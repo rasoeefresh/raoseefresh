@@ -1599,6 +1599,14 @@ function setupCrossTabSync() {
         state.currentUser = u ? JSON.parse(u) : null;
         updateHeaderUserUI();
       } catch (err) {}
+    } else if (e.key === 'raosee_banners' || !e.key) {
+      renderBanners();
+    } else if (e.key === 'raosee_fresh_config') {
+      try {
+        state.config = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
+        applyBranding();
+        renderAnnouncement();
+      } catch (err) {}
     }
   });
 }

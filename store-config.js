@@ -181,6 +181,19 @@ function getStoredBanners() {
   return DEFAULT_BANNERS;
 }
 
+function saveBanners(banners) {
+  try {
+    localStorage.setItem("raosee_banners", JSON.stringify(banners));
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new Event("storage"));
+      } catch (e) {}
+    }
+  } catch (e) {
+    console.warn("Could not save banners", e);
+  }
+}
+
 // Initial Demo Data Helper for Instant Testing
 function initDemoDataIfEmpty() {
   try {

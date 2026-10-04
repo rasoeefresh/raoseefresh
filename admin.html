@@ -1176,6 +1176,10 @@
           </div>
         </div>
         <div>
+          <label class="block font-bold text-gray-700 mb-1">Footer Tag / Guarantee Note</label>
+          <input type="text" id="modal-banner-footer" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. ✓ No Minimum Order • ✓ Free Above ₹199" />
+        </div>
+        <div>
           <label class="block font-bold text-gray-700 mb-1">Gradient Theme</label>
           <select id="modal-banner-gradient" class="w-full p-2.5 rounded-xl border border-gray-300 bg-white outline-none focus:border-blinkit-green">
             <option value="from-green-800 to-green-950">Forest Emerald (Green-800 to Green-950)</option>
@@ -1192,6 +1196,8 @@
         <button onclick="saveBannerFromModal()" class="px-5 py-2 bg-blinkit-green text-white rounded-xl font-bold text-xs hover:bg-emerald-800 shadow-sm">Save Banner</button>
       </div>
     </div>
+  </div>
+
   <!-- ================= ADMIN ORDER DETAILS & STATUS MANAGEMENT MODAL ================= -->
   <div id="admin-order-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
     <div onclick="closeAdminOrderModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
@@ -1471,6 +1477,7 @@
       if (tabId === 'customers') renderCustomersTab();
       if (tabId === 'orders') renderAllOrders();
       if (tabId === 'outlet') populateOutletSettings();
+      if (tabId === 'banners') renderBannersList();
     }
 
     // Update KPIs
@@ -1877,31 +1884,60 @@
     }
 
     // ================= BANNERS & NOTICES LOGIC =================
+    function saveBanners(banners) {
+      bannersList = banners;
+      try {
+        localStorage.setItem("raosee_banners", JSON.stringify(banners));
+        window.dispatchEvent(new Event("storage"));
+      } catch (e) {
+        console.warn("Could not save banners", e);
+      }
+    }
+
     function renderBannersList() {
       const container = document.getElementById('banners-editor-list');
       if (!container) return;
+
+      if (!bannersList || bannersList.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl space-y-2">
+            <span class="text-3xl block">🎨</span>
+            <p class="text-xs font-bold text-gray-700">No Hero Banners Found</p>
+            <p class="text-[11px] text-gray-400">Click below to add a promotional card or restore default banners.</p>
+            <div class="flex items-center justify-center gap-2 pt-2">
+              <button onclick="openBannerModal()" class="px-3.5 py-1.5 bg-blinkit-green hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer">
+                + Add Banner
+              </button>
+              <button onclick="resetDefaultBanners()" class="px-3 py-1.5 border border-gray-300 hover:bg-gray-50 rounded-xl text-xs font-bold text-gray-700 cursor-pointer">
+                ↺ Restore Defaults
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
 
       container.innerHTML = bannersList.map(b => `
         <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-1">
-              <span class="text-[11px] font-bold bg-white border px-2 py-0.5 rounded text-gray-700">${b.badge || 'Banner'}</span>
+              <span class="text-[11px] font-bold bg-white border px-2 py-0.5 rounded text-gray-700">${escapeHtml(b.badge || 'Banner')}</span>
               <span class="${b.enabled !== false ? 'text-green-700 font-bold' : 'text-gray-400 font-bold'} text-xs">
                 ${b.enabled !== false ? '● Visible on Store' : '○ Disabled'}
               </span>
             </div>
-            <h4 class="font-extrabold text-sm text-gray-900">${b.title}</h4>
-            <p class="text-xs text-gray-500 mt-0.5">${b.subtitle || ''}</p>
-            <div class="text-[11px] text-gray-400 font-mono mt-1">Theme: ${b.gradient || 'Default'} • Button: "${b.btnText || 'Action'}"</div>
+            <h4 class="font-extrabold text-sm text-gray-900">${escapeHtml(b.title)}</h4>
+            <p class="text-xs text-gray-500 mt-0.5">${escapeHtml(b.subtitle || '')}</p>
+            <div class="text-[11px] text-gray-400 font-mono mt-1">Theme: ${escapeHtml(b.gradient || 'Default')} • Button: "${escapeHtml(b.btnText || 'Action')}"</div>
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
-            <button onclick="toggleBannerVisibility('${b.id}')" class="px-3 py-1.5 border rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100">
+            <button onclick="toggleBannerVisibility('${b.id}')" class="px-3 py-1.5 border rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 cursor-pointer">
               ${b.enabled !== false ? 'Disable' : 'Enable'}
             </button>
-            <button onclick="openBannerModal('${b.id}')" class="px-3.5 py-1.5 bg-blinkit-green hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm">
+            <button onclick="openBannerModal('${b.id}')" class="px-3.5 py-1.5 bg-blinkit-green hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer">
               Edit Banner
             </button>
-            <button onclick="deleteBanner('${b.id}')" class="px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold">
+            <button onclick="deleteBanner('${b.id}')" class="px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold cursor-pointer">
               Delete
             </button>
           </div>
@@ -1921,6 +1957,7 @@
         document.getElementById('modal-banner-heading').value = b.title || '';
         document.getElementById('modal-banner-sub').value = b.subtitle || '';
         document.getElementById('modal-banner-btn').value = b.btnText || '';
+        document.getElementById('modal-banner-footer').value = b.footerText || '';
         document.getElementById('modal-banner-action').value = b.action || 'photo-whatsapp';
         document.getElementById('modal-banner-gradient').value = b.gradient || 'from-green-800 to-green-950';
       } else {
@@ -1930,14 +1967,20 @@
         document.getElementById('modal-banner-heading').value = 'Super Deals on Fresh Fruits';
         document.getElementById('modal-banner-sub').value = 'Get up to 30% OFF on fresh apples, bananas & mangoes.';
         document.getElementById('modal-banner-btn').value = 'Order on WhatsApp';
+        document.getElementById('modal-banner-footer').value = '✓ No Minimum Order • ✓ Free Above ₹199';
         document.getElementById('modal-banner-action').value = 'photo-whatsapp';
         document.getElementById('modal-banner-gradient').value = 'from-amber-500 to-orange-600';
       }
       modal.classList.remove('hidden');
+      modal.style.display = 'flex';
     }
 
     function closeBannerModal() {
-      document.getElementById('banner-modal').classList.add('hidden');
+      const modal = document.getElementById('banner-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
     }
 
     function saveBannerFromModal() {
@@ -1946,6 +1989,7 @@
       const heading = document.getElementById('modal-banner-heading').value.trim();
       const sub = document.getElementById('modal-banner-sub').value.trim();
       const btn = document.getElementById('modal-banner-btn').value.trim();
+      const footer = document.getElementById('modal-banner-footer').value.trim();
       const action = document.getElementById('modal-banner-action').value;
       const gradient = document.getElementById('modal-banner-gradient').value;
 
@@ -1961,6 +2005,7 @@
           b.title = heading;
           b.subtitle = sub;
           b.btnText = btn;
+          b.footerText = footer;
           b.action = action;
           b.gradient = gradient;
         }
@@ -1971,6 +2016,7 @@
           title: heading,
           subtitle: sub,
           btnText: btn,
+          footerText: footer,
           action,
           gradient,
           enabled: true
@@ -1980,6 +2026,7 @@
       saveBanners(bannersList);
       closeBannerModal();
       renderBannersList();
+      alert("✓ Banner saved successfully!");
     }
 
     function toggleBannerVisibility(id) {
@@ -1999,10 +2046,18 @@
       }
     }
 
+    function resetDefaultBanners() {
+      if (confirm("Reset promotional banners to default Raosee Fresh banners?")) {
+        bannersList = typeof DEFAULT_BANNERS !== 'undefined' ? JSON.parse(JSON.stringify(DEFAULT_BANNERS)) : [];
+        saveBanners(bannersList);
+        renderBannersList();
+      }
+    }
+
     function saveAnnouncementText() {
       const text = document.getElementById('announcement-text-input').value.trim();
       updateStoreConfig({ storeNotice: text });
-      alert("Announcement ticker saved!");
+      alert("✓ Announcement ticker saved!");
     }
 
     function toggleAnnouncementBar(checked) {
