@@ -1,0 +1,2888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raosee Fresh - Supermarket Operations & Daily Control Center</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            blinkit: {
+              green: '#0C831F',
+              greenDark: '#086317',
+              yellow: '#F8CB46',
+              dark: '#1C1C1C'
+            },
+            whatsapp: '#25D366'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .tab-btn.active {
+      background-color: #0C831F;
+      color: #ffffff;
+      box-shadow: 0 4px 6px -1px rgba(12, 131, 31, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans antialiased min-h-screen">
+
+  <!-- ================= TOP ADMIN NAVIGATION ================= -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20 gap-4">
+        
+        <!-- Brand & Store Mode -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-xl sm:text-2xl shadow-sm">
+            ⚡
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="font-black text-lg sm:text-xl text-gray-900 leading-tight js-admin-store-name">Raosee Fresh Supermarket</h1>
+              <span class="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Manager Mode</span>
+            </div>
+            <p class="text-xs text-gray-500">Daily Rates, Items, Categories, Banners & Operations</p>
+          </div>
+        </div>
+
+        <!-- Quick Header Actions -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Store Status Indicator Pill -->
+          <div id="admin-status-pill" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border border-green-200 bg-green-50 text-green-800">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span id="admin-status-text">Store Open (Live)</span>
+          </div>
+
+          <a href="index.html" target="_blank" class="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 hover:text-blinkit-green bg-gray-100 hover:bg-gray-200 px-3.5 py-2 rounded-xl transition-all">
+            <span>🛒 Live Storefront</span>
+            <span class="text-xs">↗</span>
+          </a>
+
+          <button onclick="saveAllMasterChanges()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5">
+            <span>💾 Save All</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Navigation Tabs Bar -->
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-2 border-t border-gray-100 -mx-4 px-4 sm:-mx-6 sm:px-6">
+        <button onclick="switchTab('overview')" id="tab-btn-overview" class="tab-btn active px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5">
+          <span>📊</span><span>Overview</span>
+        </button>
+        <button onclick="switchTab('rates')" id="tab-btn-rates" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>🏷️</span><span>Daily Rates & Quick Price</span>
+        </button>
+        <button onclick="switchTab('items')" id="tab-btn-items" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>📦</span><span>Items & Inventory</span>
+        </button>
+        <button onclick="switchTab('categories')" id="tab-btn-categories" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>🗂️</span><span>Categories</span>
+        </button>
+        <button onclick="switchTab('banners')" id="tab-btn-banners" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>🎨</span><span>Banners & Notices</span>
+        </button>
+        <button onclick="switchTab('operations')" id="tab-btn-operations" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>⏱️</span><span>Operations & Delivery</span>
+        </button>
+        <button onclick="switchTab('payment')" id="tab-btn-payment" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>💳</span><span>Payment & WhatsApp</span>
+        </button>
+        <button onclick="switchTab('orders')" id="tab-btn-orders" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>🧾</span><span>Orders (<span id="tab-orders-badge">0</span>)</span>
+        </button>
+        <button onclick="switchTab('customers')" id="tab-btn-customers" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>👥</span><span>Customers (<span id="tab-customers-badge">0</span>)</span>
+        </button>
+        <button onclick="switchTab('outlet')" id="tab-btn-outlet" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
+          <span>🏢</span><span>Company &amp; Outlet</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= MAIN DASHBOARD CONTAINER ================= -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- ================= TAB 1: OVERVIEW ================= -->
+    <div id="tab-content-overview" class="space-y-6">
+      
+      <!-- Key KPI Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Catalog Items</span>
+            <span class="w-8 h-8 rounded-xl bg-green-50 text-blinkit-green flex items-center justify-center font-bold text-base">📦</span>
+          </div>
+          <div class="text-2xl sm:text-3xl font-black text-gray-900" id="kpi-total-products">0</div>
+          <span class="text-xs text-green-700 font-semibold mt-1" id="kpi-in-stock-products">0 In Stock</span>
+        </div>
+
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Active Categories</span>
+            <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-base">🗂️</span>
+          </div>
+          <div class="text-2xl sm:text-3xl font-black text-gray-900" id="kpi-total-categories">0</div>
+          <span class="text-xs text-blue-700 font-semibold mt-1">Supermarket Aisles</span>
+        </div>
+
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Customer Orders</span>
+            <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-base">🧾</span>
+          </div>
+          <div class="text-2xl sm:text-3xl font-black text-gray-900" id="kpi-total-orders">0</div>
+          <span class="text-xs text-amber-700 font-semibold mt-1" id="kpi-total-revenue">₹0 Processed</span>
+        </div>
+
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Online Payments</span>
+            <span class="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-base">💳</span>
+          </div>
+          <div class="text-lg sm:text-xl font-black text-purple-900 truncate">Razorpay & UPI</div>
+          <span class="text-xs text-purple-700 font-semibold mt-1">0% Fee Direct UPI Active</span>
+        </div>
+      </div>
+
+      <!-- Quick Action Shortcuts -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- Fast Price Editor Card -->
+        <div class="bg-gradient-to-br from-green-700 to-green-900 text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <span class="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Daily Routine</span>
+            <h3 class="text-lg font-black mt-2">Update Daily Mandi / Wholesale Rates</h3>
+            <p class="text-xs text-green-100 opacity-90 mt-1">Quickly adjust tomato, potato, onion, milk & atta rates in 10 seconds.</p>
+          </div>
+          <button onclick="switchTab('rates')" class="mt-4 bg-white text-green-900 font-black text-xs px-4 py-2.5 rounded-xl shadow self-start active:scale-95 transition-transform">
+            Open Daily Rate Card ➔
+          </button>
+        </div>
+
+        <!-- Banners & Deals Card -->
+        <div class="bg-gradient-to-br from-emerald-600 to-teal-800 text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <span class="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Marketing</span>
+            <h3 class="text-lg font-black mt-2">Promotional Banners & Deals</h3>
+            <p class="text-xs text-teal-100 opacity-90 mt-1">Change festival banners, discount offers, and top announcement tickers.</p>
+          </div>
+          <button onclick="switchTab('banners')" class="mt-4 bg-white text-teal-900 font-black text-xs px-4 py-2.5 rounded-xl shadow self-start active:scale-95 transition-transform">
+            Customize Banners ➔
+          </button>
+        </div>
+
+        <!-- WhatsApp & Delivery Card -->
+        <div class="bg-gradient-to-br from-amber-600 to-orange-700 text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <span class="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Store Operations</span>
+            <h3 class="text-lg font-black mt-2">Delivery ETA & Rush Mode</h3>
+            <p class="text-xs text-amber-100 opacity-90 mt-1">Toggle store pause, change delivery ETA (10m / 15m), and free delivery cutoff.</p>
+          </div>
+          <button onclick="switchTab('operations')" class="mt-4 bg-white text-orange-950 font-black text-xs px-4 py-2.5 rounded-xl shadow self-start active:scale-95 transition-transform">
+            Operations Settings ➔
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Quick Recent Orders Snapshot -->
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-between mb-4 border-b pb-3">
+          <div>
+            <h3 class="font-black text-base text-gray-900 flex items-center gap-2">
+              <span>🧾</span>
+              <span>Latest Customer Orders</span>
+            </h3>
+            <p class="text-xs text-gray-500">Live stream of WhatsApp and online checkout orders</p>
+          </div>
+          <button onclick="switchTab('orders')" class="text-xs text-blinkit-green font-bold hover:underline">
+            View All Orders ➔
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b">
+              <tr>
+                <th class="p-3">Order ID</th>
+                <th class="p-3">Customer</th>
+                <th class="p-3">Items</th>
+                <th class="p-3">Amount</th>
+                <th class="p-3">Payment</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="overview-orders-tbody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 2: DAILY RATES & QUICK PRICE EDITOR ================= -->
+    <div id="tab-content-rates" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 mb-4">
+          <div>
+            <h2 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+              <span>🏷️</span>
+              <span>Daily Rate Card & Quick Price Editor</span>
+            </h2>
+            <p class="text-xs text-gray-500">Type updated selling prices and toggle daily availability with one click</p>
+          </div>
+
+          <!-- Category filter & Bulk Tool -->
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="rate-filter-category" onchange="renderRateCard(this.value)" class="text-xs p-2 rounded-xl border border-gray-300 font-semibold bg-white outline-none focus:border-blinkit-green">
+              <option value="all">All Categories</option>
+            </select>
+            <button onclick="saveAllMasterChanges()" class="bg-blinkit-green hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm">
+              Save Rates
+            </button>
+          </div>
+        </div>
+
+        <!-- Bulk Rate Adjuster Widget -->
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div>
+            <span class="font-extrabold text-amber-900">⚡ Bulk Adjustment Tool:</span>
+            <span class="text-amber-800 ml-1">Quickly adjust rates across selected categories (e.g. morning veggie mandi adjustment):</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="applyBulkPriceAdjustment('vegetables-fruits', -5)" class="bg-white text-green-800 border border-amber-300 px-3 py-1.5 rounded-lg font-bold hover:bg-green-50">
+              -5% on Veggies
+            </button>
+            <button onclick="applyBulkPriceAdjustment('vegetables-fruits', 5)" class="bg-white text-amber-900 border border-amber-300 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-100">
+              +5% on Veggies
+            </button>
+            <button onclick="setAllStockInCategory(true)" class="bg-green-700 text-white px-3 py-1.5 rounded-lg font-bold">
+              Mark Category All In Stock
+            </button>
+          </div>
+        </div>
+
+        <!-- Rates Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-gray-50 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b">
+              <tr>
+                <th class="p-3">Product</th>
+                <th class="p-3">Category</th>
+                <th class="p-3">Pack / Unit</th>
+                <th class="p-3">MRP (₹)</th>
+                <th class="p-3">Selling Price (₹)</th>
+                <th class="p-3">Discount</th>
+                <th class="p-3">Stock Status</th>
+                <th class="p-3 text-right">Quick Action</th>
+              </tr>
+            </thead>
+            <tbody id="rates-table-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 3: ITEMS & CATALOG MANAGEMENT ================= -->
+    <div id="tab-content-items" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 mb-4">
+          <div>
+            <h2 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+              <span>📦</span>
+              <span>Product Catalog Management</span>
+            </h2>
+            <p class="text-xs text-gray-500">Add new grocery items, modify details, tags, photos and delivery times</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <input 
+              type="text" 
+              id="items-search-input" 
+              oninput="renderItemsTable(this.value)" 
+              placeholder="Search items..." 
+              class="text-xs p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green w-48 sm:w-64"
+            />
+            <button onclick="openProductModal()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 flex-shrink-0">
+              <span>+ Add Item</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Full Items Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b">
+              <tr>
+                <th class="p-3">Thumbnail</th>
+                <th class="p-3">Item Name</th>
+                <th class="p-3">Category</th>
+                <th class="p-3">Unit</th>
+                <th class="p-3">Selling Price</th>
+                <th class="p-3">MRP</th>
+                <th class="p-3">Tag / Badge</th>
+                <th class="p-3">In Stock</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="items-table-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 4: CATEGORIES MANAGER ================= -->
+    <div id="tab-content-categories" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+        
+        <div class="flex items-center justify-between border-b pb-4 mb-4">
+          <div>
+            <h2 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+              <span>🗂️</span>
+              <span>Supermarket Category Aisles</span>
+            </h2>
+            <p class="text-xs text-gray-500">Configure category names, icons/emojis, and display visibility on storefront</p>
+          </div>
+
+          <button onclick="openCategoryModal()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5">
+            <span>+ Add Category</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="categories-cards-grid">
+          <!-- Injected via JavaScript -->
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 5: BANNERS & NOTICES ================= -->
+    <div id="tab-content-banners" class="hidden space-y-6">
+      
+      <!-- Top Announcement Ticker Editor -->
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b pb-3">
+          <div>
+            <h3 class="font-black text-base text-gray-900 flex items-center gap-2">
+              <span>📢</span>
+              <span>Store Announcement Ticker (Top Banner)</span>
+            </h3>
+            <p class="text-xs text-gray-500">Displays at the very top of your storefront for daily urgent announcements</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold text-gray-700">Show Ticker</label>
+            <input type="checkbox" id="announcement-toggle" class="w-4 h-4 text-blinkit-green rounded cursor-pointer" onchange="toggleAnnouncementBar(this.checked)" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Announcement Text</label>
+          <input 
+            type="text" 
+            id="announcement-text-input" 
+            class="w-full p-3 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none"
+            placeholder="e.g. ⚡ Farm fresh morning vegetables harvested & in stock! Delivery in 10-15 mins."
+          />
+        </div>
+        <div class="flex justify-end">
+          <button onclick="saveAnnouncementText()" class="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-xl text-xs font-bold">
+            Update Announcement
+          </button>
+        </div>
+      </div>
+
+      <!-- Promotional Hero Banners -->
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b pb-3">
+          <div>
+            <h3 class="font-black text-base text-gray-900 flex items-center gap-2">
+              <span>🎨</span>
+              <span>Hero Promotional Cards (Banners)</span>
+            </h3>
+            <p class="text-xs text-gray-500">Edit titles, taglines, gradients and actions of promotional banners</p>
+          </div>
+          <button onclick="openBannerModal()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-sm flex items-center gap-1">
+            <span>+ Add Banner</span>
+          </button>
+        </div>
+
+        <div class="space-y-4" id="banners-editor-list">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 6: OPERATIONS & DELIVERY ================= -->
+    <div id="tab-content-operations" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-6">
+        
+        <div class="border-b pb-4">
+          <h2 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+            <span>⏱️</span>
+            <span>Store Operations, Timings & Delivery Policies</span>
+          </h2>
+          <p class="text-xs text-gray-500">Control store open/close status, dark store delivery radius, and fees</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+          
+          <!-- Store Operating Status -->
+          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-gray-900">Store Live Status</span>
+              <select id="op-store-status" class="p-2 border rounded-xl font-bold text-xs bg-white focus:border-blinkit-green outline-none">
+                <option value="open">🟢 Store Open (Accepting Orders)</option>
+                <option value="closed">🔴 Temporarily Paused (High Rush / Closed)</option>
+              </select>
+            </div>
+            <p class="text-gray-500 text-[11px]">When paused, storefront shows "Temporarily Paused" badge so customers know delivery will resume shortly.</p>
+          </div>
+
+          <!-- Delivery ETA Estimate -->
+          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 space-y-3">
+            <span class="font-bold text-sm text-gray-900">Delivery ETA Estimate</span>
+            <input type="text" id="op-eta" class="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="e.g. 10-15 mins or Rain Delay: 20-25 mins" />
+            <p class="text-gray-500 text-[11px]">Shown on delivery badge across entire storefront and checkout drawer.</p>
+          </div>
+
+          <!-- Free Delivery Threshold -->
+          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 space-y-3">
+            <span class="font-bold text-sm text-gray-900">Free Delivery Threshold (₹)</span>
+            <input type="number" id="op-free-thresh" class="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="e.g. 199" />
+            <p class="text-gray-500 text-[11px]">Orders equal to or above this amount get 100% FREE express delivery.</p>
+          </div>
+
+          <!-- Standard Delivery Fee -->
+          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 space-y-3">
+            <span class="font-bold text-sm text-gray-900">Standard Delivery Fee (₹)</span>
+            <input type="number" id="op-std-fee" class="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="e.g. 25" />
+            <p class="text-gray-500 text-[11px]">Charged on orders below the free delivery cutoff.</p>
+          </div>
+
+          <!-- Store Opening & Closing Hours -->
+          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 space-y-3">
+            <span class="font-bold text-sm text-gray-900">Opening & Closing Hours</span>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="op-opening" class="p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="06:00 AM" />
+              <input type="text" id="op-closing" class="p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="11:30 PM" />
+            </div>
+          </div>
+
+          <!-- Dark Store Address -->
+          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 space-y-3">
+            <span class="font-bold text-sm text-gray-900">Dark Store Location / Hub</span>
+            <input type="text" id="op-address" class="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="e.g. Shop #12, Central Market Road, Bangalore" />
+          </div>
+
+        </div>
+
+        <div class="flex justify-end pt-3 border-t">
+          <button onclick="saveOperationsSettings()" class="bg-blinkit-green hover:bg-emerald-800 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm">
+            Save Operations Settings
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 7: PAYMENT GATEWAY & WHATSAPP ================= -->
+    <div id="tab-content-payment" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-6">
+        
+        <div class="border-b pb-4">
+          <h2 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+            <span>💳</span>
+            <span>Online Payment Gateway & WhatsApp Business</span>
+          </h2>
+          <p class="text-xs text-gray-500">Connect your Razorpay Key ID, Merchant UPI ID and Business WhatsApp phone</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Razorpay Key ID (Test or Live)</label>
+            <input type="text" id="pay-rzp-key" class="w-full p-2.5 rounded-xl border border-gray-300 font-mono text-xs focus:border-blinkit-green outline-none" placeholder="rzp_test_..." />
+            <p class="text-[11px] text-gray-400 mt-1">Get this from your Razorpay Dashboard > Settings > API Keys</p>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Merchant UPI ID (0% MDR / Fee)</label>
+            <input type="text" id="pay-upi-id" class="w-full p-2.5 rounded-xl border border-gray-300 font-mono text-xs focus:border-blinkit-green outline-none" placeholder="e.g. raoseefresh@okaxis" />
+            <p class="text-[11px] text-gray-400 mt-1">Direct bank credit via Google Pay, PhonePe, Paytm QR</p>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Store WhatsApp Number (digits only)</label>
+            <input type="text" id="pay-wa-number" class="w-full p-2.5 rounded-xl border border-gray-300 font-mono text-xs focus:border-blinkit-green outline-none" placeholder="919876543210" />
+            <p class="text-[11px] text-gray-400 mt-1">Include country code without '+' (e.g. 91 for India)</p>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Customer Support Phone (Display)</label>
+            <input type="text" id="pay-support-phone" class="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="+91 98765 43210" />
+          </div>
+
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t">
+          <div class="flex items-center gap-2">
+            <button onclick="testRazorpayWindow()" class="bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-xl text-xs font-bold">
+              🧪 Test Razorpay Window
+            </button>
+            <button onclick="testWhatsAppMessage()" class="bg-green-50 text-green-800 hover:bg-green-100 border border-green-200 px-4 py-2 rounded-xl text-xs font-bold">
+              💬 Test WhatsApp Number
+            </button>
+          </div>
+          <button onclick="savePaymentSettings()" class="bg-blinkit-green hover:bg-emerald-800 text-white px-6 py-2 rounded-xl text-xs font-bold shadow-sm">
+            Save Payment & Contact
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 8: ORDERS & WHATSAPP LOGS ================= -->
+    <div id="tab-content-orders" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 mb-4">
+          <div>
+            <h2 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+              <span>🧾</span>
+              <span>All Customer Orders & Transactions</span>
+            </h2>
+            <p class="text-xs text-gray-500">Live order tracking with customer phone numbers and real-time status management</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input 
+              type="text" 
+              id="order-search-input" 
+              placeholder="Search by ID, name, phone..." 
+              oninput="filterOrdersBySearch(this.value)"
+              class="text-xs p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green w-48 sm:w-60"
+            />
+            <button onclick="seedDemoOrders()" class="text-xs text-blinkit-green hover:text-emerald-800 font-bold px-3 py-2 border border-green-200 rounded-xl hover:bg-green-50 flex-shrink-0" title="Load Sample Demo Orders for Testing">
+              ⚡ Sample Orders
+            </button>
+            <button onclick="clearOrderHistory()" class="text-xs text-red-600 hover:text-red-800 font-bold px-3 py-2 border border-red-200 rounded-xl hover:bg-red-50 flex-shrink-0">
+              Clear History
+            </button>
+          </div>
+        </div>
+
+        <!-- Status Filter Pills -->
+        <div class="flex flex-wrap items-center gap-2 mb-4" id="order-status-filter-pills">
+          <button onclick="setOrderStatusFilter('all')" id="filter-pill-all" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-blinkit-green text-white shadow-xs">
+            All Orders (<span id="pill-count-all">0</span>)
+          </button>
+          <button onclick="setOrderStatusFilter('Confirmed')" id="filter-pill-Confirmed" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-700 border hover:bg-gray-50">
+            ⚡ Confirmed (<span id="pill-count-confirmed">0</span>)
+          </button>
+          <button onclick="setOrderStatusFilter('Packing')" id="filter-pill-Packing" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-700 border hover:bg-gray-50">
+            🥬 Packing (<span id="pill-count-packing">0</span>)
+          </button>
+          <button onclick="setOrderStatusFilter('Out for Delivery')" id="filter-pill-Out" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-700 border hover:bg-gray-50">
+            🛵 Out for Delivery (<span id="pill-count-out">0</span>)
+          </button>
+          <button onclick="setOrderStatusFilter('Delivered')" id="filter-pill-Delivered" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-700 border hover:bg-gray-50">
+            🎉 Delivered (<span id="pill-count-delivered">0</span>)
+          </button>
+          <button onclick="setOrderStatusFilter('Cancelled')" id="filter-pill-Cancelled" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-700 border hover:bg-gray-50">
+            ❌ Cancelled (<span id="pill-count-cancelled">0</span>)
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b">
+              <tr>
+                <th class="p-3">Order ID</th>
+                <th class="p-3">Customer</th>
+                <th class="p-3">Address</th>
+                <th class="p-3">Items Ordered</th>
+                <th class="p-3">Total Amount</th>
+                <th class="p-3">Payment Method</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="all-orders-table-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+        <div id="no-orders-msg" class="py-12 text-center text-xs text-gray-400 hidden">
+          No customer orders found matching your filter.
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 9: CUSTOMERS DIRECTORY ================= -->
+    <div id="tab-content-customers" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+          <div>
+            <h2 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+              <span>👥</span>
+              <span>Customer Directory & Orders Analytics</span>
+            </h2>
+            <p class="text-xs text-gray-500">View registered customers, delivery addresses, order counts, and chat on WhatsApp</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input 
+              type="text" 
+              id="customer-search-input" 
+              placeholder="Search by name or phone..." 
+              oninput="filterCustomers(this.value)"
+              class="text-xs p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+            />
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-gray-600">
+            <thead class="bg-gray-50 text-gray-700 font-bold uppercase text-[10px] tracking-wider border-b">
+              <tr>
+                <th class="p-3">Customer Name</th>
+                <th class="p-3">Phone</th>
+                <th class="p-3">Primary Delivery Address</th>
+                <th class="p-3 text-center">Total Orders</th>
+                <th class="p-3 text-right">Lifetime Spend</th>
+                <th class="p-3">Joined / Last Active</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="customers-table-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+        <div id="no-customers-msg" class="py-12 text-center text-xs text-gray-400 hidden">
+          No customer accounts found. Customers register via login.html or checkout!
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================= TAB 10: COMPANY & OUTLET SETTINGS ================= -->
+    <div id="tab-content-outlet" class="hidden space-y-6">
+      
+      <!-- Top Introduction Banner -->
+      <div class="bg-gradient-to-r from-emerald-800 via-green-900 to-green-950 text-white rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span class="bg-white/20 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+            Store Profile &amp; Entity
+          </span>
+          <h2 class="text-lg sm:text-xl font-black mt-2">Outlet &amp; Company Configuration</h2>
+          <p class="text-xs text-green-100 opacity-90 mt-0.5">
+            Manage your legal entity, supermarket logo, dark store physical address, FSSAI license, and GSTIN.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <a href="outlet.html" class="bg-white hover:bg-gray-100 text-green-950 font-black text-xs px-4 py-3 rounded-2xl shadow transition-transform active:scale-95 flex items-center gap-1.5">
+            <span>🏢 Standalone Outlet Window</span> ↗
+          </a>
+          <button onclick="saveOutletSettings()" class="bg-blinkit-yellow hover:bg-amber-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-1.5">
+            <span>💾 Save Outlet Profile</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left Column: Branding, Logo & Identity -->
+        <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-5 lg:col-span-1">
+          <div class="border-b pb-3 flex items-center justify-between">
+            <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+              <span>🎨</span>
+              <span>Logo &amp; Brand Identity</span>
+            </h3>
+            <span class="text-[10px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded-full">Visual</span>
+          </div>
+
+          <!-- Live Logo Preview Box -->
+          <div class="text-center p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Live Logo Preview</label>
+            <div id="outlet-logo-preview-box" class="w-24 h-24 mx-auto bg-white rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden shadow-inner relative group p-2">
+              <span id="outlet-logo-emoji-preview" class="text-4xl">⚡</span>
+              <img id="outlet-logo-img-preview" src="" alt="Logo Preview" class="w-full h-full object-contain hidden" />
+            </div>
+            <div class="mt-2 text-[11px] text-gray-500 font-medium" id="outlet-logo-status-text">Default Lightning Badge</div>
+          </div>
+
+          <!-- Upload Logo File or Image URL -->
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Upload Logo from Computer / Phone</label>
+              <input 
+                type="file" 
+                id="outlet-logo-file-input" 
+                accept="image/*"
+                onchange="handleLogoFileUpload(event)"
+                class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-green-50 file:text-blinkit-green hover:file:bg-green-100 border border-gray-200 rounded-xl p-1"
+              />
+              <p class="text-[10px] text-gray-400 mt-1">PNG, JPG, SVG, WebP (Square recommended)</p>
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Or Logo Image URL</label>
+              <input 
+                type="url" 
+                id="outlet-logo-url-input" 
+                placeholder="https://yourdomain.com/logo.png"
+                oninput="handleLogoUrlInput(this.value)"
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono text-xs"
+              />
+            </div>
+
+            <!-- Preset Quick Logos -->
+            <div>
+              <label class="block font-bold text-gray-700 mb-1.5">Preset Supermarket Icons</label>
+              <div class="grid grid-cols-4 gap-2">
+                <button type="button" onclick="setPresetLogo('⚡', 'Quick Commerce Lightning')" class="p-2 border rounded-xl hover:bg-yellow-50 text-xl font-bold flex flex-col items-center">
+                  <span>⚡</span>
+                  <span class="text-[9px] text-gray-500">10 Min</span>
+                </button>
+                <button type="button" onclick="setPresetLogo('🛒', 'Fresh Supermarket Cart')" class="p-2 border rounded-xl hover:bg-green-50 text-xl font-bold flex flex-col items-center">
+                  <span>🛒</span>
+                  <span class="text-[9px] text-gray-500">Cart</span>
+                </button>
+                <button type="button" onclick="setPresetLogo('🥬', 'Organic Farm Fresh')" class="p-2 border rounded-xl hover:bg-emerald-50 text-xl font-bold flex flex-col items-center">
+                  <span>🥬</span>
+                  <span class="text-[9px] text-gray-500">Greens</span>
+                </button>
+                <button type="button" onclick="setPresetLogo('🍎', 'Fresh Fruits Market')" class="p-2 border rounded-xl hover:bg-red-50 text-xl font-bold flex flex-col items-center">
+                  <span>🍎</span>
+                  <span class="text-[9px] text-gray-500">Fruits</span>
+                </button>
+              </div>
+            </div>
+
+            <button type="button" onclick="resetToDefaultLogo()" class="text-[11px] text-gray-500 hover:text-red-600 underline font-semibold block text-center pt-1">
+              Reset to Default Badge
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Middle & Right Columns: Company Info, Outlet Address, Compliance -->
+        <div class="space-y-6 lg:col-span-2">
+          
+          <!-- Card 1: Company Profile & Business Names -->
+          <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+            <div class="border-b pb-3">
+              <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+                <span>🏢</span>
+                <span>Company &amp; Outlet Identification</span>
+              </h3>
+              <p class="text-xs text-gray-500">Entity name for bills, customer app, and legal invoices</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Company Legal Entity Name *</label>
+                <input 
+                  type="text" 
+                  id="outlet-company-name" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
+                  placeholder="e.g. Raosee Fresh Retail Private Limited"
+                />
+                <span class="text-[10px] text-gray-400 mt-0.5 block">Appears on official tax invoices &amp; receipts</span>
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Store / Public Trade Name *</label>
+                <input 
+                  type="text" 
+                  id="outlet-store-name" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900"
+                  placeholder="e.g. Raosee Fresh Supermarket"
+                />
+                <span class="text-[10px] text-gray-400 mt-0.5 block">Displayed on customer header &amp; app title</span>
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Outlet / Branch Name *</label>
+                <input 
+                  type="text" 
+                  id="outlet-branch-name" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
+                  placeholder="e.g. Main Dark Store - HSR Layout Hub #01"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Outlet Branch Code</label>
+                <input 
+                  type="text" 
+                  id="outlet-code" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono"
+                  placeholder="e.g. RF-BLR-01"
+                />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block font-bold text-gray-700 mb-1">Tagline / Slogan</label>
+                <input 
+                  type="text" 
+                  id="outlet-tagline" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-medium"
+                  placeholder="e.g. Farm Fresh Groceries Delivered in 10-15 Mins"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Outlet Physical Address -->
+          <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+            <div class="border-b pb-3">
+              <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+                <span>📍</span>
+                <span>Dark Store / Outlet Address</span>
+              </h3>
+              <p class="text-xs text-gray-500">Used as the dispatch origin on customer live tracking maps and bills</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Shop / Unit / Floor No. *</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-shop" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. Shop #12, Ground Floor"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Building / Complex Name</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-building" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. Central Market Complex"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Street / Cross Road *</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-street" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. 19th Main Road"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Area / Locality *</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-area" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. HSR Layout Sector 2"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">City *</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-city" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. Bangalore"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Pincode *</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-pincode" 
+                  maxlength="6"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono"
+                  placeholder="e.g. 560102"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block font-bold text-gray-700 mb-1">Landmark</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-landmark" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. Near BDA Complex &amp; City Garden"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">State</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-state" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. Karnataka"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <label class="block font-bold text-gray-700 mb-1 text-xs">Combined Full Address (Printed on Invoices &amp; Footer)</label>
+              <textarea 
+                id="outlet-full-address-preview" 
+                rows="2" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green text-xs font-medium text-gray-800"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Card 3: Tax, Regulatory & Bill Footer -->
+          <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+            <div class="border-b pb-3">
+              <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+                <span>📜</span>
+                <span>Tax &amp; Food Safety Compliance</span>
+              </h3>
+              <p class="text-xs text-gray-500">Government registrations printed on customer order receipts</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">GSTIN (15-Digit GST Number)</label>
+                <input 
+                  type="text" 
+                  id="outlet-gstin" 
+                  maxlength="15"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono uppercase font-bold"
+                  placeholder="e.g. 29ABCDE1234F1Z5"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">FSSAI License Number (14 Digits)</label>
+                <input 
+                  type="text" 
+                  id="outlet-fssai" 
+                  maxlength="14"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-bold"
+                  placeholder="e.g. 11223344000123"
+                />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block font-bold text-gray-700 mb-1">Customer Receipt / Invoice Footer Note</label>
+                <input 
+                  type="text" 
+                  id="outlet-invoice-note" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. Thank you for shopping with Raosee Fresh! Freshness &amp; replacement guaranteed on WhatsApp."
+                />
+              </div>
+            </div>
+
+            <div class="pt-3 border-t flex items-center justify-between">
+              <span class="text-xs text-gray-500">Settings save to browser storage &amp; sync across customer apps</span>
+              <button 
+                onclick="saveOutletSettings()" 
+                class="bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow transition-all active:scale-95"
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Add / Edit Product Modal -->
+  <div id="product-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeProductModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-black text-gray-900 text-base" id="modal-product-title">Add New Product</h3>
+        <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+      </div>
+
+      <input type="hidden" id="modal-prod-id" />
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Product Name *</label>
+          <input type="text" id="modal-prod-name" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. Farm Fresh Alphonso Mango" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Category *</label>
+            <select id="modal-prod-category" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green bg-white">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Pack Size / Unit *</label>
+            <input type="text" id="modal-prod-unit" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. 1 kg / 500 ml" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Selling Price (₹) *</label>
+            <input type="number" id="modal-prod-price" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900" placeholder="e.g. 45" />
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">MRP Price (₹)</label>
+            <input type="number" id="modal-prod-mrp" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. 60" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Image URL</label>
+          <input type="url" id="modal-prod-image" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="https://..." />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Badge / Tag (Optional)</label>
+            <input type="text" id="modal-prod-tag" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. Bestseller / Organic" />
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Delivery ETA (Display)</label>
+            <input type="text" id="modal-prod-eta" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="10 mins" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t">
+        <button onclick="closeProductModal()" class="px-4 py-2 border rounded-xl font-bold text-gray-600 hover:bg-gray-100 text-xs">Cancel</button>
+        <button onclick="saveProductFromModal()" class="px-5 py-2 bg-blinkit-green text-white rounded-xl font-bold text-xs hover:bg-emerald-800 shadow-sm">Save Product</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Category Modal -->
+  <div id="category-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeCategoryModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-200 space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-black text-gray-900 text-base" id="modal-category-title">Add Category</h3>
+        <button onclick="closeCategoryModal()" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+      </div>
+
+      <input type="hidden" id="modal-cat-id" />
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Category Label *</label>
+          <input type="text" id="modal-cat-label" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. Organic Greens" />
+        </div>
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Emoji / Icon *</label>
+          <input type="text" id="modal-cat-icon" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. 🥬, 🥖, 🍫" />
+        </div>
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Slug / Identifier</label>
+          <input type="text" id="modal-cat-slug" class="w-full p-2.5 rounded-xl border border-gray-300 font-mono outline-none focus:border-blinkit-green" placeholder="e.g. organic-greens" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t">
+        <button onclick="closeCategoryModal()" class="px-4 py-2 border rounded-xl font-bold text-gray-600 hover:bg-gray-100 text-xs">Cancel</button>
+        <button onclick="saveCategoryFromModal()" class="px-5 py-2 bg-blinkit-green text-white rounded-xl font-bold text-xs hover:bg-emerald-800 shadow-sm">Save Category</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Banner Modal -->
+  <div id="banner-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeBannerModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-black text-gray-900 text-base" id="modal-banner-title">Customize Banner</h3>
+        <button onclick="closeBannerModal()" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+      </div>
+
+      <input type="hidden" id="modal-banner-id" />
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Badge Tag</label>
+          <input type="text" id="modal-banner-badge" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. ⚡ Superfast Delivery" />
+        </div>
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Banner Title *</label>
+          <input type="text" id="modal-banner-heading" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. Fresh Groceries in 10-15 Mins" />
+        </div>
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Subtitle / Description</label>
+          <textarea id="modal-banner-sub" rows="2" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="Farm-picked vegetables..."></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Button Text</label>
+            <input type="text" id="modal-banner-btn" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="Order on WhatsApp" />
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Button Action</label>
+            <select id="modal-banner-action" class="w-full p-2.5 rounded-xl border border-gray-300 bg-white outline-none focus:border-blinkit-green">
+              <option value="photo-whatsapp">📸 WhatsApp Photo Order</option>
+              <option value="whatsapp-chat">💬 WhatsApp Support Chat</option>
+              <option value="explore">🛒 Scroll to Products</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Gradient Theme</label>
+          <select id="modal-banner-gradient" class="w-full p-2.5 rounded-xl border border-gray-300 bg-white outline-none focus:border-blinkit-green">
+            <option value="from-green-800 to-green-950">Forest Emerald (Green-800 to Green-950)</option>
+            <option value="from-emerald-600 to-teal-800">Fresh Teal (Emerald-600 to Teal-800)</option>
+            <option value="from-amber-500 to-orange-600">Warm Amber (Amber-500 to Orange-600)</option>
+            <option value="from-purple-700 to-indigo-900">Royal Purple (Purple-700 to Indigo-900)</option>
+            <option value="from-rose-600 to-red-800">Festive Red (Rose-600 to Red-800)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t">
+        <button onclick="closeBannerModal()" class="px-4 py-2 border rounded-xl font-bold text-gray-600 hover:bg-gray-100 text-xs">Cancel</button>
+        <button onclick="saveBannerFromModal()" class="px-5 py-2 bg-blinkit-green text-white rounded-xl font-bold text-xs hover:bg-emerald-800 shadow-sm">Save Banner</button>
+      </div>
+    </div>
+  <!-- ================= ADMIN ORDER DETAILS & STATUS MANAGEMENT MODAL ================= -->
+  <div id="admin-order-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeAdminOrderModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-gray-200 overflow-hidden max-h-[92vh] flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-emerald-950 via-[#0C831F] to-green-900 text-white p-5 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="bg-white/20 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              Order Management
+            </span>
+            <span class="font-mono font-bold text-xs text-green-200" id="admin-modal-order-id">#RF-000000</span>
+            <span id="admin-modal-status-badge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-blinkit-yellow text-slate-950">Confirmed</span>
+          </div>
+          <h3 class="text-base sm:text-lg font-black mt-1" id="admin-modal-customer-heading">Customer Order Details</h3>
+          <p class="text-[11px] text-green-100" id="admin-modal-date-time">-</p>
+        </div>
+        <button onclick="closeAdminOrderModal()" class="text-white hover:bg-white/20 rounded-lg p-1.5 font-bold text-base">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-5 text-xs flex-1">
+
+        <!-- 1-CLICK ORDER STATUS ACTIONS PIPELINE -->
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="font-black text-gray-900 flex items-center gap-1.5 text-xs">
+              <span>⚡</span>
+              <span>1-Click Order Status Pipeline</span>
+            </h4>
+            <span class="text-[10px] text-gray-400">Updates customer live tracker in real time</span>
+          </div>
+
+          <!-- Quick Advance Buttons -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <button type="button" onclick="changeAdminOrderStatus('Confirmed')" id="status-btn-confirmed" class="p-2.5 rounded-xl border font-bold text-center transition-all flex flex-col items-center justify-center gap-1 hover:border-green-500 bg-white">
+              <span class="text-base">⚡</span>
+              <span class="text-[10px]">Confirmed</span>
+            </button>
+            <button type="button" onclick="changeAdminOrderStatus('Packing')" id="status-btn-packing" class="p-2.5 rounded-xl border font-bold text-center transition-all flex flex-col items-center justify-center gap-1 hover:border-yellow-500 bg-white">
+              <span class="text-base">🥬</span>
+              <span class="text-[10px]">Packing</span>
+            </button>
+            <button type="button" onclick="changeAdminOrderStatus('Out for Delivery')" id="status-btn-out" class="p-2.5 rounded-xl border font-bold text-center transition-all flex flex-col items-center justify-center gap-1 hover:border-blue-500 bg-white">
+              <span class="text-base">🛵</span>
+              <span class="text-[10px]">Out for Del.</span>
+            </button>
+            <button type="button" onclick="changeAdminOrderStatus('Delivered')" id="status-btn-delivered" class="p-2.5 rounded-xl border font-bold text-center transition-all flex flex-col items-center justify-center gap-1 hover:border-emerald-500 bg-white">
+              <span class="text-base">🎉</span>
+              <span class="text-[10px]">Delivered</span>
+            </button>
+            <button type="button" onclick="changeAdminOrderStatus('Cancelled')" id="status-btn-cancelled" class="p-2.5 rounded-xl border font-bold text-center transition-all flex flex-col items-center justify-center gap-1 hover:border-red-500 bg-white col-span-2 sm:col-span-1">
+              <span class="text-base">❌</span>
+              <span class="text-[10px]">Cancelled</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Customer & Delivery Information -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Customer Box -->
+          <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-2">
+            <div class="flex items-center justify-between border-b pb-2">
+              <span class="font-bold text-gray-500 text-[10px] uppercase">Customer Contact</span>
+              <div class="flex items-center gap-1">
+                <a id="admin-modal-call-btn" href="tel:" class="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-bold text-[11px]" title="Call Customer">📞 Call</a>
+                <button id="admin-modal-wa-btn" onclick="chatCustomerWA()" class="px-2 py-0.5 bg-green-50 hover:bg-green-100 text-[#25D366] rounded-lg font-bold text-[11px]" title="WhatsApp Customer">💬 WhatsApp</button>
+              </div>
+            </div>
+            <div>
+              <strong class="text-sm font-black text-gray-900 block" id="admin-modal-cust-name">-</strong>
+              <div class="font-mono text-gray-600 font-bold text-xs" id="admin-modal-cust-phone">-</div>
+            </div>
+            <div class="pt-1">
+              <span class="text-[10px] font-bold text-gray-400 uppercase block">Delivery Address:</span>
+              <p class="text-gray-800 font-medium leading-relaxed" id="admin-modal-cust-address">-</p>
+            </div>
+            <div id="admin-modal-instructions-container" class="bg-amber-50 text-amber-900 p-2 rounded-xl text-[11px] border border-amber-200 hidden">
+              <span class="font-bold">🔔 Delivery Note:</span> <span id="admin-modal-instructions"></span>
+            </div>
+          </div>
+
+          <!-- Rider & Logistics Box -->
+          <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-2">
+            <div class="border-b pb-2 flex items-center justify-between">
+              <span class="font-bold text-gray-500 text-[10px] uppercase">Assigned Delivery Partner</span>
+              <span class="text-[10px] bg-green-50 text-green-700 font-bold px-1.5 py-0.5 rounded">Express Rider</span>
+            </div>
+            <div class="space-y-2">
+              <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-0.5">Rider Name</label>
+                <input type="text" id="admin-modal-rider-name" class="w-full p-2 border border-gray-300 rounded-xl font-bold text-gray-800 outline-none focus:border-blinkit-green" placeholder="e.g. Ramesh Kumar" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-0.5">Rider Phone</label>
+                <input type="tel" id="admin-modal-rider-phone" class="w-full p-2 border border-gray-300 rounded-xl font-mono text-gray-800 outline-none focus:border-blinkit-green" placeholder="9876543210" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-0.5">Vehicle Info</label>
+                <input type="text" id="admin-modal-rider-vehicle" class="w-full p-2 border border-gray-300 rounded-xl text-gray-800 outline-none focus:border-blinkit-green" placeholder="Hero Electric (KA-01-EQ-4021)" />
+              </div>
+              <button onclick="saveAdminModalRider()" class="w-full py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl text-[11px]">
+                Update Rider Info
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ordered Items Table -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+          <div class="p-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <h4 class="font-black text-gray-900 text-xs">Items in this Order</h4>
+            <span class="text-[11px] font-bold text-gray-500" id="admin-modal-items-count">0 items</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-gray-50 text-gray-500 font-bold text-[10px] uppercase border-b">
+                <tr>
+                  <th class="p-2.5">Item</th>
+                  <th class="p-2.5 text-center">Unit Price</th>
+                  <th class="p-2.5 text-center">Qty</th>
+                  <th class="p-2.5 text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody id="admin-modal-items-tbody" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Payment & Financial Breakdown -->
+        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-2 text-xs">
+          <div class="flex justify-between text-gray-600">
+            <span>Payment Method:</span>
+            <span class="font-bold text-gray-900" id="admin-modal-pay-method">-</span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>Payment Status / Transaction Ref:</span>
+            <span class="font-mono text-gray-800 font-bold" id="admin-modal-pay-status">-</span>
+          </div>
+          <div class="flex justify-between text-gray-600 pt-1 border-t border-gray-200">
+            <span>Items Subtotal:</span>
+            <span class="font-bold" id="admin-modal-subtotal">₹0</span>
+          </div>
+          <div class="flex justify-between text-sm font-black text-gray-900 pt-1 border-t border-gray-300">
+            <span>Grand Total:</span>
+            <span class="text-blinkit-green font-black text-base" id="admin-modal-grandtotal">₹0</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-3">
+        <a id="admin-modal-track-link" href="track.html" target="_blank" class="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 rounded-xl font-bold text-xs text-blue-600 flex items-center gap-1">
+          <span>🗺️ Open Live Customer Tracking</span> ↗
+        </a>
+        <button onclick="closeAdminOrderModal()" class="px-5 py-2 bg-blinkit-green hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow-sm">
+          Done
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="store-config.js"></script>
+  <script src="products.js"></script>
+  <script>
+    // Global Safe HTML Escaper
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // State
+    let productsList = [];
+    let categoriesList = [];
+    let bannersList = [];
+    let currentConfig = {};
+    let ordersList = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMasterData();
+      if (window.location.hash) {
+        const h = window.location.hash.replace('#', '').trim();
+        if (h) switchTab(h);
+      }
+      window.addEventListener('hashchange', () => {
+        const h = window.location.hash.replace('#', '').trim();
+        if (h) switchTab(h);
+      });
+    });
+
+    function loadMasterData() {
+      currentConfig = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
+      productsList = typeof getStoredProducts === 'function' ? getStoredProducts() : [];
+      categoriesList = typeof getStoredCategories === 'function' ? getStoredCategories() : [];
+      bannersList = typeof getStoredBanners === 'function' ? getStoredBanners() : [];
+      try {
+        ordersList = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+      } catch (e) {
+        ordersList = [];
+      }
+
+      // If orders list is empty, initialize demo orders so tables are immediately populated
+      if (!Array.isArray(ordersList) || ordersList.length === 0) {
+        if (typeof initDemoDataIfEmpty === 'function') {
+          initDemoDataIfEmpty();
+        }
+        try {
+          ordersList = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+        } catch (e) {
+          ordersList = [];
+        }
+      }
+
+      // Populate Top & Branding
+      document.querySelectorAll('.js-admin-store-name').forEach(el => el.textContent = currentConfig.storeName || 'Raosee Fresh Supermarket');
+
+      // Populate Operations Fields
+      document.getElementById('op-store-status').value = currentConfig.isStoreOpen !== false ? 'open' : 'closed';
+      document.getElementById('op-eta').value = currentConfig.deliveryTimeEstimate || '10-15 mins';
+      document.getElementById('op-free-thresh').value = currentConfig.freeDeliveryThreshold || 199;
+      document.getElementById('op-std-fee').value = currentConfig.standardDeliveryFee || 25;
+      document.getElementById('op-opening').value = currentConfig.openingTime || '06:00 AM';
+      document.getElementById('op-closing').value = currentConfig.closingTime || '11:30 PM';
+      document.getElementById('op-address').value = currentConfig.storeAddress || '';
+
+      // Populate Announcement
+      const annInput = document.getElementById('announcement-text-input');
+      const annToggle = document.getElementById('announcement-toggle');
+      if (annInput) annInput.value = currentConfig.storeNotice || '';
+      if (annToggle) annToggle.checked = currentConfig.showAnnouncementBar !== false;
+
+      // Populate Payment Fields
+      document.getElementById('pay-rzp-key').value = currentConfig.payment?.razorpayKeyId || 'rzp_test_1DP5mmOlF5G5ag';
+      document.getElementById('pay-upi-id').value = currentConfig.payment?.upiId || 'raoseefresh@upi';
+      document.getElementById('pay-wa-number').value = currentConfig.whatsappNumber || '919876543210';
+      document.getElementById('pay-support-phone').value = currentConfig.supportPhone || '+91 98765 43210';
+
+      updateKpis();
+      renderRateCard();
+      renderItemsTable();
+      renderCategoriesGrid();
+      renderBannersList();
+      renderAllOrders();
+      renderCustomersTab();
+      populateOutletSettings();
+    }
+
+    // Tabs Switcher
+    function switchTab(tabId) {
+      const tabs = ['overview', 'rates', 'items', 'categories', 'banners', 'operations', 'payment', 'orders', 'customers', 'outlet'];
+      tabs.forEach(t => {
+        const content = document.getElementById(`tab-content-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (content) {
+          if (t === tabId) content.classList.remove('hidden');
+          else content.classList.add('hidden');
+        }
+        if (btn) {
+          if (t === tabId) {
+            btn.classList.add('active');
+            btn.classList.remove('text-gray-700', 'hover:bg-gray-100');
+          } else {
+            btn.classList.remove('active');
+            btn.classList.add('text-gray-700', 'hover:bg-gray-100');
+          }
+        }
+      });
+      if (tabId === 'customers') renderCustomersTab();
+      if (tabId === 'orders') renderAllOrders();
+      if (tabId === 'outlet') populateOutletSettings();
+    }
+
+    // Update KPIs
+    function updateKpis() {
+      const totalProds = productsList.length;
+      const inStock = productsList.filter(p => p.inStock !== false).length;
+      const totalRev = ordersList.reduce((sum, o) => sum + (o.total || 0), 0);
+
+      document.getElementById('kpi-total-products').textContent = totalProds;
+      document.getElementById('kpi-in-stock-products').textContent = `${inStock} In Stock (${totalProds - inStock} Out of Stock)`;
+      document.getElementById('kpi-total-categories').textContent = categoriesList.filter(c => c.enabled !== false).length;
+      document.getElementById('kpi-total-orders').textContent = ordersList.length;
+      document.getElementById('kpi-total-revenue').textContent = `₹${totalRev.toLocaleString()} Processed`;
+      document.getElementById('tab-orders-badge').textContent = ordersList.length;
+
+      // Status pill
+      const statusPill = document.getElementById('admin-status-pill');
+      const statusText = document.getElementById('admin-status-text');
+      if (currentConfig.isStoreOpen !== false) {
+        statusPill.className = "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border border-green-200 bg-green-50 text-green-800";
+        statusText.textContent = "Store Open (Live)";
+      } else {
+        statusPill.className = "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border border-red-200 bg-red-50 text-red-800";
+        statusText.textContent = "Store Paused (Rush)";
+      }
+
+      // Populate Category dropdowns in filters and modals
+      const filterCat = document.getElementById('rate-filter-category');
+      const modalCat = document.getElementById('modal-prod-category');
+      const catOptions = categoriesList.filter(c => c.id !== 'all').map(c => `
+        <option value="${c.id}">${c.icon || ''} ${c.label}</option>
+      `).join('');
+
+      if (filterCat) {
+        filterCat.innerHTML = `<option value="all">All Categories</option>` + catOptions;
+      }
+      if (modalCat) {
+        modalCat.innerHTML = catOptions;
+      }
+    }
+
+    // ================= RATE CARD LOGIC =================
+    function renderRateCard(filterCategory = 'all') {
+      const tbody = document.getElementById('rates-table-body');
+      if (!tbody) return;
+
+      let filtered = productsList;
+      if (filterCategory !== 'all') {
+        filtered = filtered.filter(p => p.category === filterCategory);
+      }
+
+      tbody.innerHTML = filtered.map(p => {
+        const discount = Math.round(((p.mrp - p.price) / p.mrp) * 100);
+        return `
+          <tr class="hover:bg-gray-50/80 transition-colors">
+            <td class="p-3">
+              <div class="flex items-center gap-2.5">
+                <img src="${p.image}" class="w-9 h-9 object-cover rounded-lg bg-gray-100 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'" />
+                <div>
+                  <div class="font-bold text-gray-900">${p.name}</div>
+                  <div class="text-[11px] text-gray-400 font-mono">ID: ${p.id}</div>
+                </div>
+              </div>
+            </td>
+            <td class="p-3 text-gray-500 font-semibold">${p.categoryLabel || p.category}</td>
+            <td class="p-3 text-gray-700 font-medium">${p.unit}</td>
+            <td class="p-3">
+              <input 
+                type="number" 
+                value="${p.mrp || p.price}" 
+                onchange="updateProductField('${p.id}', 'mrp', this.value)" 
+                class="w-20 p-1.5 border border-gray-200 rounded-lg text-xs outline-none focus:border-blinkit-green"
+              />
+            </td>
+            <td class="p-3">
+              <div class="relative w-24">
+                <span class="absolute left-2 top-1.5 text-gray-400 font-bold">₹</span>
+                <input 
+                  type="number" 
+                  value="${p.price}" 
+                  onchange="updateProductField('${p.id}', 'price', this.value)" 
+                  class="w-full pl-5 pr-2 py-1.5 border-2 border-green-600 rounded-lg text-xs font-black text-gray-900 outline-none shadow-sm"
+                />
+              </div>
+            </td>
+            <td class="p-3">
+              <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">${discount}% OFF</span>
+            </td>
+            <td class="p-3">
+              <button 
+                onclick="toggleProductStockState('${p.id}')"
+                class="px-3 py-1 rounded-full text-[11px] font-extrabold cursor-pointer transition-all ${
+                  p.inStock !== false 
+                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                    : 'bg-red-100 text-red-800 hover:bg-red-200'
+                }"
+              >
+                ${p.inStock !== false ? '● In Stock' : '✕ Out of Stock'}
+              </button>
+            </td>
+            <td class="p-3 text-right">
+              <button onclick="openProductModal('${p.id}')" class="text-blue-600 hover:underline font-bold text-xs">
+                Edit Details
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateProductField(id, field, val) {
+      const p = productsList.find(item => item.id === id);
+      if (p) {
+        if (field === 'price' || field === 'mrp') {
+          p[field] = parseInt(val, 10) || p[field];
+        } else {
+          p[field] = val;
+        }
+        saveProducts(productsList);
+        renderRateCard(document.getElementById('rate-filter-category').value);
+      }
+    }
+
+    function toggleProductStockState(id) {
+      const p = productsList.find(item => item.id === id);
+      if (p) {
+        p.inStock = p.inStock === false ? true : false;
+        saveProducts(productsList);
+        renderRateCard(document.getElementById('rate-filter-category').value);
+        updateKpis();
+      }
+    }
+
+    function applyBulkPriceAdjustment(category, percent) {
+      if (!confirm(`Apply ${percent > 0 ? '+' : ''}${percent}% price change to all ${category} items?`)) return;
+      productsList.forEach(p => {
+        if (p.category === category) {
+          const factor = 1 + (percent / 100);
+          p.price = Math.round(p.price * factor);
+          if (p.price > p.mrp) p.mrp = p.price;
+        }
+      });
+      saveProducts(productsList);
+      renderRateCard(document.getElementById('rate-filter-category').value);
+      alert(`Applied ${percent}% change to ${category}!`);
+    }
+
+    function setAllStockInCategory(inStock) {
+      const cat = document.getElementById('rate-filter-category').value;
+      productsList.forEach(p => {
+        if (cat === 'all' || p.category === cat) {
+          p.inStock = inStock;
+        }
+      });
+      saveProducts(productsList);
+      renderRateCard(cat);
+      updateKpis();
+      alert(`Updated stock for ${cat}!`);
+    }
+
+    // ================= ITEMS CATALOG LOGIC =================
+    function renderItemsTable(query = '') {
+      const tbody = document.getElementById('items-table-body');
+      if (!tbody) return;
+
+      let filtered = productsList;
+      if (query.trim() !== '') {
+        const q = query.toLowerCase().trim();
+        filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+      }
+
+      tbody.innerHTML = filtered.map(p => `
+        <tr class="hover:bg-gray-50/80">
+          <td class="p-3">
+            <img src="${p.image}" class="w-10 h-10 object-cover rounded-lg bg-gray-100" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'" />
+          </td>
+          <td class="p-3 font-bold text-gray-900">${p.name}</td>
+          <td class="p-3 text-gray-500">${p.categoryLabel || p.category}</td>
+          <td class="p-3 text-gray-700 font-semibold">${p.unit}</td>
+          <td class="p-3 font-extrabold text-green-800">₹${p.price}</td>
+          <td class="p-3 text-gray-400 line-through">₹${p.mrp || p.price}</td>
+          <td class="p-3">
+            ${p.tag ? `<span class="bg-gray-100 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${p.tag}</span>` : '—'}
+          </td>
+          <td class="p-3">
+            <span class="${p.inStock !== false ? 'text-green-700 font-bold' : 'text-red-600 font-bold'}">
+              ${p.inStock !== false ? '✓ In Stock' : '✗ Out'}
+            </span>
+          </td>
+          <td class="p-3 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <button onclick="openProductModal('${p.id}')" class="text-blue-600 hover:underline font-bold">Edit</button>
+              <button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:underline font-bold">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openProductModal(id = null) {
+      const modal = document.getElementById('product-modal');
+      const title = document.getElementById('modal-product-title');
+      
+      if (id) {
+        const p = productsList.find(item => item.id === id);
+        if (!p) return;
+        title.textContent = "Edit Product Details";
+        document.getElementById('modal-prod-id').value = p.id;
+        document.getElementById('modal-prod-name').value = p.name;
+        document.getElementById('modal-prod-category').value = p.category;
+        document.getElementById('modal-prod-unit').value = p.unit;
+        document.getElementById('modal-prod-price').value = p.price;
+        document.getElementById('modal-prod-mrp').value = p.mrp || p.price;
+        document.getElementById('modal-prod-image').value = p.image || '';
+        document.getElementById('modal-prod-tag').value = p.tag || '';
+        document.getElementById('modal-prod-eta').value = p.deliveryTime || '10 mins';
+      } else {
+        title.textContent = "Add New Product";
+        document.getElementById('modal-prod-id').value = '';
+        document.getElementById('modal-prod-name').value = '';
+        document.getElementById('modal-prod-unit').value = '';
+        document.getElementById('modal-prod-price').value = '';
+        document.getElementById('modal-prod-mrp').value = '';
+        document.getElementById('modal-prod-image').value = '';
+        document.getElementById('modal-prod-tag').value = '';
+        document.getElementById('modal-prod-eta').value = '10 mins';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeProductModal() {
+      document.getElementById('product-modal').classList.add('hidden');
+    }
+
+    function saveProductFromModal() {
+      const id = document.getElementById('modal-prod-id').value;
+      const name = document.getElementById('modal-prod-name').value.trim();
+      const cat = document.getElementById('modal-prod-category').value;
+      const unit = document.getElementById('modal-prod-unit').value.trim();
+      const price = parseInt(document.getElementById('modal-prod-price').value, 10);
+      const mrp = parseInt(document.getElementById('modal-prod-mrp').value, 10) || price;
+      const image = document.getElementById('modal-prod-image').value.trim() || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
+      const tag = document.getElementById('modal-prod-tag').value.trim();
+      const eta = document.getElementById('modal-prod-eta').value.trim() || '10 mins';
+
+      if (!name || !unit || isNaN(price)) {
+        alert("Please fill in Product Name, Unit and Selling Price");
+        return;
+      }
+
+      if (id) {
+        const p = productsList.find(item => item.id === id);
+        if (p) {
+          p.name = name;
+          p.category = cat;
+          p.categoryLabel = cat.replace(/-/g, ' ');
+          p.unit = unit;
+          p.price = price;
+          p.mrp = mrp;
+          p.image = image;
+          p.tag = tag;
+          p.deliveryTime = eta;
+        }
+      } else {
+        const newProduct = {
+          id: 'item-' + Date.now(),
+          name,
+          category: cat,
+          categoryLabel: cat.replace(/-/g, ' '),
+          price,
+          mrp,
+          unit,
+          image,
+          inStock: true,
+          tag: tag || 'Fresh',
+          deliveryTime: eta
+        };
+        productsList.unshift(newProduct);
+      }
+
+      saveProducts(productsList);
+      closeProductModal();
+      renderItemsTable();
+      renderRateCard();
+      updateKpis();
+    }
+
+    function deleteProduct(id) {
+      if (confirm("Delete this product from catalog?")) {
+        productsList = productsList.filter(p => p.id !== id);
+        saveProducts(productsList);
+        renderItemsTable();
+        renderRateCard();
+        updateKpis();
+      }
+    }
+
+    // ================= CATEGORIES MANAGER LOGIC =================
+    function renderCategoriesGrid() {
+      const container = document.getElementById('categories-cards-grid');
+      if (!container) return;
+
+      container.innerHTML = categoriesList.map(cat => {
+        const prodCount = productsList.filter(p => p.category === cat.id).length;
+        return `
+          <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-3xl">${cat.icon || '🛒'}</span>
+              <span class="${cat.enabled !== false ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'} text-[10px] font-bold px-2 py-0.5 rounded-full">
+                ${cat.enabled !== false ? 'Active' : 'Hidden'}
+              </span>
+            </div>
+            <div>
+              <h4 class="font-extrabold text-sm text-gray-900">${cat.label}</h4>
+              <p class="text-[11px] text-gray-500 font-mono">Slug: ${cat.id}</p>
+              <div class="text-xs font-semibold text-blinkit-green mt-1">${prodCount} products in aisle</div>
+            </div>
+            <div class="flex items-center justify-between pt-3 mt-3 border-t border-gray-200">
+              <button onclick="toggleCategoryVisibility('${cat.id}')" class="text-xs font-bold text-gray-600 hover:text-gray-900">
+                ${cat.enabled !== false ? 'Hide' : 'Unhide'}
+              </button>
+              <div class="flex items-center gap-2">
+                <button onclick="openCategoryModal('${cat.id}')" class="text-blue-600 font-bold text-xs hover:underline">Edit</button>
+                ${cat.id !== 'all' ? `<button onclick="deleteCategory('${cat.id}')" class="text-red-500 font-bold text-xs hover:underline">Delete</button>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openCategoryModal(id = null) {
+      const modal = document.getElementById('category-modal');
+      const title = document.getElementById('modal-category-title');
+      if (id) {
+        const c = categoriesList.find(item => item.id === id);
+        if (!c) return;
+        title.textContent = "Edit Category";
+        document.getElementById('modal-cat-id').value = c.id;
+        document.getElementById('modal-cat-label').value = c.label;
+        document.getElementById('modal-cat-icon').value = c.icon || '🛒';
+        document.getElementById('modal-cat-slug').value = c.id;
+        document.getElementById('modal-cat-slug').disabled = (c.id === 'all');
+      } else {
+        title.textContent = "Add Category";
+        document.getElementById('modal-cat-id').value = '';
+        document.getElementById('modal-cat-label').value = '';
+        document.getElementById('modal-cat-icon').value = '🛒';
+        document.getElementById('modal-cat-slug').value = '';
+        document.getElementById('modal-cat-slug').disabled = false;
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeCategoryModal() {
+      document.getElementById('category-modal').classList.add('hidden');
+    }
+
+    function saveCategoryFromModal() {
+      const id = document.getElementById('modal-cat-id').value;
+      const label = document.getElementById('modal-cat-label').value.trim();
+      const icon = document.getElementById('modal-cat-icon').value.trim() || '🛒';
+      let slug = document.getElementById('modal-cat-slug').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+      if (!label) {
+        alert("Please provide a category name");
+        return;
+      }
+      if (!slug) slug = label.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+      if (id) {
+        const c = categoriesList.find(item => item.id === id);
+        if (c) {
+          c.label = label;
+          c.icon = icon;
+        }
+      } else {
+        categoriesList.push({ id: slug, label, icon, enabled: true });
+      }
+
+      saveCategories(categoriesList);
+      closeCategoryModal();
+      renderCategoriesGrid();
+      updateKpis();
+    }
+
+    function toggleCategoryVisibility(id) {
+      const c = categoriesList.find(item => item.id === id);
+      if (c) {
+        c.enabled = c.enabled === false ? true : false;
+        saveCategories(categoriesList);
+        renderCategoriesGrid();
+      }
+    }
+
+    function deleteCategory(id) {
+      if (id === 'all') return;
+      if (confirm("Delete this category? Items under this category will remain in catalog.")) {
+        categoriesList = categoriesList.filter(c => c.id !== id);
+        saveCategories(categoriesList);
+        renderCategoriesGrid();
+        updateKpis();
+      }
+    }
+
+    // ================= BANNERS & NOTICES LOGIC =================
+    function renderBannersList() {
+      const container = document.getElementById('banners-editor-list');
+      if (!container) return;
+
+      container.innerHTML = bannersList.map(b => `
+        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-[11px] font-bold bg-white border px-2 py-0.5 rounded text-gray-700">${b.badge || 'Banner'}</span>
+              <span class="${b.enabled !== false ? 'text-green-700 font-bold' : 'text-gray-400 font-bold'} text-xs">
+                ${b.enabled !== false ? '● Visible on Store' : '○ Disabled'}
+              </span>
+            </div>
+            <h4 class="font-extrabold text-sm text-gray-900">${b.title}</h4>
+            <p class="text-xs text-gray-500 mt-0.5">${b.subtitle || ''}</p>
+            <div class="text-[11px] text-gray-400 font-mono mt-1">Theme: ${b.gradient || 'Default'} • Button: "${b.btnText || 'Action'}"</div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button onclick="toggleBannerVisibility('${b.id}')" class="px-3 py-1.5 border rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100">
+              ${b.enabled !== false ? 'Disable' : 'Enable'}
+            </button>
+            <button onclick="openBannerModal('${b.id}')" class="px-3.5 py-1.5 bg-blinkit-green hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm">
+              Edit Banner
+            </button>
+            <button onclick="deleteBanner('${b.id}')" class="px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold">
+              Delete
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openBannerModal(id = null) {
+      const modal = document.getElementById('banner-modal');
+      const title = document.getElementById('modal-banner-title');
+      if (id) {
+        const b = bannersList.find(item => item.id === id);
+        if (!b) return;
+        title.textContent = "Edit Banner Card";
+        document.getElementById('modal-banner-id').value = b.id;
+        document.getElementById('modal-banner-badge').value = b.badge || '';
+        document.getElementById('modal-banner-heading').value = b.title || '';
+        document.getElementById('modal-banner-sub').value = b.subtitle || '';
+        document.getElementById('modal-banner-btn').value = b.btnText || '';
+        document.getElementById('modal-banner-action').value = b.action || 'photo-whatsapp';
+        document.getElementById('modal-banner-gradient').value = b.gradient || 'from-green-800 to-green-950';
+      } else {
+        title.textContent = "Add Promotional Banner";
+        document.getElementById('modal-banner-id').value = '';
+        document.getElementById('modal-banner-badge').value = '⚡ Weekend Offer';
+        document.getElementById('modal-banner-heading').value = 'Super Deals on Fresh Fruits';
+        document.getElementById('modal-banner-sub').value = 'Get up to 30% OFF on fresh apples, bananas & mangoes.';
+        document.getElementById('modal-banner-btn').value = 'Order on WhatsApp';
+        document.getElementById('modal-banner-action').value = 'photo-whatsapp';
+        document.getElementById('modal-banner-gradient').value = 'from-amber-500 to-orange-600';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeBannerModal() {
+      document.getElementById('banner-modal').classList.add('hidden');
+    }
+
+    function saveBannerFromModal() {
+      const id = document.getElementById('modal-banner-id').value;
+      const badge = document.getElementById('modal-banner-badge').value.trim();
+      const heading = document.getElementById('modal-banner-heading').value.trim();
+      const sub = document.getElementById('modal-banner-sub').value.trim();
+      const btn = document.getElementById('modal-banner-btn').value.trim();
+      const action = document.getElementById('modal-banner-action').value;
+      const gradient = document.getElementById('modal-banner-gradient').value;
+
+      if (!heading) {
+        alert("Please enter a Banner Title");
+        return;
+      }
+
+      if (id) {
+        const b = bannersList.find(item => item.id === id);
+        if (b) {
+          b.badge = badge;
+          b.title = heading;
+          b.subtitle = sub;
+          b.btnText = btn;
+          b.action = action;
+          b.gradient = gradient;
+        }
+      } else {
+        bannersList.push({
+          id: 'banner-' + Date.now(),
+          badge,
+          title: heading,
+          subtitle: sub,
+          btnText: btn,
+          action,
+          gradient,
+          enabled: true
+        });
+      }
+
+      saveBanners(bannersList);
+      closeBannerModal();
+      renderBannersList();
+    }
+
+    function toggleBannerVisibility(id) {
+      const b = bannersList.find(item => item.id === id);
+      if (b) {
+        b.enabled = b.enabled === false ? true : false;
+        saveBanners(bannersList);
+        renderBannersList();
+      }
+    }
+
+    function deleteBanner(id) {
+      if (confirm("Delete this banner?")) {
+        bannersList = bannersList.filter(b => b.id !== id);
+        saveBanners(bannersList);
+        renderBannersList();
+      }
+    }
+
+    function saveAnnouncementText() {
+      const text = document.getElementById('announcement-text-input').value.trim();
+      updateStoreConfig({ storeNotice: text });
+      alert("Announcement ticker saved!");
+    }
+
+    function toggleAnnouncementBar(checked) {
+      updateStoreConfig({ showAnnouncementBar: checked });
+    }
+
+    // ================= OPERATIONS & DELIVERY SETTINGS =================
+    function saveOperationsSettings() {
+      const status = document.getElementById('op-store-status').value;
+      const eta = document.getElementById('op-eta').value.trim();
+      const freeDel = parseInt(document.getElementById('op-free-thresh').value, 10) || 199;
+      const stdFee = parseInt(document.getElementById('op-std-fee').value, 10) || 25;
+      const openTime = document.getElementById('op-opening').value.trim();
+      const closeTime = document.getElementById('op-closing').value.trim();
+      const addr = document.getElementById('op-address').value.trim();
+
+      currentConfig = updateStoreConfig({
+        isStoreOpen: status === 'open',
+        deliveryTimeEstimate: eta || '10-15 mins',
+        freeDeliveryThreshold: freeDel,
+        standardDeliveryFee: stdFee,
+        openingTime: openTime,
+        closingTime: closeTime,
+        storeAddress: addr
+      });
+
+      updateKpis();
+      alert("Store operations and delivery parameters updated!");
+    }
+
+    // ================= PAYMENT SETTINGS =================
+    function savePaymentSettings() {
+      const rzpKey = document.getElementById('pay-rzp-key').value.trim() || 'rzp_test_1DP5mmOlF5G5ag';
+      const upiId = document.getElementById('pay-upi-id').value.trim() || 'raoseefresh@upi';
+      const waNumber = document.getElementById('pay-wa-number').value.trim().replace(/\D/g, '');
+      const supportPhone = document.getElementById('pay-support-phone').value.trim();
+
+      currentConfig = updateStoreConfig({
+        whatsappNumber: waNumber,
+        supportPhone: supportPhone || ('+' + waNumber),
+        payment: {
+          razorpayKeyId: rzpKey,
+          upiId: upiId
+        }
+      });
+
+      alert("Payment gateway credentials and WhatsApp contact saved!");
+    }
+
+    function testRazorpayWindow() {
+      const keyId = document.getElementById('pay-rzp-key').value.trim() || 'rzp_test_1DP5mmOlF5G5ag';
+      if (typeof Razorpay === 'undefined') {
+        alert("Razorpay SDK not loaded.");
+        return;
+      }
+      const rzp = new Razorpay({
+        key: keyId,
+        amount: 100, // ₹1 test
+        currency: "INR",
+        name: currentConfig.storeName || "Raosee Fresh Supermarket",
+        description: "Payment Gateway Connection Test",
+        image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=120",
+        prefill: { name: "Store Admin", contact: "9876543210" },
+        theme: { color: "#0C831F" },
+        handler: function(resp) {
+          alert("Payment gateway test verified! Payment ID: " + resp.razorpay_payment_id);
+        }
+      });
+      rzp.open();
+    }
+
+    function testWhatsAppMessage() {
+      const waNumber = document.getElementById('pay-wa-number').value.trim().replace(/\D/g, '');
+      window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent('Hello Raosee Fresh Supermarket! This is a test message from Store Manager Control Center.')}`, '_blank');
+    }
+
+    // ================= ORDERS & STATUS CHANGE LOGIC =================
+    let currentOrderStatusFilter = 'all';
+    let currentOrderSearchQuery = '';
+    let activeAdminModalOrderId = null;
+
+    function setOrderStatusFilter(filter) {
+      currentOrderStatusFilter = filter;
+      const pills = ['all', 'Confirmed', 'Packing', 'Out for Delivery', 'Delivered', 'Cancelled'];
+      pills.forEach(p => {
+        const key = p === 'Out for Delivery' ? 'Out' : p;
+        const btn = document.getElementById(`filter-pill-${key}`);
+        if (btn) {
+          if (p === filter) {
+            btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-blinkit-green text-white shadow-xs";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-gray-700 border hover:bg-gray-50";
+          }
+        }
+      });
+      renderAllOrders();
+    }
+
+    function filterOrdersBySearch(query) {
+      currentOrderSearchQuery = query;
+      renderAllOrders();
+    }
+
+    function renderAllOrders() {
+      const tbody = document.getElementById('all-orders-table-body');
+      const overviewTbody = document.getElementById('overview-orders-tbody');
+      const emptyMsg = document.getElementById('no-orders-msg');
+
+      // Update filter pill counts
+      const countAll = ordersList.length;
+      const countConfirmed = ordersList.filter(o => (o.status || 'Confirmed').includes('Confirmed') && !(o.status || '').includes('Out')).length;
+      const countPacking = ordersList.filter(o => (o.status || '').includes('Pack')).length;
+      const countOut = ordersList.filter(o => (o.status || '').includes('Out')).length;
+      const countDelivered = ordersList.filter(o => (o.status || '').includes('Deliver') && !(o.status || '').includes('Out')).length;
+      const countCancelled = ordersList.filter(o => (o.status || '').includes('Cancel')).length;
+
+      const elAll = document.getElementById('pill-count-all');
+      const elConf = document.getElementById('pill-count-confirmed');
+      const elPack = document.getElementById('pill-count-packing');
+      const elOut = document.getElementById('pill-count-out');
+      const elDel = document.getElementById('pill-count-delivered');
+      const elCanc = document.getElementById('pill-count-cancelled');
+
+      if (elAll) elAll.textContent = countAll;
+      if (elConf) elConf.textContent = countConfirmed;
+      if (elPack) elPack.textContent = countPacking;
+      if (elOut) elOut.textContent = countOut;
+      if (elDel) elDel.textContent = countDelivered;
+      if (elCanc) elCanc.textContent = countCancelled;
+
+      if (ordersList.length === 0) {
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-gray-500 font-medium">No customer orders recorded yet. <button onclick="seedDemoOrders()" class="text-blinkit-green font-bold underline ml-1 hover:text-emerald-800 cursor-pointer">⚡ Load 3 Sample Orders</button></td></tr>';
+        }
+        if (overviewTbody) {
+          overviewTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500 font-medium">No orders logged yet. <button onclick="seedDemoOrders()" class="text-blinkit-green font-bold underline ml-1 hover:text-emerald-800 cursor-pointer">⚡ Load Sample Orders</button></td></tr>';
+        }
+        if (emptyMsg) emptyMsg.classList.add('hidden');
+        return;
+      }
+
+      // Filter list for Tab 8
+      let filtered = ordersList;
+      if (currentOrderStatusFilter !== 'all') {
+        filtered = filtered.filter(o => {
+          const s = (o.status || 'Confirmed').toLowerCase();
+          const target = currentOrderStatusFilter.toLowerCase();
+          if (target === 'confirmed') return s.includes('confirmed') && !s.includes('out');
+          if (target === 'packing') return s.includes('pack');
+          if (target === 'out for delivery') return s.includes('out');
+          if (target === 'delivered') return s.includes('deliver') && !s.includes('out');
+          if (target === 'cancelled') return s.includes('cancel');
+          return s.includes(target);
+        });
+      }
+
+      if (currentOrderSearchQuery.trim()) {
+        const q = currentOrderSearchQuery.toLowerCase().trim();
+        filtered = filtered.filter(o => 
+          (o.id && o.id.toLowerCase().includes(q)) ||
+          (o.customer?.name && o.customer.name.toLowerCase().includes(q)) ||
+          (o.customer?.phone && o.customer.phone.includes(q)) ||
+          (o.items && o.items.some(i => i.product?.name && i.product.name.toLowerCase().includes(q)))
+        );
+      }
+
+      if (emptyMsg) {
+        if (filtered.length === 0) emptyMsg.classList.remove('hidden');
+        else emptyMsg.classList.add('hidden');
+      }
+
+      // Render Tab 8 Rows
+      if (tbody) {
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-gray-400">No orders match current filter. <button onclick="setOrderStatusFilter(\'all\')" class="text-blinkit-green font-bold underline ml-1 cursor-pointer">Reset Filters</button></td></tr>';
+        } else {
+          tbody.innerHTML = filtered.map(order => {
+          const itemsText = order.items.map(i => `${i.product.name} (x${i.qty})`).join(', ');
+          const isPaid = (order.payment?.status || '').includes('PAID');
+          const currentStatus = order.status || (isPaid ? 'Confirmed' : 'Confirmed');
+
+          let statusBadgeClass = 'bg-green-100 text-green-800 border-green-200';
+          if (currentStatus.includes('Pack')) statusBadgeClass = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+          if (currentStatus.includes('Out')) statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+          if (currentStatus.includes('Deliver') && !currentStatus.includes('Out')) statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+          if (currentStatus.includes('Cancel')) statusBadgeClass = 'bg-red-100 text-red-800 border-red-200';
+
+          return `
+            <tr class="hover:bg-gray-50/80 transition-colors">
+              <td class="p-3 font-mono font-bold text-gray-900">
+                <button onclick="openAdminOrderDetails('${order.id}')" class="text-left group cursor-pointer">
+                  <div class="group-hover:text-blinkit-green font-black">#${order.id}</div>
+                  <div class="text-[10px] text-gray-400 font-normal">${new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </button>
+              </td>
+              <td class="p-3">
+                <div class="font-bold text-gray-900">${escapeHtml(order.customer?.name || 'Customer')}</div>
+                <div class="text-[11px] text-gray-500 font-mono">${order.customer?.phone || 'No phone'}</div>
+              </td>
+              <td class="p-3 max-w-[150px] truncate text-gray-600" title="${escapeHtml(order.customer?.flat || '')} ${escapeHtml(order.customer?.street || '')}">
+                ${escapeHtml(order.customer?.flat || '')} ${escapeHtml(order.customer?.street || '')}
+              </td>
+              <td class="p-3 max-w-[180px] truncate" title="${escapeHtml(itemsText)}">
+                <span class="font-medium text-gray-800">${escapeHtml(itemsText)}</span>
+                <span class="text-[10px] text-gray-400 block">${order.items.length} items</span>
+              </td>
+              <td class="p-3 font-bold text-[#0C831F]">₹${order.total}</td>
+              <td class="p-3 text-[11px] font-semibold text-gray-700">
+                <div>${order.payment?.method || 'COD'}</div>
+                ${order.payment?.paymentId ? `<div class="font-mono text-[10px] text-gray-400 truncate max-w-[100px]">${order.payment.paymentId}</div>` : ''}
+              </td>
+              <td class="p-3">
+                <div class="flex items-center gap-1.5 mb-1">
+                  <select 
+                    onchange="updateOrderStatus('${order.id}', this.value)"
+                    class="text-[11px] font-bold py-1 px-1.5 rounded-lg border border-gray-300 bg-white outline-none focus:border-blinkit-green cursor-pointer shadow-xs"
+                  >
+                    <option value="Confirmed" ${currentStatus.includes('Confirmed') && !currentStatus.includes('Out') ? 'selected' : ''}>⚡ Confirmed</option>
+                    <option value="Packing" ${currentStatus.includes('Pack') ? 'selected' : ''}>🥬 Packing</option>
+                    <option value="Out for Delivery" ${currentStatus.includes('Out') ? 'selected' : ''}>🛵 Out for Del.</option>
+                    <option value="Delivered" ${currentStatus.includes('Deliver') && !currentStatus.includes('Out') ? 'selected' : ''}>🎉 Delivered</option>
+                    <option value="Cancelled" ${currentStatus.includes('Cancel') ? 'selected' : ''}>❌ Cancelled</option>
+                  </select>
+                  <button 
+                    onclick="advanceOrderStatus('${order.id}')"
+                    class="p-1 px-1.5 bg-gray-100 hover:bg-green-100 hover:text-green-800 border rounded-lg text-[10px] font-black transition-colors cursor-pointer"
+                    title="Advance to Next Status"
+                  >
+                    ➔
+                  </button>
+                </div>
+                <div class="text-[10px] text-gray-500 flex items-center gap-1">
+                  <span>Rider:</span>
+                  <input 
+                    type="text" 
+                    value="${order.rider?.name || 'Ramesh Kumar'}" 
+                    onchange="updateOrderRider('${order.id}', this.value)"
+                    class="w-24 px-1 py-0.5 text-[10px] border border-gray-200 rounded font-semibold text-gray-800 outline-none focus:border-blinkit-green"
+                    title="Assign Rider Name"
+                  />
+                </div>
+              </td>
+              <td class="p-3 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  <button 
+                    onclick="openAdminOrderDetails('${order.id}')"
+                    class="text-blinkit-green hover:bg-green-100 font-bold text-xs bg-green-50 px-2.5 py-1.5 rounded-lg border border-green-200 transition-colors cursor-pointer"
+                    title="View Full Itemized Order & Customer Details"
+                  >
+                    👁️ Details
+                  </button>
+                  <a 
+                    href="track.html?orderId=${order.id}" 
+                    target="_blank" 
+                    class="text-blue-600 hover:bg-blue-100 font-bold text-xs bg-blue-50 px-2 py-1.5 rounded-lg border border-blue-100 transition-colors"
+                    title="Live Customer Screen"
+                  >
+                    🗺️
+                  </a>
+                  <button 
+                    onclick="openWhatsAppChatWithCustomer('${order.customer?.phone}', '${order.id}', '${currentStatus}')" 
+                    class="text-[#25D366] hover:bg-emerald-100 font-bold text-xs bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                    title="WhatsApp Customer"
+                  >
+                    💬
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        }
+      }
+
+      // Render Overview Rows (7 columns)
+      if (overviewTbody) {
+        overviewTbody.innerHTML = ordersList.slice(0, 5).map(order => {
+          const itemsText = order.items.map(i => `${i.product.name} (x${i.qty})`).join(', ');
+          const isPaid = (order.payment?.status || '').includes('PAID');
+          const currentStatus = order.status || (isPaid ? 'Confirmed' : 'Confirmed');
+
+          let statusBg = 'bg-green-100 text-green-800 border-green-200';
+          if (currentStatus.includes('Pack')) statusBg = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+          if (currentStatus.includes('Out')) statusBg = 'bg-blue-100 text-blue-800 border-blue-200';
+          if (currentStatus.includes('Deliver') && !currentStatus.includes('Out')) statusBg = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+          if (currentStatus.includes('Cancel')) statusBg = 'bg-red-100 text-red-800 border-red-200';
+
+          return `
+            <tr class="hover:bg-gray-50/80 transition-colors">
+              <td class="p-3 font-mono font-bold text-gray-900">
+                <button onclick="openAdminOrderDetails('${order.id}')" class="text-left group cursor-pointer">
+                  <div class="group-hover:text-blinkit-green font-black">#${order.id}</div>
+                  <div class="text-[10px] text-gray-400 font-normal">${new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </button>
+              </td>
+              <td class="p-3">
+                <div class="font-bold text-gray-900">${escapeHtml(order.customer?.name || 'Customer')}</div>
+                <div class="text-[11px] text-gray-500 font-mono">${order.customer?.phone || ''}</div>
+              </td>
+              <td class="p-3 max-w-[180px] truncate text-gray-700" title="${escapeHtml(itemsText)}">${escapeHtml(itemsText)}</td>
+              <td class="p-3 font-bold text-blinkit-green">₹${order.total}</td>
+              <td class="p-3 text-[11px] font-semibold text-gray-700">${order.payment?.method || 'COD'}</td>
+              <td class="p-3">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-black px-2 py-0.5 rounded-full border ${statusBg}">${escapeHtml(currentStatus)}</span>
+                  <button onclick="advanceOrderStatus('${order.id}')" class="text-[10px] font-black bg-gray-100 hover:bg-green-100 hover:text-green-800 text-gray-700 px-1.5 py-0.5 rounded border cursor-pointer" title="Advance Status">➔</button>
+                </div>
+              </td>
+              <td class="p-3 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  <button onclick="openAdminOrderDetails('${order.id}')" class="px-2 py-1 bg-green-50 hover:bg-green-100 text-blinkit-green border border-green-200 rounded-lg text-xs font-bold cursor-pointer">
+                    👁️ Details
+                  </button>
+                  <a href="track.html?orderId=${order.id}" target="_blank" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg text-xs font-bold">
+                    🗺️
+                  </a>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    function seedDemoOrders() {
+      localStorage.removeItem('raosee_orders');
+      if (typeof initDemoDataIfEmpty === 'function') {
+        initDemoDataIfEmpty();
+      }
+      loadMasterData();
+      renderAllOrders();
+      updateKpis();
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {}
+    }
+
+    function advanceOrderStatus(orderId) {
+      const order = ordersList.find(o => o.id === orderId);
+      if (!order) return;
+      const current = (order.status || 'Confirmed').toLowerCase();
+      let next = 'Packing';
+      if (current.includes('cancel')) {
+        alert("This order is cancelled.");
+        return;
+      }
+      if (current.includes('deliver') && !current.includes('out')) {
+        alert("This order is already marked Delivered!");
+        return;
+      }
+      if (current.includes('out')) {
+        next = 'Delivered';
+      } else if (current.includes('pack')) {
+        next = 'Out for Delivery';
+      } else {
+        next = 'Packing';
+      }
+      updateOrderStatus(orderId, next);
+    }
+
+    function updateOrderStatus(orderId, newStatus) {
+      const order = ordersList.find(o => o.id === orderId);
+      if (order) {
+        order.status = newStatus;
+        localStorage.setItem('raosee_orders', JSON.stringify(ordersList));
+        updateKpis();
+        renderAllOrders();
+
+        // Broadcast storage event for real-time customer app syncing
+        try {
+          window.dispatchEvent(new Event('storage'));
+        } catch (e) {}
+
+        if (activeAdminModalOrderId === orderId) {
+          updateAdminModalContent(order);
+        }
+      }
+    }
+
+    function updateOrderRider(orderId, riderName) {
+      const order = ordersList.find(o => o.id === orderId);
+      if (order) {
+        if (!order.rider) order.rider = {};
+        order.rider.name = riderName;
+        localStorage.setItem('raosee_orders', JSON.stringify(ordersList));
+        try {
+          window.dispatchEvent(new Event('storage'));
+        } catch (e) {}
+      }
+    }
+
+    // ================= ADMIN ORDER DETAILS MODAL CONTROLLER =================
+    function openAdminOrderDetails(orderId) {
+      const order = ordersList.find(o => o.id === orderId);
+      if (!order) return;
+
+      activeAdminModalOrderId = orderId;
+      updateAdminModalContent(order);
+
+      const modal = document.getElementById('admin-order-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeAdminOrderModal() {
+      const modal = document.getElementById('admin-order-modal');
+      if (modal) modal.classList.add('hidden');
+      activeAdminModalOrderId = null;
+    }
+
+    function updateAdminModalContent(order) {
+      document.getElementById('admin-modal-order-id').textContent = `#${order.id}`;
+      document.getElementById('admin-modal-customer-heading').textContent = `Order by ${order.customer?.name || 'Customer'}`;
+      document.getElementById('admin-modal-date-time').textContent = `Placed on ${new Date(order.timestamp).toLocaleString()}`;
+      
+      const currentStatus = order.status || 'Confirmed';
+      const badge = document.getElementById('admin-modal-status-badge');
+      badge.textContent = currentStatus;
+
+      // Highlight active status button
+      const sMap = {
+        'confirmed': 'status-btn-confirmed',
+        'pack': 'status-btn-packing',
+        'out': 'status-btn-out',
+        'deliver': 'status-btn-delivered',
+        'cancel': 'status-btn-cancelled'
+      };
+      ['status-btn-confirmed', 'status-btn-packing', 'status-btn-out', 'status-btn-delivered', 'status-btn-cancelled'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.className = "p-2.5 rounded-xl border font-bold text-center transition-all flex flex-col items-center justify-center gap-1 bg-white hover:bg-gray-50";
+      });
+
+      const sLower = currentStatus.toLowerCase();
+      let activeBtnId = 'status-btn-confirmed';
+      if (sLower.includes('cancel')) activeBtnId = 'status-btn-cancelled';
+      else if (sLower.includes('deliver') && !sLower.includes('out')) activeBtnId = 'status-btn-delivered';
+      else if (sLower.includes('out')) activeBtnId = 'status-btn-out';
+      else if (sLower.includes('pack')) activeBtnId = 'status-btn-packing';
+
+      const activeBtn = document.getElementById(activeBtnId);
+      if (activeBtn) {
+        activeBtn.className = "p-2.5 rounded-xl border-2 border-blinkit-green bg-green-50 text-green-950 font-black text-center shadow-xs flex flex-col items-center justify-center gap-1";
+      }
+
+      // Customer info
+      document.getElementById('admin-modal-cust-name').textContent = order.customer?.name || 'Customer';
+      document.getElementById('admin-modal-cust-phone').textContent = order.customer?.phone ? '+91 ' + order.customer.phone : 'Not provided';
+      
+      let addrStr = '';
+      if (order.customer) {
+        if (typeof order.customer.address === 'string') {
+          addrStr = order.customer.address;
+        } else if (order.customer.address && typeof order.customer.address === 'object') {
+          addrStr = `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}`;
+        } else {
+          addrStr = `${order.customer.flat || ''}, ${order.customer.street || ''}`;
+        }
+        if (order.customer.landmark) addrStr += ` (Landmark: ${order.customer.landmark})`;
+      }
+      document.getElementById('admin-modal-cust-address').textContent = addrStr || 'Standard Dark Store Service Area';
+
+      const instrBox = document.getElementById('admin-modal-instructions-container');
+      const instrText = document.getElementById('admin-modal-instructions');
+      if (order.customer?.instructions) {
+        instrText.textContent = `"${order.customer.instructions}"`;
+        instrBox.classList.remove('hidden');
+      } else {
+        instrBox.classList.add('hidden');
+      }
+
+      // Phone call button
+      const callBtn = document.getElementById('admin-modal-call-btn');
+      if (callBtn) {
+        callBtn.href = order.customer?.phone ? `tel:+91${order.customer.phone.replace(/\D/g,'')}` : '#';
+      }
+
+      // Rider details
+      document.getElementById('admin-modal-rider-name').value = order.rider?.name || 'Ramesh Kumar';
+      document.getElementById('admin-modal-rider-phone').value = order.rider?.phone || '9876543210';
+      document.getElementById('admin-modal-rider-vehicle').value = order.rider?.vehicle || 'Hero Electric (KA-01-EQ-4021)';
+
+      // Items table
+      const tbody = document.getElementById('admin-modal-items-tbody');
+      let subtotal = 0;
+      if (tbody) {
+        tbody.innerHTML = order.items.map((item, idx) => {
+          const itemTot = item.total || (item.qty * (item.product?.price || 0));
+          subtotal += itemTot;
+          return `
+            <tr class="hover:bg-gray-50/80">
+              <td class="p-2.5">
+                <div class="flex items-center gap-2">
+                  <img src="${item.product?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=80'}" class="w-8 h-8 rounded-lg object-cover bg-gray-100 flex-shrink-0" />
+                  <div>
+                    <div class="font-bold text-gray-900">${escapeHtml(item.product?.name || 'Product')}</div>
+                    <div class="text-[10px] text-gray-400">${item.product?.unit || ''}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="p-2.5 text-center font-semibold text-gray-700">₹${item.product?.price || 0}</td>
+              <td class="p-2.5 text-center font-black text-gray-900">${item.qty}</td>
+              <td class="p-2.5 text-right font-black text-green-800">₹${itemTot}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('admin-modal-items-count').textContent = `${order.items.length} items (${order.items.reduce((s, i) => s + i.qty, 0)} units)`;
+      document.getElementById('admin-modal-subtotal').textContent = `₹${subtotal}`;
+      document.getElementById('admin-modal-grandtotal').textContent = `₹${order.total || subtotal}`;
+      document.getElementById('admin-modal-pay-method').textContent = order.payment?.method || 'Cash on Delivery (COD)';
+      document.getElementById('admin-modal-pay-status').textContent = order.payment?.status || (order.payment?.paymentId ? `Verified Ref: ${order.payment.paymentId}` : 'Pay at doorstep');
+
+      // Live Track Link
+      const trackLink = document.getElementById('admin-modal-track-link');
+      if (trackLink) trackLink.href = `track.html?orderId=${order.id}`;
+    }
+
+    function changeAdminOrderStatus(newStatus) {
+      if (!activeAdminModalOrderId) return;
+      updateOrderStatus(activeAdminModalOrderId, newStatus);
+    }
+
+    function saveAdminModalRider() {
+      if (!activeAdminModalOrderId) return;
+      const order = ordersList.find(o => o.id === activeAdminModalOrderId);
+      if (!order) return;
+      const name = document.getElementById('admin-modal-rider-name').value.trim();
+      const phone = document.getElementById('admin-modal-rider-phone').value.trim();
+      const vehicle = document.getElementById('admin-modal-rider-vehicle').value.trim();
+
+      order.rider = { name, phone, vehicle };
+      localStorage.setItem('raosee_orders', JSON.stringify(ordersList));
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {}
+      alert(`Updated delivery partner for Order #${order.id}!`);
+      renderAllOrders();
+    }
+
+    function chatCustomerWA() {
+      if (!activeAdminModalOrderId) return;
+      const order = ordersList.find(o => o.id === activeAdminModalOrderId);
+      if (order) {
+        openWhatsAppChatWithCustomer(order.customer?.phone, order.id, order.status || 'Confirmed');
+      }
+    }
+
+    function filterOrdersByCustomer(phone) {
+      switchTab('orders');
+      const searchInput = document.getElementById('order-search-input');
+      if (searchInput) {
+        searchInput.value = phone;
+        filterOrdersBySearch(phone);
+      }
+    }
+
+    // ================= CUSTOMERS DIRECTORY LOGIC =================
+    function renderCustomersTab(filterQuery = '') {
+      const tbody = document.getElementById('customers-table-body');
+      const emptyMsg = document.getElementById('no-customers-msg');
+      const badgeEl = document.getElementById('tab-customers-badge');
+      if (!tbody) return;
+
+      let registeredUsers = [];
+      try {
+        registeredUsers = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+      } catch (e) {
+        registeredUsers = [];
+      }
+
+      // Aggregate customers from registry and order histories
+      const customerMap = new Map();
+      registeredUsers.forEach(u => {
+        if (u.phone) customerMap.set(u.phone, { ...u });
+      });
+
+      ordersList.forEach(o => {
+        const ph = o.customer?.phone;
+        if (ph) {
+          if (customerMap.has(ph)) {
+            const existing = customerMap.get(ph);
+            existing.orderCount = (existing.orderCount || 0) + 1;
+            existing.totalSpend = (existing.totalSpend || 0) + (o.total || 0);
+          } else {
+            customerMap.set(ph, {
+              id: 'usr_' + ph.slice(-4),
+              name: o.customer?.name || 'Customer',
+              phone: ph,
+              address: { flat: o.customer?.flat || '', street: o.customer?.street || '' },
+              orderCount: 1,
+              totalSpend: o.total || 0,
+              createdAt: o.timestamp || new Date().toISOString()
+            });
+          }
+        }
+      });
+
+      let list = Array.from(customerMap.values());
+
+      if (filterQuery) {
+        const q = filterQuery.toLowerCase();
+        list = list.filter(c => (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)));
+      }
+
+      if (badgeEl) badgeEl.textContent = list.length;
+
+      if (list.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        return;
+      }
+      if (emptyMsg) emptyMsg.classList.add('hidden');
+
+      tbody.innerHTML = list.map(c => {
+        const addrStr = c.address ? `${c.address.flat || ''} ${c.address.street || ''}`.trim() : 'Store Locality';
+        return `
+          <tr class="hover:bg-gray-50/80 transition-colors">
+            <td class="p-3">
+              <div class="font-black text-gray-900 flex items-center gap-1.5">
+                <span>👤</span>
+                <span>${escapeHtml(c.name || 'Customer')}</span>
+                <span class="bg-green-100 text-green-800 text-[9px] font-black px-1.5 py-0.2 rounded-full">VIP</span>
+              </div>
+              <span class="text-[10px] text-gray-400 font-mono">ID: ${c.id || 'N/A'}</span>
+            </td>
+            <td class="p-3 font-semibold text-gray-800 font-mono">${c.phone ? '+91 ' + c.phone : 'N/A'}</td>
+            <td class="p-3 max-w-[180px] truncate text-gray-600" title="${escapeHtml(addrStr)}">${escapeHtml(addrStr)}</td>
+            <td class="p-3 text-center font-bold text-gray-900">
+              <span class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-[11px]">${c.orderCount || 1} orders</span>
+            </td>
+            <td class="p-3 text-right font-black text-[#0C831F]">₹${c.totalSpend || 0}</td>
+            <td class="p-3 text-[11px] text-gray-500">${c.createdAt ? new Date(c.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}</td>
+            <td class="p-3 text-right">
+              <div class="flex items-center justify-end gap-1.5">
+                <button 
+                  onclick="filterOrdersByCustomer('${c.phone}')" 
+                  class="px-2 py-1 bg-green-50 hover:bg-green-100 text-blinkit-green border border-green-200 rounded-lg text-xs font-bold"
+                  title="View Customer Order History"
+                >
+                  📦 Orders
+                </button>
+                <button 
+                  onclick="openWhatsAppCustomerDirect('${c.phone}', '${escapeHtml(c.name || 'Valued Customer')}')" 
+                  class="text-[#25D366] hover:underline font-bold text-xs"
+                >
+                  💬 Chat
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterCustomers(val) {
+      renderCustomersTab(val.trim());
+    }
+
+    function openWhatsAppCustomerDirect(phone, name) {
+      if (!phone) {
+        alert("Customer phone number not available.");
+        return;
+      }
+      const cleanPhone = phone.replace(/\D/g, '');
+      const msg = `Hello ${name}! Greeting from Raosee Fresh Supermarket team. How was your recent grocery delivery experience with us? We'd love your feedback!`;
+      window.open(`https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function openWhatsAppChatWithCustomer(phone, orderId, status = 'Dispatched') {
+      if (!phone) {
+        alert("Customer phone was not provided.");
+        return;
+      }
+      const cleanPhone = phone.replace(/\D/g, '');
+      const msg = `Hello! Regarding your Raosee Fresh Supermarket order #${orderId}: Your order status is now "${status}". Our express 10-15 min delivery team is actively serving you!`;
+      window.open(`https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function clearOrderHistory() {
+      if (confirm("Are you sure you want to clear order history?")) {
+        ordersList = [];
+        localStorage.removeItem('raosee_orders');
+        loadMasterData();
+      }
+    }
+
+    // ================= OUTLET & COMPANY SETTINGS LOGIC =================
+    let currentUploadedLogoDataUrl = '';
+
+    function populateOutletSettings() {
+      const cfg = currentConfig || {};
+      const companyEl = document.getElementById('outlet-company-name');
+      const storeEl = document.getElementById('outlet-store-name');
+      const branchEl = document.getElementById('outlet-branch-name');
+      const codeEl = document.getElementById('outlet-code');
+      const taglineEl = document.getElementById('outlet-tagline');
+      const gstinEl = document.getElementById('outlet-gstin');
+      const fssaiEl = document.getElementById('outlet-fssai');
+      const noteEl = document.getElementById('outlet-invoice-note');
+      const urlInput = document.getElementById('outlet-logo-url-input');
+
+      if (companyEl) companyEl.value = cfg.companyName || 'Raosee Fresh Retail Private Limited';
+      if (storeEl) storeEl.value = cfg.storeName || 'Raosee Fresh Supermarket';
+      if (branchEl) branchEl.value = cfg.outletName || 'Main Dark Store - HSR Layout Hub #01';
+      if (codeEl) codeEl.value = cfg.outletCode || 'RF-BLR-01';
+      if (taglineEl) taglineEl.value = cfg.tagline || 'Farm Fresh Groceries Delivered in 10-15 Mins';
+      if (gstinEl) gstinEl.value = cfg.gstin || '29ABCDE1234F1Z5';
+      if (fssaiEl) fssaiEl.value = cfg.fssaiNumber || '11223344000123';
+      if (noteEl) noteEl.value = cfg.invoiceFooterNote || '';
+      if (urlInput) urlInput.value = cfg.logoUrl || '';
+
+      const addr = cfg.outletAddress || {};
+      const shopEl = document.getElementById('outlet-addr-shop');
+      const bldgEl = document.getElementById('outlet-addr-building');
+      const streetEl = document.getElementById('outlet-addr-street');
+      const areaEl = document.getElementById('outlet-addr-area');
+      const cityEl = document.getElementById('outlet-addr-city');
+      const pinEl = document.getElementById('outlet-addr-pincode');
+      const landmarkEl = document.getElementById('outlet-addr-landmark');
+      const stateEl = document.getElementById('outlet-addr-state');
+      const fullAddrEl = document.getElementById('outlet-full-address-preview');
+
+      if (shopEl) shopEl.value = addr.shopNo || 'Shop #12, Ground Floor';
+      if (bldgEl) bldgEl.value = addr.building || 'Central Market Complex';
+      if (streetEl) streetEl.value = addr.street || '19th Main Road';
+      if (areaEl) areaEl.value = addr.area || 'HSR Layout Sector 2';
+      if (cityEl) cityEl.value = addr.city || cfg.city || 'Bangalore';
+      if (pinEl) pinEl.value = addr.pincode || cfg.pincode || '560102';
+      if (landmarkEl) landmarkEl.value = addr.landmark || 'Near BDA Complex & City Garden';
+      if (stateEl) stateEl.value = addr.state || 'Karnataka';
+      if (fullAddrEl) fullAddrEl.value = cfg.storeAddress || '';
+
+      updateLogoPreview(cfg.logoUrl, cfg.logoEmoji || '⚡');
+    }
+
+    function updateLogoPreview(url, emoji) {
+      const emojiEl = document.getElementById('outlet-logo-emoji-preview');
+      const imgEl = document.getElementById('outlet-logo-img-preview');
+      const statusText = document.getElementById('outlet-logo-status-text');
+
+      if (url) {
+        if (imgEl) {
+          imgEl.src = url;
+          imgEl.classList.remove('hidden');
+        }
+        if (emojiEl) emojiEl.classList.add('hidden');
+        if (statusText) statusText.textContent = "Custom Image Logo Active";
+      } else {
+        if (imgEl) imgEl.classList.add('hidden');
+        if (emojiEl) {
+          emojiEl.textContent = emoji || '⚡';
+          emojiEl.classList.remove('hidden');
+        }
+        if (statusText) statusText.textContent = `Preset Icon (${emoji || '⚡'}) Active`;
+      }
+    }
+
+    function handleLogoFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        currentUploadedLogoDataUrl = e.target.result;
+        const urlInput = document.getElementById('outlet-logo-url-input');
+        if (urlInput) urlInput.value = '';
+        updateLogoPreview(currentUploadedLogoDataUrl, '');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleLogoUrlInput(url) {
+      currentUploadedLogoDataUrl = url.trim();
+      updateLogoPreview(url.trim(), currentConfig.logoEmoji || '⚡');
+    }
+
+    function setPresetLogo(emoji, desc) {
+      currentUploadedLogoDataUrl = '';
+      currentConfig.logoEmoji = emoji;
+      const urlInput = document.getElementById('outlet-logo-url-input');
+      const fileInput = document.getElementById('outlet-logo-file-input');
+      if (urlInput) urlInput.value = '';
+      if (fileInput) fileInput.value = '';
+      updateLogoPreview('', emoji);
+    }
+
+    function resetToDefaultLogo() {
+      currentUploadedLogoDataUrl = '';
+      currentConfig.logoEmoji = '⚡';
+      const urlInput = document.getElementById('outlet-logo-url-input');
+      const fileInput = document.getElementById('outlet-logo-file-input');
+      if (urlInput) urlInput.value = '';
+      if (fileInput) fileInput.value = '';
+      updateLogoPreview('', '⚡');
+    }
+
+    function updateFullAddressPreview() {
+      const shop = document.getElementById('outlet-addr-shop')?.value.trim() || '';
+      const bldg = document.getElementById('outlet-addr-building')?.value.trim() || '';
+      const street = document.getElementById('outlet-addr-street')?.value.trim() || '';
+      const area = document.getElementById('outlet-addr-area')?.value.trim() || '';
+      const city = document.getElementById('outlet-addr-city')?.value.trim() || '';
+      const pin = document.getElementById('outlet-addr-pincode')?.value.trim() || '';
+      const state = document.getElementById('outlet-addr-state')?.value.trim() || '';
+      const landmark = document.getElementById('outlet-addr-landmark')?.value.trim() || '';
+
+      const parts = [shop, bldg, street, area, landmark ? `Near ${landmark}` : '', city, state, pin].filter(Boolean);
+      const full = parts.join(', ');
+      const fullAddrEl = document.getElementById('outlet-full-address-preview');
+      if (fullAddrEl) fullAddrEl.value = full;
+    }
+
+    function saveOutletSettings(silent = false) {
+      const companyName = document.getElementById('outlet-company-name')?.value.trim() || 'Raosee Fresh Retail Private Limited';
+      const storeName = document.getElementById('outlet-store-name')?.value.trim() || 'Raosee Fresh Supermarket';
+      const branchName = document.getElementById('outlet-branch-name')?.value.trim() || 'Main Dark Store - HSR Layout Hub #01';
+      const outletCode = document.getElementById('outlet-code')?.value.trim() || 'RF-BLR-01';
+      const tagline = document.getElementById('outlet-tagline')?.value.trim() || 'Farm Fresh Groceries Delivered in 10-15 Mins';
+      const gstin = document.getElementById('outlet-gstin')?.value.trim() || '';
+      const fssai = document.getElementById('outlet-fssai')?.value.trim() || '';
+      const note = document.getElementById('outlet-invoice-note')?.value.trim() || '';
+
+      const shop = document.getElementById('outlet-addr-shop')?.value.trim() || '';
+      const bldg = document.getElementById('outlet-addr-building')?.value.trim() || '';
+      const street = document.getElementById('outlet-addr-street')?.value.trim() || '';
+      const area = document.getElementById('outlet-addr-area')?.value.trim() || '';
+      const city = document.getElementById('outlet-addr-city')?.value.trim() || 'Bangalore';
+      const pin = document.getElementById('outlet-addr-pincode')?.value.trim() || '560102';
+      const state = document.getElementById('outlet-addr-state')?.value.trim() || 'Karnataka';
+      const landmark = document.getElementById('outlet-addr-landmark')?.value.trim() || '';
+      const fullAddress = document.getElementById('outlet-full-address-preview')?.value.trim() || `${shop}, ${street}, ${area}, ${city} - ${pin}`;
+
+      const logoUrlInput = document.getElementById('outlet-logo-url-input')?.value.trim() || '';
+      const finalLogoUrl = currentUploadedLogoDataUrl || logoUrlInput;
+
+      currentConfig = updateStoreConfig({
+        companyName,
+        storeName,
+        outletName: branchName,
+        outletCode,
+        tagline,
+        logoUrl: finalLogoUrl,
+        logoEmoji: currentConfig.logoEmoji || '⚡',
+        storeAddress: fullAddress,
+        city,
+        pincode: pin,
+        outletAddress: {
+          shopNo: shop,
+          building: bldg,
+          street,
+          area,
+          city,
+          state,
+          pincode: pin,
+          landmark
+        },
+        gstin,
+        fssaiNumber: fssai,
+        invoiceFooterNote: note
+      });
+
+      // Update header branding immediately
+      document.querySelectorAll('.js-admin-store-name').forEach(el => el.textContent = storeName);
+      updateKpis();
+      if (!silent) {
+        alert("🎉 Outlet, Company Profile, Logo & Address saved successfully!\nUpdated across customer storefront, live tracking, and invoices.");
+      }
+    }
+
+    // Save All Master Changes
+    function saveAllMasterChanges() {
+      saveProducts(productsList);
+      saveCategories(categoriesList);
+      saveBanners(bannersList);
+      saveOperationsSettings();
+      savePaymentSettings();
+      saveOutletSettings(true);
+      alert("🎉 All customizations (Rates, Items, Categories, Banners, Operations & Outlet Settings) saved!");
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Company & Outlet Settings | Raosee Fresh Supermarket</title>
+  <meta name="description" content="Configure Raosee Fresh Supermarket company details, store logo, dark store physical address, GSTIN, and FSSAI licenses." />
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0C831F" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            blinkit: {
+              yellow: '#F8CB46',
+              green: '#0C831F',
+              greenHover: '#0a6c1a',
+              dark: '#1C1C1C',
+              lightGray: '#F4F6FB'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#F4F6FB] min-h-screen font-sans antialiased text-gray-900 pb-16 selection:bg-green-100 selection:text-green-800">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="bg-white border-b border-gray-200 py-3.5 px-4 sm:px-8 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-3">
+      
+      <div class="flex items-center gap-3">
+        <a href="admin.html" class="flex items-center gap-2 group">
+          <div class="w-10 h-10 rounded-2xl bg-blinkit-yellow text-slate-950 font-black flex items-center justify-center text-xl shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden" id="header-logo-container">
+            ⚡
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-black text-lg tracking-tight text-blinkit-green js-store-name">Raosee Fresh</span>
+              <span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Outlet Profile</span>
+            </div>
+            <p class="text-[11px] text-gray-500 font-medium">Dark Store Address, Legal Entity &amp; Invoicing</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="index.html" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1">
+          <span>🛒</span>
+          <span>View Storefront</span>
+        </a>
+        <a href="admin.html" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1">
+          <span>🛠️</span>
+          <span>Admin Control</span>
+        </a>
+        <button onclick="saveOutletSettings()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5">
+          <span>💾</span>
+          <span>Save Changes</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT CONTAINER ================= -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
+
+    <!-- Hero Introduction Card -->
+    <div class="bg-gradient-to-r from-emerald-900 via-green-900 to-green-950 text-white rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+      <div class="relative z-10 max-w-2xl">
+        <div class="inline-flex items-center gap-2 bg-white/20 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-3">
+          <span>🏢</span>
+          <span>Supermarket Identity &amp; Compliance Center</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-black">Company &amp; Outlet Configuration</h1>
+        <p class="text-xs sm:text-sm text-green-100 opacity-90 mt-1 leading-relaxed">
+          Configure your registered company name, brand logo, dark store physical address, GSTIN, and FSSAI license. 
+          All updates automatically reflect on customer apps, live order tracking, and official tax invoices!
+        </p>
+      </div>
+
+      <div class="relative z-10 flex flex-col sm:flex-row gap-2 self-start md:self-auto">
+        <button onclick="saveOutletSettings()" class="bg-blinkit-yellow hover:bg-amber-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+          <span>💾 Save All Settings</span>
+        </button>
+      </div>
+
+      <!-- Watermark Graphic -->
+      <div class="absolute -right-6 -bottom-6 text-9xl opacity-10 select-none pointer-events-none">🏢</div>
+    </div>
+
+    <!-- 3-Column Layout: Left (Logo & Identity) + Center (Address & Compliance) + Right (Live Tax Invoice Preview) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- LEFT COLUMN: Brand Logo & Business Identity (4 Cols) -->
+      <div class="lg:col-span-4 space-y-6">
+        
+        <!-- Logo Uploader Box -->
+        <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+          <div class="border-b pb-3 flex items-center justify-between">
+            <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+              <span>🎨</span>
+              <span>Supermarket Logo &amp; Icon</span>
+            </h3>
+            <span class="text-[10px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded-full">Branding</span>
+          </div>
+
+          <!-- Live Preview Avatar -->
+          <div class="text-center p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+            <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Live Logo Display</span>
+            <div id="outlet-logo-preview-box" class="w-24 h-24 mx-auto bg-white rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden shadow-inner p-2">
+              <span id="outlet-logo-emoji-preview" class="text-4xl">⚡</span>
+              <img id="outlet-logo-img-preview" src="" alt="Logo" class="w-full h-full object-contain hidden" />
+            </div>
+            <div class="mt-2 text-xs font-bold text-gray-700" id="outlet-logo-status-text">Default Lightning Badge</div>
+            <p class="text-[10px] text-gray-400 mt-0.5">Displayed on Header, Receipt &amp; App Icon</p>
+          </div>
+
+          <!-- File Upload -->
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Upload Logo from Computer / Phone</label>
+              <input 
+                type="file" 
+                id="outlet-logo-file-input" 
+                accept="image/*"
+                onchange="handleLogoFileUpload(event)"
+                class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-green-50 file:text-blinkit-green hover:file:bg-green-100 border border-gray-200 rounded-xl p-1 cursor-pointer"
+              />
+              <p class="text-[10px] text-gray-400 mt-1">PNG, JPG, SVG, WebP (Square 512×512 recommended)</p>
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Or Logo Image URL</label>
+              <input 
+                type="url" 
+                id="outlet-logo-url-input" 
+                placeholder="https://example.com/logo.png"
+                oninput="handleLogoUrlInput(this.value)"
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono text-xs"
+              />
+            </div>
+
+            <!-- Preset Icons -->
+            <div>
+              <label class="block font-bold text-gray-700 mb-1.5">Preset Quick Commerce Badges</label>
+              <div class="grid grid-cols-4 gap-2">
+                <button type="button" onclick="setPresetLogo('⚡', 'Quick Commerce Lightning')" class="p-2 border rounded-xl hover:bg-yellow-50 text-xl font-bold flex flex-col items-center">
+                  <span>⚡</span>
+                  <span class="text-[9px] text-gray-500">10 Min</span>
+                </button>
+                <button type="button" onclick="setPresetLogo('🛒', 'Fresh Supermarket Cart')" class="p-2 border rounded-xl hover:bg-green-50 text-xl font-bold flex flex-col items-center">
+                  <span>🛒</span>
+                  <span class="text-[9px] text-gray-500">Cart</span>
+                </button>
+                <button type="button" onclick="setPresetLogo('🥬', 'Organic Farm Fresh')" class="p-2 border rounded-xl hover:bg-emerald-50 text-xl font-bold flex flex-col items-center">
+                  <span>🥬</span>
+                  <span class="text-[9px] text-gray-500">Greens</span>
+                </button>
+                <button type="button" onclick="setPresetLogo('🍎', 'Fresh Fruits Market')" class="p-2 border rounded-xl hover:bg-red-50 text-xl font-bold flex flex-col items-center">
+                  <span>🍎</span>
+                  <span class="text-[9px] text-gray-500">Fruits</span>
+                </button>
+              </div>
+            </div>
+
+            <button type="button" onclick="resetToDefaultLogo()" class="text-[11px] text-gray-500 hover:text-red-600 underline font-semibold block text-center pt-1 w-full">
+              Reset to Default Badge (⚡)
+            </button>
+          </div>
+        </div>
+
+        <!-- Business Entity & Brand Names -->
+        <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4 text-xs">
+          <div class="border-b pb-3">
+            <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+              <span>🏷️</span>
+              <span>Business &amp; Outlet Identity</span>
+            </h3>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Company Legal Entity Name *</label>
+            <input 
+              type="text" 
+              id="outlet-company-name" 
+              class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900"
+              placeholder="e.g. Raosee Fresh Retail Private Limited"
+              oninput="updateInvoicePreview()"
+            />
+            <p class="text-[10px] text-gray-400 mt-1">Legal entity name printed on tax receipts &amp; GST invoices</p>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Supermarket Brand Display Name *</label>
+            <input 
+              type="text" 
+              id="outlet-store-name" 
+              class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900"
+              placeholder="e.g. Raosee Fresh Supermarket"
+              oninput="updateInvoicePreview()"
+            />
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Outlet / Dark Store Name *</label>
+            <input 
+              type="text" 
+              id="outlet-branch-name" 
+              class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+              placeholder="e.g. Main Dark Store - HSR Layout Hub #01"
+              oninput="updateInvoicePreview()"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Outlet Code</label>
+              <input 
+                type="text" 
+                id="outlet-code" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono uppercase"
+                placeholder="RF-BLR-01"
+                oninput="updateInvoicePreview()"
+              />
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Estimated ETA</label>
+              <input 
+                type="text" 
+                id="outlet-eta" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-blinkit-green"
+                placeholder="10-15 mins"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Supermarket Tagline</label>
+            <input 
+              type="text" 
+              id="outlet-tagline" 
+              class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+              placeholder="Farm Fresh Groceries Delivered in 10-15 Mins"
+            />
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- MIDDLE COLUMN: Physical Address & Compliance (4 Cols) -->
+      <div class="lg:col-span-4 space-y-6">
+        
+        <!-- Physical Dark Store Address -->
+        <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4 text-xs">
+          <div class="border-b pb-3 flex items-center justify-between">
+            <div>
+              <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+                <span>📍</span>
+                <span>Dark Store Dispatch Address</span>
+              </h3>
+              <p class="text-[11px] text-gray-500">Physical address where delivery riders pick up bags</p>
+            </div>
+            <span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">Hub Location</span>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Shop / Unit / Floor No. *</label>
+              <input 
+                type="text" 
+                id="outlet-addr-shop" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
+                placeholder="e.g. Shop #12, Ground Floor"
+                oninput="updateFullAddressPreview()"
+              />
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Building / Complex Name</label>
+              <input 
+                type="text" 
+                id="outlet-addr-building" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                placeholder="e.g. Central Market Complex"
+                oninput="updateFullAddressPreview()"
+              />
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Street / Cross Road *</label>
+              <input 
+                type="text" 
+                id="outlet-addr-street" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                placeholder="e.g. 19th Main Road"
+                oninput="updateFullAddressPreview()"
+              />
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Area / Locality *</label>
+              <input 
+                type="text" 
+                id="outlet-addr-area" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
+                placeholder="e.g. HSR Layout Sector 2"
+                oninput="updateFullAddressPreview()"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">City *</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-city" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
+                  placeholder="e.g. Bangalore"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Pincode *</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-pincode" 
+                  maxlength="6"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-bold"
+                  placeholder="e.g. 560102"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">State</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-state" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. Karnataka"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Landmark</label>
+                <input 
+                  type="text" 
+                  id="outlet-addr-landmark" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  placeholder="e.g. Near BDA Complex"
+                  oninput="updateFullAddressPreview()"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Combined Formatted Address (Auto-Generated)</label>
+              <textarea 
+                id="outlet-full-address-preview" 
+                rows="2" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green text-xs font-medium text-gray-800 bg-gray-50"
+                oninput="updateInvoicePreview()"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compliance & Regulatory -->
+        <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4 text-xs">
+          <div class="border-b pb-3">
+            <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+              <span>📜</span>
+              <span>Tax &amp; Food Safety Compliance</span>
+            </h3>
+            <p class="text-[11px] text-gray-500">Government registrations printed on customer receipts</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">GSTIN (15-Digit GST Number)</label>
+              <input 
+                type="text" 
+                id="outlet-gstin" 
+                maxlength="15"
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono uppercase font-bold text-gray-900"
+                placeholder="29ABCDE1234F1Z5"
+                oninput="updateInvoicePreview()"
+              />
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">FSSAI License Number (14 Digits)</label>
+              <input 
+                type="text" 
+                id="outlet-fssai" 
+                maxlength="14"
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-bold text-gray-900"
+                placeholder="11223344000123"
+                oninput="updateInvoicePreview()"
+              />
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Customer Receipt / Invoice Footer Note</label>
+              <textarea 
+                id="outlet-invoice-note" 
+                rows="2"
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green text-xs"
+                placeholder="Thank you for shopping with Raosee Fresh! Freshness & 100% replacement guaranteed on WhatsApp."
+                oninput="updateInvoicePreview()"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: LIVE TAX INVOICE PREVIEW (4 Cols) -->
+      <div class="lg:col-span-4 space-y-6">
+        
+        <div class="bg-white rounded-3xl p-6 border-2 border-emerald-500 shadow-xl space-y-4 sticky top-20">
+          <div class="flex items-center justify-between border-b pb-3">
+            <div>
+              <span class="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full uppercase">Real-Time Sync</span>
+              <h3 class="font-black text-sm text-gray-900 mt-1 flex items-center gap-1.5">
+                <span>🧾</span>
+                <span>Customer Invoice Preview</span>
+              </h3>
+            </div>
+            <span class="text-[10px] text-gray-400">Live Render</span>
+          </div>
+
+          <!-- The Rendered Receipt Mockup -->
+          <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-[11px] space-y-3 font-sans">
+            
+            <!-- Receipt Header -->
+            <div class="flex items-start gap-3 border-b border-gray-200 pb-3">
+              <div id="preview-bill-logo-box" class="w-10 h-10 rounded-xl bg-blinkit-yellow flex items-center justify-center text-xl shadow-xs overflow-hidden flex-shrink-0">
+                <span id="preview-bill-emoji">⚡</span>
+                <img id="preview-bill-img" src="" class="w-full h-full object-contain hidden" />
+              </div>
+              <div class="flex-1">
+                <div class="text-[9px] font-black text-green-700 bg-green-100 px-1.5 py-0.2 rounded inline-block uppercase">Official Tax Invoice</div>
+                <div class="font-black text-xs text-gray-900 mt-0.5" id="preview-bill-company">Raosee Fresh Retail Pvt Ltd</div>
+                <div class="text-[10px] font-bold text-gray-600" id="preview-bill-outlet">Main Dark Store - HSR Layout</div>
+                <div class="text-[10px] text-gray-400 font-mono">Invoice #RF-948210 • 10-15m Express</div>
+              </div>
+            </div>
+
+            <!-- Dispatch Address & Registration -->
+            <div class="bg-white rounded-xl p-2.5 border border-gray-200/80 space-y-1 text-[10px]">
+              <div class="text-gray-400 font-bold uppercase tracking-wider text-[9px] flex justify-between">
+                <span>Dispatch Dark Store</span>
+                <span class="text-blinkit-green font-mono font-bold" id="preview-bill-code">RF-BLR-01</span>
+              </div>
+              <div class="text-gray-800 font-medium leading-relaxed" id="preview-bill-address">
+                Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102
+              </div>
+              <div class="pt-1 border-t border-gray-100 flex items-center justify-between font-mono text-gray-600">
+                <span>GST: <strong id="preview-bill-gstin" class="text-gray-900 font-bold">29ABCDE1234F1Z5</strong></span>
+                <span>FSSAI: <strong id="preview-bill-fssai" class="text-gray-900 font-bold">11223344000123</strong></span>
+              </div>
+            </div>
+
+            <!-- Sample Line Items -->
+            <div class="border-b border-gray-200 pb-2">
+              <table class="w-full text-left text-[10px]">
+                <thead class="text-gray-400 font-bold border-b border-gray-200">
+                  <tr>
+                    <th class="pb-1">Item</th>
+                    <th class="pb-1 text-center">Qty</th>
+                    <th class="pb-1 text-right">Price</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-gray-700">
+                  <tr>
+                    <td class="py-1">Farm Fresh Tomatoes (1 kg)</td>
+                    <td class="py-1 text-center">1</td>
+                    <td class="py-1 text-right font-bold">₹34</td>
+                  </tr>
+                  <tr>
+                    <td class="py-1">Amul Taaza Milk (500 ml)</td>
+                    <td class="py-1 text-center">2</td>
+                    <td class="py-1 text-right font-bold">₹54</td>
+                  </tr>
+                  <tr>
+                    <td class="py-1">Crisp Shimla Apples (500 g)</td>
+                    <td class="py-1 text-center">1</td>
+                    <td class="py-1 text-right font-bold">₹119</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Grand Total -->
+            <div class="space-y-1 text-[10px] text-gray-600">
+              <div class="flex justify-between">
+                <span>Items Subtotal:</span>
+                <span>₹207</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Delivery (Free above ₹199):</span>
+                <span class="text-green-700 font-bold">FREE</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Handling &amp; Packaging:</span>
+                <span>₹2</span>
+              </div>
+              <div class="flex justify-between text-xs font-black text-gray-900 pt-1 border-t border-gray-200">
+                <span>Grand Total:</span>
+                <span class="text-blinkit-green font-black">₹209</span>
+              </div>
+            </div>
+
+            <!-- Footer Note -->
+            <div class="bg-green-50/70 p-2 rounded-xl border border-green-200 text-[10px] text-green-900 text-center font-medium leading-relaxed" id="preview-bill-footer">
+              Thank you for shopping with Raosee Fresh! Freshness &amp; 100% replacement guaranteed on WhatsApp.
+            </div>
+
+          </div>
+
+          <!-- Bottom Action -->
+          <div class="pt-2">
+            <button onclick="saveOutletSettings()" class="w-full bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+              <span>💾 Save &amp; Apply Outlet Profile</span>
+            </button>
+            <p class="text-[10px] text-gray-400 text-center mt-2">Saved directly to store localStorage &amp; active for all customers</p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-bold transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50">
+    <span class="text-lg">✓</span>
+    <span id="toast-msg">Settings saved successfully!</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="store-config.js"></script>
+  <script>
+    let activeConfig = {};
+    let customLogoData = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadOutletConfig();
+    });
+
+    function loadOutletConfig() {
+      activeConfig = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
+
+      // Fill Company & Brand
+      document.getElementById('outlet-company-name').value = activeConfig.companyName || 'Raosee Fresh Retail Private Limited';
+      document.getElementById('outlet-store-name').value = activeConfig.storeName || 'Raosee Fresh Supermarket';
+      document.getElementById('outlet-branch-name').value = activeConfig.outletName || 'Main Dark Store - HSR Layout Hub #01';
+      document.getElementById('outlet-code').value = activeConfig.outletCode || 'RF-BLR-01';
+      document.getElementById('outlet-eta').value = activeConfig.deliveryTimeEstimate || '10-15 mins';
+      document.getElementById('outlet-tagline').value = activeConfig.tagline || 'Farm Fresh Groceries Delivered in 10-15 Mins';
+
+      // Fill Address Components
+      const addr = activeConfig.outletAddress || {};
+      document.getElementById('outlet-addr-shop').value = addr.shopNo || 'Shop #12, Ground Floor';
+      document.getElementById('outlet-addr-building').value = addr.building || 'Central Market Complex';
+      document.getElementById('outlet-addr-street').value = addr.street || '19th Main Road';
+      document.getElementById('outlet-addr-area').value = addr.area || 'HSR Layout Sector 2';
+      document.getElementById('outlet-addr-city').value = addr.city || 'Bangalore';
+      document.getElementById('outlet-addr-pincode').value = addr.pincode || '560102';
+      document.getElementById('outlet-addr-landmark').value = addr.landmark || 'Near BDA Complex & City Garden';
+      document.getElementById('outlet-addr-state').value = addr.state || 'Karnataka';
+
+      // Full address preview
+      document.getElementById('outlet-full-address-preview').value = activeConfig.storeAddress || formatAddressFromInputs();
+
+      // Tax & Compliance
+      document.getElementById('outlet-gstin').value = activeConfig.gstin || '29ABCDE1234F1Z5';
+      document.getElementById('outlet-fssai').value = activeConfig.fssaiNumber || '11223344000123';
+      document.getElementById('outlet-invoice-note').value = activeConfig.invoiceFooterNote || 'Thank you for shopping with Raosee Fresh! Freshness & 100% replacement guaranteed on WhatsApp.';
+
+      // Logo handling
+      customLogoData = activeConfig.logoUrl || null;
+      document.getElementById('outlet-logo-url-input').value = customLogoData && customLogoData.startsWith('http') ? customLogoData : '';
+      updateLogoPreview(customLogoData, activeConfig.logoEmoji || '⚡');
+
+      updateInvoicePreview();
+    }
+
+    function formatAddressFromInputs() {
+      const shop = document.getElementById('outlet-addr-shop').value.trim();
+      const building = document.getElementById('outlet-addr-building').value.trim();
+      const street = document.getElementById('outlet-addr-street').value.trim();
+      const area = document.getElementById('outlet-addr-area').value.trim();
+      const city = document.getElementById('outlet-addr-city').value.trim();
+      const pin = document.getElementById('outlet-addr-pincode').value.trim();
+      const state = document.getElementById('outlet-addr-state').value.trim();
+
+      const parts = [shop, building, street, area, city, state].filter(Boolean);
+      let formatted = parts.join(', ');
+      if (pin) formatted += ` - ${pin}`;
+      return formatted;
+    }
+
+    function updateFullAddressPreview() {
+      const full = formatAddressFromInputs();
+      document.getElementById('outlet-full-address-preview').value = full;
+      updateInvoicePreview();
+    }
+
+    function handleLogoFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Logo file is larger than 2MB. Please upload a smaller image.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        customLogoData = e.target.result;
+        document.getElementById('outlet-logo-url-input').value = '';
+        updateLogoPreview(customLogoData, '');
+        updateInvoicePreview();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleLogoUrlInput(url) {
+      const trimmed = url.trim();
+      if (trimmed) {
+        customLogoData = trimmed;
+        updateLogoPreview(trimmed, '');
+      } else {
+        customLogoData = null;
+        updateLogoPreview(null, activeConfig.logoEmoji || '⚡');
+      }
+      updateInvoicePreview();
+    }
+
+    function setPresetLogo(emoji, label) {
+      customLogoData = null;
+      activeConfig.logoEmoji = emoji;
+      document.getElementById('outlet-logo-url-input').value = '';
+      document.getElementById('outlet-logo-file-input').value = '';
+      updateLogoPreview(null, emoji, label);
+      updateInvoicePreview();
+    }
+
+    function resetToDefaultLogo() {
+      setPresetLogo('⚡', 'Default Lightning Badge');
+    }
+
+    function updateLogoPreview(imgSrc, emoji = '⚡', label = '') {
+      const imgEl = document.getElementById('outlet-logo-img-preview');
+      const emojiEl = document.getElementById('outlet-logo-emoji-preview');
+      const statusText = document.getElementById('outlet-logo-status-text');
+
+      if (imgSrc) {
+        imgEl.src = imgSrc;
+        imgEl.classList.remove('hidden');
+        emojiEl.classList.add('hidden');
+        statusText.textContent = label || "Custom Store Image Logo";
+      } else {
+        imgEl.src = '';
+        imgEl.classList.add('hidden');
+        emojiEl.textContent = emoji || '⚡';
+        emojiEl.classList.remove('hidden');
+        statusText.textContent = label || (emoji + " Supermarket Badge");
+      }
+    }
+
+    function updateInvoicePreview() {
+      const company = document.getElementById('outlet-company-name').value.trim() || 'Raosee Fresh Retail Pvt Ltd';
+      const branch = document.getElementById('outlet-branch-name').value.trim() || 'Main Dark Store - HSR Layout';
+      const code = document.getElementById('outlet-code').value.trim() || 'RF-BLR-01';
+      const fullAddr = document.getElementById('outlet-full-address-preview').value.trim() || formatAddressFromInputs();
+      const gstin = document.getElementById('outlet-gstin').value.trim() || '29ABCDE1234F1Z5';
+      const fssai = document.getElementById('outlet-fssai').value.trim() || '11223344000123';
+      const note = document.getElementById('outlet-invoice-note').value.trim() || 'Thank you for shopping with Raosee Fresh!';
+
+      document.getElementById('preview-bill-company').textContent = company;
+      document.getElementById('preview-bill-outlet').textContent = branch;
+      document.getElementById('preview-bill-code').textContent = code;
+      document.getElementById('preview-bill-address').textContent = fullAddr;
+      document.getElementById('preview-bill-gstin').textContent = gstin;
+      document.getElementById('preview-bill-fssai').textContent = fssai;
+      document.getElementById('preview-bill-footer').textContent = note;
+
+      // Update bill preview logo
+      const billImg = document.getElementById('preview-bill-img');
+      const billEmoji = document.getElementById('preview-bill-emoji');
+      if (customLogoData) {
+        billImg.src = customLogoData;
+        billImg.classList.remove('hidden');
+        billEmoji.classList.add('hidden');
+      } else {
+        billImg.classList.add('hidden');
+        billEmoji.textContent = activeConfig.logoEmoji || '⚡';
+        billEmoji.classList.remove('hidden');
+      }
+    }
+
+    function saveOutletSettings() {
+      const companyName = document.getElementById('outlet-company-name').value.trim();
+      const storeName = document.getElementById('outlet-store-name').value.trim();
+      const outletName = document.getElementById('outlet-branch-name').value.trim();
+      const outletCode = document.getElementById('outlet-code').value.trim();
+      const eta = document.getElementById('outlet-eta').value.trim();
+      const tagline = document.getElementById('outlet-tagline').value.trim();
+
+      const shop = document.getElementById('outlet-addr-shop').value.trim();
+      const building = document.getElementById('outlet-addr-building').value.trim();
+      const street = document.getElementById('outlet-addr-street').value.trim();
+      const area = document.getElementById('outlet-addr-area').value.trim();
+      const city = document.getElementById('outlet-addr-city').value.trim();
+      const pincode = document.getElementById('outlet-addr-pincode').value.trim();
+      const landmark = document.getElementById('outlet-addr-landmark').value.trim();
+      const state = document.getElementById('outlet-addr-state').value.trim();
+      const storeAddress = document.getElementById('outlet-full-address-preview').value.trim();
+
+      const gstin = document.getElementById('outlet-gstin').value.trim();
+      const fssai = document.getElementById('outlet-fssai').value.trim();
+      const invoiceNote = document.getElementById('outlet-invoice-note').value.trim();
+
+      const updated = {
+        companyName: companyName || activeConfig.companyName,
+        storeName: storeName || activeConfig.storeName,
+        outletName: outletName || activeConfig.outletName,
+        outletCode: outletCode || activeConfig.outletCode,
+        deliveryTimeEstimate: eta || activeConfig.deliveryTimeEstimate,
+        tagline: tagline || activeConfig.tagline,
+        logoUrl: customLogoData || '',
+        logoEmoji: customLogoData ? '' : (activeConfig.logoEmoji || '⚡'),
+        outletAddress: {
+          shopNo: shop,
+          building: building,
+          street: street,
+          area: area,
+          city: city,
+          pincode: pincode,
+          landmark: landmark,
+          state: state
+        },
+        storeAddress: storeAddress,
+        gstin: gstin,
+        fssaiNumber: fssai,
+        invoiceFooterNote: invoiceNote
+      };
+
+      activeConfig = updateStoreConfig(updated);
+
+      // Trigger cross-tab sync event
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {}
+
+      showToast("✓ Outlet profile & company settings saved successfully!");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      if (toast && toastMsg) {
+        toastMsg.textContent = msg;
+        toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+          toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 3000);
+      }
+    }
+  </script>
+
+</body>
+</html>

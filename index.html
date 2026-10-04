@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Raosee Fresh Supermarket | 10-15 Mins Grocery Delivery</title>
+  <meta name="description" content="Raosee Fresh Supermarket - Order farm fresh fruits, vegetables, dairy, atta, snacks & household essentials delivered in 10-15 minutes with Razorpay online payment, Instant UPI, and WhatsApp support." />
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>" />
+  
+  <!-- Web App Manifest for PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0C831F" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            blinkit: {
+              yellow: '#F8CB46',
+              green: '#0C831F',
+              greenHover: '#0a6c1a',
+              dark: '#1C1C1C',
+              lightGray: '#F4F6FB',
+              border: '#E8E8E8'
+            },
+            whatsapp: {
+              DEFAULT: '#25D366',
+              hover: '#20BA59',
+              dark: '#075E54'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Razorpay Online Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <style>
+    ::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #999;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .tap-highlight-transparent {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body class="bg-blinkit-lightGray text-gray-900 font-sans antialiased min-h-screen pb-24 md:pb-12 tap-highlight-transparent selection:bg-green-100 selection:text-green-800">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm transition-all duration-200">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-6">
+        
+        <!-- Logo & Delivery ETA -->
+        <div class="flex items-center gap-3 sm:gap-6 min-w-0">
+          <a href="#" class="flex items-center gap-2 flex-shrink-0 group">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-xl sm:text-2xl shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden">
+              ⚡
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-black text-lg sm:text-2xl tracking-tight text-blinkit-green js-store-name">Raosee Fresh</span>
+              </div>
+              <span class="block text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 js-outlet-name">Supermarket</span>
+            </div>
+          </a>
+
+          <!-- Location Selector & 10 Min Badge -->
+          <div class="hidden md:flex items-center gap-2 pl-4 border-l border-gray-200">
+            <div class="bg-green-50 border border-green-200 text-blinkit-green font-bold text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-blinkit-green animate-ping"></span>
+              <span>10-15 MINS</span>
+            </div>
+            <button onclick="openLocationModal()" class="text-left group flex items-center gap-1 hover:text-blinkit-green transition-colors">
+              <div>
+                <div class="text-[11px] font-bold uppercase text-gray-500 flex items-center gap-1">
+                  Delivery to
+                  <span class="text-xs">▾</span>
+                </div>
+                <div class="text-xs font-bold text-gray-800 truncate max-w-[180px] js-selected-address-summary">
+                  HSR Layout, Bangalore
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Bar (Desktop & Tablet) -->
+        <div class="flex-1 max-w-xl hidden sm:block relative">
+          <div class="relative flex items-center">
+            <span class="absolute left-3.5 text-gray-400 text-base">🔍</span>
+            <input 
+              type="text" 
+              id="search-input"
+              placeholder="Search 'farm fresh milk' or 'potatoes'..."
+              class="w-full bg-gray-100 hover:bg-gray-50 focus:bg-white text-gray-800 pl-10 pr-10 py-2.5 rounded-xl border border-transparent focus:border-blinkit-green focus:ring-2 focus:ring-green-100 text-sm outline-none transition-all shadow-inner"
+            />
+            <button onclick="document.getElementById('search-input').value=''; state.searchQuery=''; renderProducts();" class="absolute right-3 text-gray-400 hover:text-gray-600 text-xs font-bold">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- Header Actions: WhatsApp Support, Track Order, Login, Settings & Cart -->
+        <div class="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+          
+          <!-- Live Tracking Header Link -->
+          <a 
+            href="track.html" 
+            class="hidden md:flex items-center gap-1.5 bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-blinkit-green border border-gray-200 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95"
+            title="Track Live Grocery Delivery"
+          >
+            <span>📦</span>
+            <span>Track Order</span>
+          </a>
+
+          <!-- Customer Login / Account Button -->
+          <button 
+            id="header-user-btn"
+            onclick="handleHeaderUserClick()" 
+            class="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95"
+            title="Customer Login & Past Orders"
+          >
+            <span id="header-user-avatar">👤</span>
+            <span id="header-user-name">Login</span>
+          </button>
+
+          <!-- Quick WhatsApp Support Header Button -->
+          <button 
+            onclick="openWhatsAppSupportModal()" 
+            class="hidden sm:flex items-center gap-1.5 bg-green-50 hover:bg-green-100 text-[#075E54] border border-green-200 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95"
+            title="Chat on WhatsApp"
+          >
+            <svg class="w-4 h-4 fill-[#25D366]" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
+            <span class="hidden md:inline">WhatsApp</span> Support
+          </button>
+
+          <!-- Store Settings / Admin Modal -->
+          <button 
+            onclick="openStoreSettingsModal()"
+            class="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors" 
+            title="Store Settings & Payment Gateway Setup"
+          >
+            ⚙️
+          </button>
+
+          <!-- Cart Button -->
+          <button 
+            onclick="toggleCartDrawer(true)"
+            class="bg-blinkit-green hover:bg-blinkit-greenHover text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all active:scale-95"
+          >
+            <span class="text-base">🛒</span>
+            <span class="js-header-cart-total">My Cart</span>
+            <span class="bg-white text-blinkit-green text-xs font-black px-1.5 py-0.5 rounded-full js-header-cart-count" style="display: none;">
+              0
+            </span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Mobile Search Bar -->
+      <div class="sm:hidden pb-3">
+        <div class="relative flex items-center">
+          <span class="absolute left-3 text-gray-400 text-sm">🔍</span>
+          <input 
+            type="text" 
+            oninput="state.searchQuery = this.value; renderProducts();"
+            placeholder="Search groceries & daily fresh items..."
+            class="w-full bg-gray-100 text-gray-800 pl-9 pr-8 py-2 rounded-xl border border-transparent focus:border-blinkit-green focus:bg-white text-xs outline-none shadow-inner"
+          />
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Live Dynamic Store Announcement Ticker -->
+  <div id="announcement-ticker" class="hidden"></div>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-6">
+
+    <!-- Install Android / iOS App Smart Banner -->
+    <div id="pwa-install-banner" class="bg-gradient-to-r from-green-950 via-[#0C831F] to-emerald-900 text-white rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-md">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blinkit-yellow text-blinkit-dark font-black flex items-center justify-center text-xl flex-shrink-0 shadow-sm">
+          ⚡
+        </div>
+        <div>
+          <div class="text-xs sm:text-sm font-extrabold flex items-center gap-1.5">
+            <span>Install Raosee Fresh Mobile App</span>
+            <span class="bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">Android &amp; iOS</span>
+          </div>
+          <p class="text-[11px] text-green-100 opacity-90 hidden sm:block">Faster 10-minute grocery ordering, instant live WhatsApp notifications &amp; offline access!</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="triggerAppInstall()" class="bg-white text-green-900 hover:bg-green-50 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-black shadow-sm transition-all active:scale-95 flex items-center gap-1 flex-shrink-0">
+          <span>📲 Install App</span>
+        </button>
+        <button onclick="document.getElementById('pwa-install-banner').classList.add('hidden')" class="text-white/60 hover:text-white p-1 text-xs">✕</button>
+      </div>
+    </div>
+
+    <!-- Payment & Delivery Notice Banner -->
+    <div class="bg-white border border-green-200 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-sm">
+      <div class="flex items-center gap-2 text-xs text-gray-700">
+        <span class="bg-green-100 text-green-800 font-extrabold px-2 py-0.5 rounded-md text-[10px]">NEW</span>
+        <span class="font-bold text-gray-900">Online Payments Active:</span>
+        <span class="text-gray-500">Razorpay (Cards, NetBanking, UPI), Instant Dynamic UPI QR, and Cash on Delivery.</span>
+      </div>
+      <div class="flex items-center gap-1.5 text-xs text-green-800 font-bold">
+        <span>🔒 100% Secure Checkout</span>
+      </div>
+    </div>
+
+    <!-- Dynamic Hero / Promotional Banner Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4" id="promo-banners-grid">
+      <!-- Injected dynamically by app.js based on Store Manager settings -->
+    </div>
+
+    <!-- Quick Supermarket Categories Bar (Horizontal Scroll) -->
+    <section class="sticky top-16 sm:top-20 z-30 bg-blinkit-lightGray/95 backdrop-blur-md py-2 border-y border-gray-200 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" id="category-pills">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="products-section" class="scroll-mt-36">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg sm:text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <span>Explore Supermarket Aisle</span>
+          </h3>
+          <p class="text-xs text-gray-500" id="products-count">Loading items...</p>
+        </div>
+        
+        <div id="store-status-badge" class="flex items-center gap-2 text-xs font-semibold text-gray-600 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Store Open (06:00 AM - 11:30 PM)</span>
+        </div>
+      </div>
+
+      <!-- Product Cards Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4" id="product-grid">
+        <!-- Rendered by app.js -->
+      </div>
+    </section>
+
+    <!-- Why Choose Raosee Fresh Supermarket -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm mt-8">
+      <h3 class="text-lg sm:text-xl font-black text-gray-900 text-center mb-6">
+        Why Bangalore Loves Raosee Fresh Supermarket 💚
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+        <div class="flex flex-col items-center">
+          <div class="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-2xl mb-3">⚡</div>
+          <h4 class="font-bold text-gray-800 text-sm mb-1">10-15 Min Delivery</h4>
+          <p class="text-xs text-gray-500">Direct from our neighborhood fresh dark store to your door.</p>
+        </div>
+        <div class="flex flex-col items-center">
+          <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl mb-3">🥬</div>
+          <h4 class="font-bold text-gray-800 text-sm mb-1">Farm Direct Freshness</h4>
+          <p class="text-xs text-gray-500">Hand-sorted vegetables and fruits harvested daily morning.</p>
+        </div>
+        <div class="flex flex-col items-center">
+          <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl mb-3">💳</div>
+          <h4 class="font-bold text-gray-800 text-sm mb-1">Online Payment Gateway</h4>
+          <p class="text-xs text-gray-500">Razorpay, UPI QR, Cards & Cash on Delivery supported.</p>
+        </div>
+        <div class="flex flex-col items-center">
+          <div class="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-2xl mb-3">💬</div>
+          <h4 class="font-bold text-gray-800 text-sm mb-1">WhatsApp Order Verification</h4>
+          <p class="text-xs text-gray-500">Instant order confirmation and direct store support on WhatsApp.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= OUTLET & COMPANY BRAND FOOTER ================= -->
+    <footer class="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm mt-8 space-y-6 text-xs text-gray-600">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-100">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-2xl shadow-sm js-store-logo overflow-hidden flex-shrink-0">
+            ⚡
+          </div>
+          <div>
+            <h4 class="font-black text-lg text-gray-900 js-store-name">Raosee Fresh Supermarket</h4>
+            <div class="text-[11px] font-bold text-blinkit-green js-company-name">Raosee Fresh Retail Private Limited</div>
+            <p class="text-[11px] text-gray-500 mt-0.5 js-store-tagline">Farm Fresh Groceries Delivered in 10-15 Mins</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="admin.html" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1">
+            <span>🏢 Outlet & Store Settings</span>
+          </a>
+          <a href="track.html" class="bg-green-50 hover:bg-green-100 text-blinkit-green font-bold px-3 py-1.5 rounded-xl border border-green-200 transition-colors flex items-center gap-1">
+            <span>📦 Live Tracker</span>
+          </a>
+          <a href="login.html" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1">
+            <span>👤 Customer Login</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Outlet physical address & regulatory grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="space-y-1">
+          <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">🏢 Outlet & Dark Store Address</span>
+          <div class="font-bold text-gray-800 js-outlet-name">Main Dark Store - HSR Layout Hub #01</div>
+          <p class="text-gray-500 js-outlet-address">Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102</p>
+          <div class="text-[10px] font-mono text-gray-400">Outlet Code: <span class="font-bold text-gray-700 js-outlet-code">RF-BLR-01</span></div>
+        </div>
+
+        <div class="space-y-1">
+          <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">⚖️ Compliance & Licences</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-gray-500 font-semibold">FSSAI Lic No:</span>
+            <span class="font-mono font-bold text-gray-800 js-store-fssai">11223344000123</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-gray-500 font-semibold">GSTIN:</span>
+            <span class="font-mono font-bold text-gray-800 js-store-gstin">29ABCDE1234F1Z5</span>
+          </div>
+          <p class="text-[10px] text-gray-400 mt-1">100% compliant food packaging & cold-chain distribution.</p>
+        </div>
+
+        <div class="space-y-1">
+          <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">📞 Store Support & Orders</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-gray-500 font-semibold">Customer Care:</span>
+            <span class="font-bold text-gray-800 js-store-phone">+91 98765 43210</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-gray-500 font-semibold">Email:</span>
+            <span class="font-bold text-gray-800 js-store-email">support@raoseefresh.com</span>
+          </div>
+          <div class="text-[10px] text-emerald-700 font-bold flex items-center gap-1 pt-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Operating Hours: 06:00 AM – 11:30 PM (Daily)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-400 gap-2">
+        <div>
+          © 2026 <span class="js-company-name font-semibold text-gray-600">Raosee Fresh Retail Private Limited</span>. All rights reserved.
+        </div>
+        <div class="flex items-center gap-3">
+          <span>⚡ 10-15 Min Express Quick Commerce</span>
+          <span>•</span>
+          <span class="text-blinkit-green font-bold">Bangalore Dark Store Network</span>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- ================= FLOATING BOTTOM CART BAR (MOBILE ONLY) ================= -->
+  <aside 
+    id="mobile-cart-bar" 
+    aria-label="Shopping Cart Summary"
+    class="fixed bottom-3 left-3 right-3 z-30 transform translate-y-full opacity-0 pointer-events-none transition-all duration-300 md:hidden"
+  >
+    <div class="bg-blinkit-green text-white p-3 rounded-2xl shadow-xl flex items-center justify-between border border-green-400">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg">🛒</div>
+        <div>
+          <div class="text-[11px] font-bold text-green-200 uppercase tracking-wider" id="mobile-cart-count">0 ITEMS</div>
+          <div class="text-base font-black" id="mobile-cart-total">₹0</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button 
+          onclick="toggleCartDrawer(true)"
+          class="bg-white text-blinkit-green px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider shadow-sm flex items-center gap-1 active:scale-95 transition-transform"
+        >
+          View Cart ➔
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= FLOATING WHATSAPP SUPPORT BUTTON ================= -->
+  <div class="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-30">
+    <button 
+      onclick="openWhatsAppSupportModal()"
+      class="group relative flex items-center gap-2.5 bg-[#25D366] hover:bg-[#20ba59] text-white pl-3.5 pr-4 py-3 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95"
+      title="WhatsApp Customer Care & Instant Orders"
+    >
+      <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full"></span>
+      <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
+      <div class="text-left leading-tight hidden sm:block">
+        <div class="text-[10px] uppercase font-bold text-green-100">Live Support</div>
+        <div class="text-xs font-black">WhatsApp Help</div>
+      </div>
+    </button>
+  </div>
+
+  <!-- ================= BLINKIT CART & CHECKOUT SLIDE DRAWER ================= -->
+  <div id="cart-drawer" class="fixed inset-0 z-50 hidden">
+    <!-- Overlay -->
+    <div id="drawer-overlay" onclick="toggleCartDrawer(false)" class="absolute inset-0 bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300"></div>
+
+    <!-- Panel -->
+    <div id="drawer-panel" class="absolute top-0 right-0 bottom-0 w-full max-w-md bg-white shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300">
+      
+      <!-- Drawer Header -->
+      <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-white z-10">
+        <div class="flex items-center gap-2">
+          <button onclick="toggleCartDrawer(false)" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 font-bold">
+            ✕
+          </button>
+          <h3 class="font-black text-gray-900 text-base">My Cart</h3>
+        </div>
+        <span class="text-xs bg-green-50 text-blinkit-green font-bold px-2.5 py-1 rounded-full border border-green-200">
+          ⚡ 10-15 Min Delivery
+        </span>
+      </div>
+
+      <!-- Drawer Scrollable Body -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
+        
+        <!-- Empty State -->
+        <div id="drawer-empty-state" class="hidden py-16 text-center">
+          <div class="w-24 h-24 mx-auto mb-4 bg-amber-50 rounded-full flex items-center justify-center text-4xl">🛒</div>
+          <h4 class="text-lg font-bold text-gray-800 mb-1">Your cart is empty!</h4>
+          <p class="text-xs text-gray-500 max-w-xs mx-auto mb-6">Add farm fresh milk, tomatoes, bread or snacks from Raosee Fresh Supermarket aisle.</p>
+          <button onclick="toggleCartDrawer(false)" class="bg-blinkit-green hover:bg-blinkit-greenHover text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md">
+            Start Shopping
+          </button>
+        </div>
+
+        <!-- Filled State -->
+        <div id="drawer-filled-state" class="space-y-4">
+          <!-- Free delivery progress bar -->
+          <div id="free-delivery-progress"></div>
+
+          <!-- Items List -->
+          <div class="space-y-2.5" id="drawer-items-list">
+            <!-- Injected by app.js -->
+          </div>
+
+          <!-- Delivery Partner Tip -->
+          <div class="bg-gray-50 rounded-2xl p-3.5 border border-gray-100">
+            <div class="text-xs font-bold text-gray-800 mb-1 flex items-center gap-1.5">
+              <span>🚴</span>
+              <span>Delivery Partner Tip</span>
+            </div>
+            <p class="text-[11px] text-gray-500 mb-2">100% of the tip goes directly to your Raosee Fresh delivery rider.</p>
+            <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <button onclick="setTip(0)" data-tip="0" class="js-tip-btn flex-1 py-1.5 px-2 bg-[#0C831F] text-white border border-[#0C831F] rounded-lg text-xs font-bold transition-colors">
+                No tip
+              </button>
+              <button onclick="setTip(10)" data-tip="10" class="js-tip-btn flex-1 py-1.5 px-2 bg-white text-gray-700 border border-gray-200 hover:border-blinkit-green rounded-lg text-xs font-bold transition-colors">
+                +₹10
+              </button>
+              <button onclick="setTip(20)" data-tip="20" class="js-tip-btn flex-1 py-1.5 px-2 bg-white text-gray-700 border border-gray-200 hover:border-blinkit-green rounded-lg text-xs font-bold transition-colors">
+                +₹20
+              </button>
+              <button onclick="setTip(30)" data-tip="30" class="js-tip-btn flex-1 py-1.5 px-2 bg-white text-gray-700 border border-gray-200 hover:border-blinkit-green rounded-lg text-xs font-bold transition-colors">
+                +₹30
+              </button>
+              <button onclick="setTip(50)" data-tip="50" class="js-tip-btn flex-1 py-1.5 px-2 bg-white text-gray-700 border border-gray-200 hover:border-blinkit-green rounded-lg text-xs font-bold transition-colors">
+                +₹50
+              </button>
+            </div>
+          </div>
+
+          <!-- Delivery Address Section -->
+          <div id="address-section-drawer" class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between border-b pb-2">
+              <h5 class="font-extrabold text-xs sm:text-sm text-gray-900 flex items-center gap-1.5">
+                <span>📍</span>
+                <span>Delivery Address & Contact</span>
+              </h5>
+              <span class="text-[10px] text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded">Auto-Saved</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Your Name *</label>
+                <input type="text" id="addr-name" placeholder="e.g. Rahul Sharma" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Phone / WhatsApp *</label>
+                <input type="tel" id="addr-phone" placeholder="e.g. 9876543210" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Flat / House / Floor *</label>
+                <input type="text" id="addr-flat" placeholder="e.g. Flat 302, Block B" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Street / Building *</label>
+                <input type="text" id="addr-street" placeholder="e.g. Green Valley Apts" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Landmark (Optional)</label>
+              <input type="text" id="addr-landmark" placeholder="e.g. Near HSR BDA Complex" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Delivery Instruction</label>
+              <select id="addr-notes" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none bg-white">
+                <option value="Leave at door & ring bell">Leave at door & ring bell</option>
+                <option value="Handover directly to me">Handover directly to me</option>
+                <option value="Please call before reaching">Please call before reaching</option>
+                <option value="Avoid ringing bell (baby sleeping)">Avoid ringing bell (baby sleeping)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ================= PAYMENT GATEWAY SELECTION ================= -->
+          <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between border-b pb-2">
+              <h5 class="font-extrabold text-xs sm:text-sm text-gray-900 flex items-center gap-1.5">
+                <span>💳</span>
+                <span>Select Payment Method</span>
+              </h5>
+              <span class="text-[10px] text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded">Fast & Secure</span>
+            </div>
+
+            <div class="space-y-2">
+              <!-- Option 1: Razorpay Online Gateway -->
+              <div 
+                id="pay-opt-razorpay" 
+                onclick="selectPaymentMethod('razorpay')" 
+                class="border-2 border-green-600 bg-green-50/50 p-3 rounded-xl cursor-pointer transition-all flex items-start gap-3"
+              >
+                <input type="radio" name="payment_choice" id="radio-razorpay" checked class="mt-1 text-green-600 focus:ring-green-500" />
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                      <span>Online Payment Gateway</span>
+                      <span class="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-1.5 py-0.5 rounded">Razorpay</span>
+                    </span>
+                    <span class="text-[11px] font-bold text-green-700">Recommended</span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 mt-0.5">Google Pay, PhonePe, Paytm, RuPay, Visa, Mastercard, NetBanking & Wallets</p>
+                </div>
+              </div>
+
+              <!-- Option 2: Instant Direct UPI QR (0% MDR) -->
+              <div 
+                id="pay-opt-upi_qr" 
+                onclick="selectPaymentMethod('upi_qr')" 
+                class="border border-gray-200 bg-white p-3 rounded-xl cursor-pointer hover:border-green-400 transition-all flex items-start gap-3"
+              >
+                <input type="radio" name="payment_choice" id="radio-upi_qr" class="mt-1 text-green-600 focus:ring-green-500" />
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                      <span>Instant Direct UPI (0% Fee)</span>
+                      <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">Scan QR</span>
+                    </span>
+                    <span class="text-[10px] text-gray-400">Zero charges</span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 mt-0.5">Direct merchant UPI transfer with dynamic QR code & 1-tap app launch</p>
+                </div>
+              </div>
+
+              <!-- Option 3: Pay on Delivery (COD) -->
+              <div 
+                id="pay-opt-cod" 
+                onclick="selectPaymentMethod('cod')" 
+                class="border border-gray-200 bg-white p-3 rounded-xl cursor-pointer hover:border-green-400 transition-all flex items-start gap-3"
+              >
+                <input type="radio" name="payment_choice" id="radio-cod" class="mt-1 text-green-600 focus:ring-green-500" />
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-gray-900">Cash / UPI on Delivery</span>
+                    <span class="text-[10px] text-gray-400">Pay at Doorstep</span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 mt-0.5">Pay via cash or scan rider's UPI QR code upon 10-15 min delivery</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bill Summary Card -->
+          <div id="drawer-bill-details"></div>
+
+        </div>
+
+      </div>
+
+      <!-- Drawer Footer Action: Unified Checkout Button -->
+      <div class="p-4 border-t border-gray-200 bg-white shadow-inner">
+        <button 
+          id="btn-checkout-primary"
+          onclick="handleUnifiedCheckout()"
+          class="w-full bg-[#0C831F] hover:bg-emerald-800 text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all"
+        >
+          <div class="flex items-center gap-2">
+            <span id="btn-checkout-icon" class="text-xl">💳</span>
+            <div class="text-left">
+              <div id="btn-checkout-label" class="leading-tight">Proceed to Pay via Razorpay</div>
+              <div id="btn-checkout-sub" class="text-[10px] font-normal opacity-90">Cards, UPI, NetBanking, Wallets</div>
+            </div>
+          </div>
+          <span class="flex items-center gap-1 font-extrabold text-sm sm:text-base">
+            <span>Pay & Order</span>
+            <span>➔</span>
+          </span>
+        </button>
+        <div class="text-center mt-2">
+          <span class="text-[11px] text-gray-500 flex items-center justify-center gap-1">
+            🔒 Verified Order & Direct WhatsApp dispatch to Raosee Fresh team
+          </span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= DIRECT UPI QR MODAL ================= -->
+  <div id="upi-qr-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeUpiQrModal()" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-200 text-center space-y-4">
+      
+      <div class="flex items-center justify-between border-b pb-2">
+        <div class="flex items-center gap-2 text-left">
+          <span class="text-2xl">📲</span>
+          <div>
+            <h4 class="font-black text-gray-900 text-sm">Direct UPI Payment</h4>
+            <p class="text-[11px] text-gray-500">Scan & pay to Raosee Fresh Supermarket</p>
+          </div>
+        </div>
+        <button onclick="closeUpiQrModal()" class="text-gray-400 hover:text-gray-600 font-bold p-1">✕</button>
+      </div>
+
+      <!-- Amount Badge -->
+      <div class="bg-green-50 border border-green-200 rounded-2xl p-3">
+        <span class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Amount to Pay</span>
+        <div class="text-2xl font-black text-green-800" id="upi-modal-amount">₹0</div>
+        <span class="text-[10px] text-gray-400">Order ID: <strong id="upi-modal-orderid">#RF-000000</strong></span>
+      </div>
+
+      <!-- Dynamic QR Code Container -->
+      <div class="p-3 bg-white border border-gray-200 rounded-2xl inline-block shadow-inner">
+        <img id="upi-modal-qr-img" src="" alt="UPI QR Code" class="w-48 h-48 mx-auto object-contain rounded-lg" />
+        <div class="text-[11px] font-mono text-gray-500 mt-2 font-bold" id="upi-modal-vpa">raoseefresh@upi</div>
+      </div>
+
+      <!-- 1-Tap Mobile UPI Intent Buttons -->
+      <div class="space-y-2">
+        <p class="text-[11px] text-gray-500 font-bold">On Mobile? Tap your preferred UPI App:</p>
+        <div class="grid grid-cols-3 gap-2">
+          <a id="btn-upi-gpay" href="#" class="bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 py-2 rounded-xl text-xs font-bold transition-colors block">
+            Google Pay
+          </a>
+          <a id="btn-upi-phonepe" href="#" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 py-2 rounded-xl text-xs font-bold transition-colors block">
+            PhonePe
+          </a>
+          <a id="btn-upi-paytm" href="#" class="bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 py-2 rounded-xl text-xs font-bold transition-colors block">
+            Paytm
+          </a>
+        </div>
+      </div>
+
+      <!-- UTR Reference Verification -->
+      <div class="text-left pt-2 border-t">
+        <label class="block text-[11px] font-bold text-gray-700 mb-1">Enter UPI Reference / UTR No (Optional)</label>
+        <input type="text" id="upi-utr-input" placeholder="e.g. 428198273612" class="w-full text-xs p-2 rounded-xl border border-gray-200 outline-none focus:border-green-600 mb-3" />
+        <button 
+          onclick="confirmUpiPaymentCompleted()"
+          class="w-full bg-[#0C831F] hover:bg-emerald-800 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all"
+        >
+          ✓ I Have Paid • Confirm Order
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= WHATSAPP SUPPORT POPUP MODAL ================= -->
+  <div id="whatsapp-support-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeWhatsAppSupportModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-gray-200">
+      
+      <!-- Top banner -->
+      <div class="bg-[#075E54] text-white p-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">
+            💬
+          </div>
+          <div>
+            <h4 class="font-black text-base leading-tight js-store-name">Raosee Fresh Helpdesk</h4>
+            <div class="flex items-center gap-1.5 text-xs text-green-200 mt-0.5">
+              <span class="w-2 h-2 rounded-full bg-[#25D366] animate-pulse"></span>
+              <span>Online • Typical reply under 2 mins</span>
+            </div>
+          </div>
+        </div>
+        <button onclick="closeWhatsAppSupportModal()" class="text-white/80 hover:text-white font-bold p-1">✕</button>
+      </div>
+
+      <!-- Quick Action List -->
+      <div class="p-5 space-y-3">
+        <p class="text-xs text-gray-600 font-medium">How can our supermarket team help you right now?</p>
+
+        <button 
+          onclick="closeWhatsAppSupportModal(); openWhatsAppChat('Hi Raosee Fresh, I would like to track my order.');"
+          class="w-full text-left p-3.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-2xl flex items-center justify-between group transition-all"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-xl">📦</span>
+            <div>
+              <div class="text-xs font-bold text-gray-900">Track My Delivery</div>
+              <div class="text-[11px] text-gray-500">Check live rider status & estimated arrival</div>
+            </div>
+          </div>
+          <span class="text-gray-400 group-hover:text-blinkit-green font-bold">➔</span>
+        </button>
+
+        <button 
+          onclick="closeWhatsAppSupportModal(); openPhotoOrderWhatsApp();"
+          class="w-full text-left p-3.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-2xl flex items-center justify-between group transition-all"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-xl">📸</span>
+            <div>
+              <div class="text-xs font-bold text-gray-900">Order by Photo or List</div>
+              <div class="text-[11px] text-gray-500">Send handwritten grocery list or voice note</div>
+            </div>
+          </div>
+          <span class="text-gray-400 group-hover:text-blinkit-green font-bold">➔</span>
+        </button>
+
+        <button 
+          onclick="closeWhatsAppSupportModal(); openWhatsAppChat('Hi Raosee Fresh team, I want to check availability of fresh items.');"
+          class="w-full text-left p-3.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-2xl flex items-center justify-between group transition-all"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🥬</span>
+            <div>
+              <div class="text-xs font-bold text-gray-900">Item Availability & Fresh Stock</div>
+              <div class="text-[11px] text-gray-500">Inquire about exotic fruits, organic veggies & milk</div>
+            </div>
+          </div>
+          <span class="text-gray-400 group-hover:text-blinkit-green font-bold">➔</span>
+        </button>
+
+        <button 
+          onclick="closeWhatsAppSupportModal(); openWhatsAppChat('Hi Raosee Fresh, I need assistance with an existing order/refund.');"
+          class="w-full text-left p-3.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-2xl flex items-center justify-between group transition-all"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🛡️</span>
+            <div>
+              <div class="text-xs font-bold text-gray-900">Refunds, Returns & Quality</div>
+              <div class="text-[11px] text-gray-500">Instant resolution with store supervisor</div>
+            </div>
+          </div>
+          <span class="text-gray-400 group-hover:text-blinkit-green font-bold">➔</span>
+        </button>
+
+        <div class="pt-2 text-center">
+          <span class="text-xs text-gray-400">Store Support Phone: <strong class="text-gray-700 js-store-phone">+91 98765 43210</strong></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= LIVE ORDER TRACKING MODAL ================= -->
+  <div id="tracking-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeTrackingModal()" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-gray-200 max-h-[92vh] flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-green-950 via-[#0C831F] to-emerald-900 text-white p-5 flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="track-payment-badge" class="bg-white/20 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              Live Order Status
+            </span>
+            <span class="text-xs font-mono font-bold text-green-200" id="track-order-id">#RF-000000</span>
+          </div>
+          <h4 class="text-lg font-black mt-1 flex items-center gap-2">
+            <span>Arriving in</span>
+            <span id="track-eta-timer" class="bg-blinkit-yellow text-blinkit-dark px-2 py-0.5 rounded-lg text-sm font-black">11m 45s</span>
+            <span class="text-base">⚡</span>
+          </h4>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="track-fullscreen-link" href="track.html" class="text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg font-bold transition-colors" title="Open Full Screen Tracking">
+            🗺️ Map
+          </a>
+          <button onclick="closeTrackingModal()" class="text-white hover:bg-white/20 rounded-lg p-1.5 font-bold">✕</button>
+        </div>
+      </div>
+
+      <!-- Tracking content -->
+      <div class="p-5 space-y-5 overflow-y-auto flex-1">
+        
+        <!-- Animated Route Mini Graphic -->
+        <div class="bg-emerald-50/70 border border-green-200 rounded-2xl p-3.5 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🏪</span>
+            <div class="text-[11px] leading-tight">
+              <strong class="text-gray-900 block">Raosee Store</strong>
+              <span class="text-gray-500">Dark Store Hub</span>
+            </div>
+          </div>
+
+          <div class="flex-1 mx-3 relative flex items-center justify-center">
+            <div class="w-full h-1.5 bg-green-200 rounded-full"></div>
+            <div class="absolute text-base animate-bounce">🛵</div>
+          </div>
+
+          <div class="flex items-center gap-2 text-right">
+            <div class="text-[11px] leading-tight">
+              <strong class="text-gray-900 block">Doorstep</strong>
+              <span class="text-gray-500">Express Delivery</span>
+            </div>
+            <span class="text-xl">🏠</span>
+          </div>
+        </div>
+
+        <!-- Delivery Partner Mini Card -->
+        <div class="bg-gray-50 rounded-2xl p-3.5 border border-gray-200 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-emerald-100 flex items-center justify-center text-2xl shadow-inner">
+              🚴
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-black text-gray-800">Ramesh Kumar</span>
+                <span class="bg-yellow-100 text-yellow-800 text-[9px] font-bold px-1 rounded">4.9 ⭐</span>
+              </div>
+              <div class="text-[10px] text-gray-500">Hero Electric (KA-01-EQ-4021) • 1,240 deliveries</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button 
+              onclick="window.location.href='tel:+919876543210'"
+              class="w-8 h-8 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-xs" 
+              title="Call Rider"
+            >
+              📞
+            </button>
+            <button 
+              onclick="openWhatsAppChat('Hi Ramesh (Raosee Fresh Rider), checking on my live order.')"
+              class="w-8 h-8 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white flex items-center justify-center text-xs active:scale-95 shadow-sm" 
+              title="Chat with Rider on WhatsApp"
+            >
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5-Stage Stepper -->
+        <div class="relative pl-6 space-y-3.5 border-l-2 border-green-200">
+          
+          <div class="relative" id="track-step-1">
+            <span class="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-[#0C831F] border-2 border-white ring-2 ring-green-100"></span>
+            <div class="text-xs font-bold text-gray-900">Order Placed &amp; Confirmed</div>
+            <div class="text-[10px] text-gray-500">Order received at Raosee Fresh central dark store</div>
+          </div>
+
+          <div class="relative" id="track-step-2">
+            <span class="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-gray-300 border-2 border-white"></span>
+            <div class="text-xs font-semibold text-gray-400">Packing at Raosee Dark Store</div>
+            <div class="text-[10px] text-gray-500">Fresh vegetables hand-inspected &amp; cold-packed</div>
+          </div>
+
+          <div class="relative" id="track-step-3">
+            <span class="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-gray-300 border-2 border-white"></span>
+            <div class="text-xs font-semibold text-gray-400">Delivery Partner Assigned</div>
+            <div class="text-[10px] text-gray-500">Partner Ramesh Kumar at store pickup bay</div>
+          </div>
+
+          <div class="relative" id="track-step-4">
+            <span class="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-gray-300 border-2 border-white"></span>
+            <div class="text-xs font-semibold text-gray-400">Out for Delivery</div>
+            <div class="text-[10px] text-gray-500">Speeding safely on electric scooter</div>
+          </div>
+
+          <div class="relative" id="track-step-5">
+            <span class="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-gray-300 border-2 border-white"></span>
+            <div class="text-xs font-semibold text-gray-400">Delivered at Doorstep</div>
+            <div class="text-[10px] text-gray-500">Contactless handover completed</div>
+          </div>
+
+        </div>
+
+        <!-- Order Summary Collapse -->
+        <div class="border-t pt-3">
+          <div class="text-xs font-bold text-gray-700 mb-1 flex justify-between">
+            <span>Ordered Items</span>
+            <span id="track-order-total" class="text-blinkit-green font-black">₹0</span>
+          </div>
+          <div id="track-order-items" class="max-h-24 overflow-y-auto space-y-1"></div>
+        </div>
+
+      </div>
+
+      <div class="p-4 border-t bg-gray-50 flex items-center gap-2">
+        <a href="track.html" class="flex-1 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 py-2.5 rounded-xl font-bold text-xs text-center">
+          Open Full Tracker
+        </a>
+        <button onclick="openWhatsAppChat('Hi Raosee Fresh, I need assistance with my current order.');" class="flex-1 bg-blinkit-green hover:bg-blinkit-greenHover text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow">
+          <span>WhatsApp Help</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= IN-APP CUSTOMER LOGIN MODAL ================= -->
+  <div id="customer-login-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeLoginModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-sm w-full shadow-2xl overflow-hidden border border-gray-200">
+      
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-green-950 via-[#0C831F] to-emerald-900 text-white p-5 text-center relative">
+        <button onclick="closeLoginModal()" class="absolute right-3.5 top-3.5 text-white/80 hover:text-white font-bold p-1">✕</button>
+        <div class="w-12 h-12 rounded-2xl bg-blinkit-yellow text-blinkit-dark font-black text-2xl mx-auto flex items-center justify-center shadow mb-2">
+          ⚡
+        </div>
+        <h4 class="font-black text-base">Customer Account</h4>
+        <p class="text-[11px] text-green-100">Log in for express 10-15m deliveries &amp; live tracking</p>
+      </div>
+
+      <div class="p-5 space-y-4">
+        
+        <!-- STEP 1: PHONE INPUT -->
+        <div id="modal-login-step-phone" class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-gray-700 uppercase mb-1.5">Enter Mobile Number</label>
+            <div class="relative flex items-center">
+              <span class="absolute left-3 text-xs font-bold text-gray-600 border-r pr-2">🇮🇳 +91</span>
+              <input 
+                type="tel" 
+                id="modal-login-phone"
+                maxlength="10"
+                placeholder="98765 43210" 
+                class="w-full pl-20 pr-3 py-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-bold text-sm outline-none"
+                onkeypress="if(event.key === 'Enter') handleModalSendOtp();"
+              />
+            </div>
+          </div>
+
+          <button 
+            onclick="handleModalSendOtp()"
+            class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-2.5 rounded-xl font-black text-xs shadow transition-all active:scale-95"
+          >
+            Continue with OTP ➔
+          </button>
+
+          <!-- 1-Click Demo Accounts -->
+          <div class="pt-3 border-t">
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block text-center mb-2">
+              ⚡ 1-Click Instant Demo Login:
+            </span>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button 
+                onclick="quickModalLogin('Rahul Sharma', '9876543210', 'Flat 402, Green Glen, HSR Sector 2')"
+                class="p-2 bg-gray-50 hover:bg-green-50 border rounded-xl text-left"
+              >
+                <div class="font-bold text-gray-900">👤 Rahul S.</div>
+                <div class="text-[9px] text-gray-500 truncate">HSR Layout</div>
+              </button>
+              <button 
+                onclick="quickModalLogin('Priya Patel', '9898989898', 'Villa 12, Palm Meadows, Koramangala')"
+                class="p-2 bg-gray-50 hover:bg-green-50 border rounded-xl text-left"
+              >
+                <div class="font-bold text-gray-900">👤 Priya P.</div>
+                <div class="text-[9px] text-gray-500 truncate">Koramangala</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: OTP INPUT -->
+        <div id="modal-login-step-otp" class="space-y-3 hidden">
+          <div class="text-center">
+            <h5 class="text-xs font-black text-gray-900">Enter Verification Code</h5>
+            <p class="text-[11px] text-gray-500">Sent to <strong id="modal-otp-phone-display">+91 9876543210</strong></p>
+          </div>
+
+          <div class="flex justify-center gap-2 my-2">
+            <input type="text" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-lg font-black rounded-xl border border-gray-300 focus:border-blinkit-green outline-none bg-gray-50" />
+            <input type="text" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-lg font-black rounded-xl border border-gray-300 focus:border-blinkit-green outline-none bg-gray-50" />
+            <input type="text" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-lg font-black rounded-xl border border-gray-300 focus:border-blinkit-green outline-none bg-gray-50" />
+            <input type="text" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-lg font-black rounded-xl border border-gray-300 focus:border-blinkit-green outline-none bg-gray-50" />
+          </div>
+
+          <div class="bg-amber-50 text-amber-900 text-[11px] p-2 rounded-xl flex items-center justify-between">
+            <span>💡 Demo code is <strong>1234</strong></span>
+            <button onclick="document.querySelectorAll('.modal-otp-digit').forEach((el,i)=>el.value=['1','2','3','4'][i])" class="text-[10px] font-bold underline">Auto-fill</button>
+          </div>
+
+          <button 
+            onclick="handleModalVerifyOtp()"
+            class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-2.5 rounded-xl font-black text-xs shadow transition-all active:scale-95"
+          >
+            Verify &amp; Sign In
+          </button>
+        </div>
+
+        <!-- STEP 3: NEW USER PROFILE -->
+        <div id="modal-login-step-profile" class="space-y-2.5 text-xs hidden">
+          <div class="text-center pb-1">
+            <h5 class="font-black text-gray-900">Almost Done! 🎉</h5>
+            <p class="text-[11px] text-gray-500">Enter your name &amp; address for grocery delivery</p>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-0.5">Your Full Name *</label>
+            <input type="text" id="modal-profile-name" placeholder="e.g. Vikram Rao" class="w-full p-2 border rounded-xl outline-none focus:border-blinkit-green font-semibold" />
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-0.5">Flat / House No. *</label>
+            <input type="text" id="modal-profile-flat" placeholder="e.g. Flat 302, Green Glen" class="w-full p-2 border rounded-xl outline-none focus:border-blinkit-green" />
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-0.5">Street / Locality</label>
+            <input type="text" id="modal-profile-street" placeholder="e.g. Sector 2, HSR Layout" class="w-full p-2 border rounded-xl outline-none focus:border-blinkit-green" />
+          </div>
+
+          <button 
+            onclick="handleModalSaveProfile()"
+            class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-2.5 rounded-xl font-black text-xs shadow transition-all active:scale-95"
+          >
+            Save &amp; Start Shopping ➔
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= "MY ACCOUNT & ORDERS" SLIDE DRAWER ================= -->
+  <div id="account-drawer" class="fixed inset-0 z-50 hidden">
+    <div id="account-drawer-overlay" onclick="closeAccountDrawer()" class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+    <div id="account-drawer-panel" class="absolute right-0 top-0 bottom-0 max-w-md w-full bg-white shadow-2xl flex flex-col transition-transform duration-300 translate-x-full">
+      
+      <!-- Drawer Header -->
+      <div class="p-4 sm:p-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-blinkit-yellow text-blinkit-dark font-black flex items-center justify-center text-xl shadow-sm">
+            👤
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h4 class="font-black text-sm text-gray-900" id="account-user-name">Customer Account</h4>
+              <span class="bg-green-100 text-green-800 text-[9px] font-black px-1.5 py-0.5 rounded-full">VIP Club</span>
+            </div>
+            <div class="text-xs text-gray-500" id="account-user-phone">+91 98765 43210</div>
+          </div>
+        </div>
+        <button onclick="closeAccountDrawer()" class="text-gray-400 hover:text-gray-700 p-2 font-bold text-sm">✕</button>
+      </div>
+
+      <!-- Drawer Content -->
+      <div class="p-5 overflow-y-auto flex-1 space-y-5">
+        
+        <!-- Saved Delivery Address Card -->
+        <div class="bg-green-50/60 rounded-2xl p-3.5 border border-green-200 text-xs">
+          <div class="flex items-center justify-between text-gray-500 font-bold mb-1">
+            <span>📍 PRIMARY DELIVERY ADDRESS</span>
+            <span class="text-blinkit-green text-[10px]">10-15 Min Zone</span>
+          </div>
+          <div class="font-bold text-gray-900" id="account-user-address">HSR Layout, Sector 2, Bangalore</div>
+        </div>
+
+        <!-- Orders Section Header -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-black text-sm text-gray-900 flex items-center gap-2">
+              <span>🧾</span>
+              <span>Past Orders &amp; Receipts</span>
+            </h4>
+            <a href="track.html" class="text-xs text-blinkit-green font-bold hover:underline">
+              Live Map ➔
+            </a>
+          </div>
+
+          <!-- Orders List Container -->
+          <div id="account-orders-container" class="space-y-3">
+            <!-- Rendered via JavaScript -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Drawer Footer with Logout -->
+      <div class="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+        <a href="login.html" class="text-xs text-gray-500 hover:text-gray-900 font-semibold">
+          Switch Account
+        </a>
+        <button onclick="logoutCustomer()" class="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-xs font-bold border border-red-200 transition-colors">
+          Logout
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= ITEMIZED BILL RECEIPT MODAL ================= -->
+  <div id="order-receipt-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4">
+    <div onclick="closeOrderReceipt()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-gray-200 max-h-[90vh] flex flex-col">
+      
+      <!-- Receipt Header -->
+      <div class="p-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-2xl shadow-sm js-store-logo overflow-hidden flex-shrink-0">
+            ⚡
+          </div>
+          <div>
+            <span class="text-[10px] font-black text-green-700 bg-green-100 px-2 py-0.5 rounded-full uppercase tracking-wider">Official Tax Invoice</span>
+            <h4 class="font-black text-base text-gray-900 mt-0.5 js-company-name" id="receipt-company-name">Raosee Fresh Retail Private Limited</h4>
+            <div class="text-[11px] font-bold text-gray-600 js-outlet-name" id="receipt-outlet-name">Main Dark Store - HSR Layout Hub #01</div>
+            <p class="text-xs text-gray-500 mt-0.5">Order ID: <strong id="receipt-order-id" class="text-gray-800 font-mono">#RF-000000</strong></p>
+          </div>
+        </div>
+        <button onclick="closeOrderReceipt()" class="text-gray-400 hover:text-gray-700 font-bold p-1">✕</button>
+      </div>
+
+      <div class="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
+        
+        <!-- Live Order Status & Quick Track Bar -->
+        <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-2xl p-3">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🛵</span>
+            <div>
+              <span class="text-[10px] text-gray-500 font-semibold block uppercase">Current Status</span>
+              <strong id="receipt-order-status" class="text-xs font-black text-green-900">Confirmed</strong>
+            </div>
+          </div>
+          <a id="receipt-track-btn" href="track.html" class="px-3 py-1.5 bg-blinkit-green hover:bg-emerald-800 text-white rounded-xl font-bold text-xs flex items-center gap-1 shadow-xs">
+            <span>⚡ Track Live</span>
+          </a>
+        </div>
+
+        <!-- Outlet Physical Address & Tax/FSSAI Compliance Box -->
+        <div class="bg-gray-50 rounded-2xl p-3 border border-gray-200 text-[11px] space-y-1">
+          <div class="text-gray-500 font-bold uppercase tracking-wider text-[10px] flex items-center justify-between">
+            <span>🏢 Dark Store Dispatch Location</span>
+            <span class="text-blinkit-green font-mono font-bold js-outlet-code">RF-BLR-01</span>
+          </div>
+          <div class="text-gray-800 font-semibold leading-relaxed" id="receipt-outlet-address">
+            Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102
+          </div>
+          <div class="flex items-center justify-between pt-1.5 text-[10px] text-gray-600 border-t border-gray-200/70 font-mono">
+            <span>GSTIN: <strong id="receipt-gstin" class="text-gray-800">29ABCDE1234F1Z5</strong></span>
+            <span>FSSAI Lic: <strong id="receipt-fssai" class="text-gray-800">11223344000123</strong></span>
+          </div>
+        </div>
+
+        <!-- Order Meta -->
+        <div class="grid grid-cols-2 gap-2 pb-3 border-b border-gray-100 text-[11px]">
+          <div>
+            <span class="text-gray-400 block">Date &amp; Time:</span>
+            <strong id="receipt-date" class="text-gray-800">-</strong>
+          </div>
+          <div>
+            <span class="text-gray-400 block">Customer:</span>
+            <strong id="receipt-customer-name" class="text-gray-800">-</strong>
+            <span id="receipt-customer-phone" class="text-gray-500 block"></span>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-gray-400 block text-[11px]">Delivery Address:</span>
+          <strong id="receipt-customer-address" class="text-gray-800 block text-xs"></strong>
+        </div>
+
+        <!-- Items Table -->
+        <div>
+          <table class="w-full text-left">
+            <thead class="text-[10px] uppercase font-bold text-gray-400 border-b">
+              <tr>
+                <th class="py-1">Item</th>
+                <th class="py-1 text-center">Qty</th>
+                <th class="py-1 text-right">Price</th>
+                <th class="py-1 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody id="receipt-items-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Bill Totals -->
+        <div class="border-t pt-2 space-y-1.5 text-xs text-gray-600">
+          <div class="flex justify-between">
+            <span>Subtotal</span>
+            <span id="receipt-subtotal" class="font-bold">₹0</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Delivery Fee</span>
+            <span class="text-blinkit-green font-bold">FREE</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Handling Fee</span>
+            <span>₹2</span>
+          </div>
+          <div class="flex justify-between text-sm font-black text-gray-900 border-t pt-2">
+            <span>Grand Total</span>
+            <span id="receipt-grand-total" class="text-blinkit-green text-base">₹0</span>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 p-3 rounded-xl border text-[11px] text-gray-600 space-y-0.5">
+          <div>Payment: <strong id="receipt-payment-method">Online</strong></div>
+          <div id="receipt-payment-ref" class="font-mono text-gray-500"></div>
+        </div>
+
+        <!-- Custom Invoice Footer Note -->
+        <div class="text-[10px] text-gray-500 text-center italic border-t pt-2" id="receipt-footer-note">
+          Thank you for shopping with Raosee Fresh! Freshness &amp; 100% replacement guaranteed on WhatsApp.
+        </div>
+
+      </div>
+
+      <div class="p-4 border-t bg-gray-50 flex items-center justify-between">
+        <button onclick="window.print()" class="text-xs font-bold text-gray-600 hover:text-gray-900 flex items-center gap-1">
+          <span>🖨️ Print Invoice</span>
+        </button>
+        <button onclick="closeOrderReceipt()" class="px-5 py-2 bg-blinkit-green text-white rounded-xl text-xs font-bold shadow">
+          Done
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MOBILE BOTTOM NAVIGATION (BLINKIT STYLE) ================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-3 py-2 flex items-center justify-around shadow-lg">
+    <a href="#" class="flex flex-col items-center text-blinkit-green">
+      <span class="text-lg">🛒</span>
+      <span class="text-[10px] font-bold">Store</span>
+    </a>
+    <a href="track.html" class="flex flex-col items-center text-gray-600 hover:text-blinkit-green">
+      <span class="text-lg">📦</span>
+      <span class="text-[10px] font-bold">Track</span>
+    </a>
+    <button onclick="handleHeaderUserClick()" class="flex flex-col items-center text-gray-600 hover:text-blinkit-green">
+      <span class="text-lg">👤</span>
+      <span class="text-[10px] font-bold" id="mobile-bottom-user-label">Account</span>
+    </button>
+    <button onclick="toggleCartDrawer(true)" class="flex flex-col items-center text-gray-600 hover:text-blinkit-green relative">
+      <span class="text-lg">🛍️</span>
+      <span class="text-[10px] font-bold">Cart</span>
+      <span class="absolute -top-1 -right-2 bg-blinkit-green text-white text-[9px] font-black px-1.5 py-0.2 rounded-full js-header-cart-count" style="display: none;">0</span>
+    </button>
+  </nav>
+
+  <!-- ================= STORE CONFIGURATION & ADMIN MODAL ================= -->
+  <div id="settings-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeStoreSettingsModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-gray-200 max-h-[90vh] flex flex-col">
+      
+      <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+        <div>
+          <h4 class="font-black text-gray-900 text-base">Store Settings & Payment Gateway</h4>
+          <p class="text-xs text-gray-500">Configure your business WhatsApp and Payment Gateway credentials</p>
+        </div>
+        <button onclick="closeStoreSettingsModal()" class="text-gray-500 hover:text-gray-900 font-bold p-1">✕</button>
+      </div>
+
+      <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        
+        <div class="bg-green-50 border border-green-200 rounded-xl p-3 text-green-900">
+          <strong>💳 Payment Gateway Tip:</strong> Enter your Razorpay Key ID (e.g. <code>rzp_test_...</code> for testing, or live key) and your Store UPI ID (e.g. <code>raoseefresh@upi</code>). Customer payments will credit directly to your account!
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Razorpay Key ID (Test or Live)</label>
+          <input type="text" id="cfg-rzp-key" class="w-full p-2.5 border rounded-xl font-mono text-xs focus:border-blinkit-green outline-none" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Store UPI ID (for Direct 0% Fee QR Payments)</label>
+          <input type="text" id="cfg-upi-id" class="w-full p-2.5 border rounded-xl font-mono text-xs focus:border-blinkit-green outline-none" placeholder="e.g. yourname@okaxis" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">WhatsApp Business Number (digits only, e.g. 919876543210)</label>
+          <input type="text" id="cfg-wa-num" class="w-full p-2.5 border rounded-xl font-mono text-sm focus:border-blinkit-green outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Store / Public Trade Name</label>
+            <input type="text" id="cfg-store-name" class="w-full p-2.5 border rounded-xl text-xs focus:border-blinkit-green outline-none font-bold" />
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Company Legal Entity Name</label>
+            <input type="text" id="cfg-company-name" class="w-full p-2.5 border rounded-xl text-xs focus:border-blinkit-green outline-none font-semibold" placeholder="e.g. Raosee Fresh Retail Pvt Ltd" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Outlet / Branch Name</label>
+            <input type="text" id="cfg-outlet-name" class="w-full p-2.5 border rounded-xl text-xs focus:border-blinkit-green outline-none font-semibold" placeholder="e.g. HSR Layout Hub #01" />
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">Store Tagline / Slogan</label>
+            <input type="text" id="cfg-tagline" class="w-full p-2.5 border rounded-xl text-xs focus:border-blinkit-green outline-none" placeholder="e.g. Fresh Groceries in 10-15 Mins" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Store Address / Dark Store Location</label>
+          <input type="text" id="cfg-address" class="w-full p-2.5 border rounded-xl text-xs focus:border-blinkit-green outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">GSTIN (15 Digits)</label>
+            <input type="text" id="cfg-gstin" class="w-full p-2.5 border rounded-xl font-mono text-xs focus:border-blinkit-green outline-none" placeholder="29ABCDE1234F1Z5" />
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">FSSAI License (14 Digits)</label>
+            <input type="text" id="cfg-fssai" class="w-full p-2.5 border rounded-xl font-mono text-xs focus:border-blinkit-green outline-none" placeholder="11223344000123" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t">
+          <a href="admin.html#outlet" class="text-blinkit-green font-bold hover:underline flex items-center gap-1">
+            <span>🏢 Go to Full Company &amp; Outlet Manager (with Logo Upload)</span>
+            <span>➔</span>
+          </a>
+        </div>
+
+      </div>
+
+      <div class="p-4 border-t bg-gray-50 flex items-center justify-end gap-2">
+        <button onclick="closeStoreSettingsModal()" class="px-4 py-2 border rounded-xl text-gray-700 font-bold hover:bg-gray-100">
+          Cancel
+        </button>
+        <button onclick="saveStoreSettingsModal()" class="px-5 py-2 bg-blinkit-green hover:bg-blinkit-greenHover text-white rounded-xl font-bold shadow-md">
+          Save Settings
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Location Picker Modal -->
+  <div id="location-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeLocationModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-gray-200">
+      <h4 class="font-black text-gray-900 text-base mb-2">Select Delivery Area</h4>
+      <p class="text-xs text-gray-500 mb-4">Express 10-15 minute grocery delivery is currently active in these localities:</p>
+      
+      <div class="space-y-2 text-xs">
+        <button onclick="setDeliveryLocation('HSR Layout, Sector 1-7, Bangalore')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
+          <span>📍 HSR Layout (Sectors 1-7)</span>
+          <span class="text-green-700 font-bold">10 mins</span>
+        </button>
+        <button onclick="setDeliveryLocation('Koramangala 3rd to 6th Block, Bangalore')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
+          <span>📍 Koramangala (Blocks 3-6)</span>
+          <span class="text-green-700 font-bold">12 mins</span>
+        </button>
+        <button onclick="setDeliveryLocation('Bellandur & Green Glen Layout, Bangalore')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
+          <span>📍 Bellandur & Green Glen</span>
+          <span class="text-green-700 font-bold">14 mins</span>
+        </button>
+        <button onclick="setDeliveryLocation('Sarjapur Road / Haralur, Bangalore')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
+          <span>📍 Sarjapur Road / Haralur</span>
+          <span class="text-green-700 font-bold">15 mins</span>
+        </button>
+      </div>
+
+      <button onclick="closeLocationModal()" class="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2.5 rounded-xl font-bold text-xs">
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="store-config.js"></script>
+  <script src="products.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    function openWhatsAppSupportModal() {
+      document.getElementById('whatsapp-support-modal').classList.remove('hidden');
+    }
+    function closeWhatsAppSupportModal() {
+      document.getElementById('whatsapp-support-modal').classList.add('hidden');
+    }
+
+    function openLocationModal() {
+      document.getElementById('location-modal').classList.remove('hidden');
+    }
+    function closeLocationModal() {
+      document.getElementById('location-modal').classList.add('hidden');
+    }
+    function setDeliveryLocation(loc) {
+      document.querySelectorAll('.js-selected-address-summary').forEach(el => el.textContent = loc);
+      closeLocationModal();
+    }
+
+    function openStoreSettingsModal() {
+      const cfg = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
+      document.getElementById('cfg-wa-num').value = cfg.whatsappNumber || '919876543210';
+      document.getElementById('cfg-store-name').value = cfg.storeName || 'Raosee Fresh Supermarket';
+      const compEl = document.getElementById('cfg-company-name');
+      if (compEl) compEl.value = cfg.companyName || 'Raosee Fresh Retail Private Limited';
+      const outEl = document.getElementById('cfg-outlet-name');
+      if (outEl) outEl.value = cfg.outletName || 'Main Dark Store - HSR Layout Hub #01';
+      const tagEl = document.getElementById('cfg-tagline');
+      if (tagEl) tagEl.value = cfg.tagline || 'Farm Fresh Groceries Delivered in 10-15 Mins';
+      const gstEl = document.getElementById('cfg-gstin');
+      if (gstEl) gstEl.value = cfg.gstin || '29ABCDE1234F1Z5';
+      const fssaiEl = document.getElementById('cfg-fssai');
+      if (fssaiEl) fssaiEl.value = cfg.fssaiNumber || '11223344000123';
+      document.getElementById('cfg-free-del').value = cfg.freeDeliveryThreshold || 199;
+      document.getElementById('cfg-std-del').value = cfg.standardDeliveryFee || 25;
+      document.getElementById('cfg-address').value = cfg.storeAddress || '';
+      document.getElementById('cfg-rzp-key').value = cfg.payment?.razorpayKeyId || 'rzp_test_1DP5mmOlF5G5ag';
+      document.getElementById('cfg-upi-id').value = cfg.payment?.upiId || 'raoseefresh@upi';
+      document.getElementById('settings-modal').classList.remove('hidden');
+    }
+    function closeStoreSettingsModal() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+    function saveStoreSettingsModal() {
+      const waNum = document.getElementById('cfg-wa-num').value.trim().replace(/\D/g, '');
+      const storeName = document.getElementById('cfg-store-name').value.trim();
+      const compName = document.getElementById('cfg-company-name') ? document.getElementById('cfg-company-name').value.trim() : '';
+      const outletName = document.getElementById('cfg-outlet-name') ? document.getElementById('cfg-outlet-name').value.trim() : '';
+      const tagline = document.getElementById('cfg-tagline') ? document.getElementById('cfg-tagline').value.trim() : '';
+      const gstin = document.getElementById('cfg-gstin') ? document.getElementById('cfg-gstin').value.trim().toUpperCase() : '';
+      const fssai = document.getElementById('cfg-fssai') ? document.getElementById('cfg-fssai').value.trim() : '';
+      const freeDel = parseInt(document.getElementById('cfg-free-del').value, 10) || 199;
+      const stdDel = parseInt(document.getElementById('cfg-std-del').value, 10) || 25;
+      const address = document.getElementById('cfg-address').value.trim();
+      const rzpKey = document.getElementById('cfg-rzp-key').value.trim() || 'rzp_test_1DP5mmOlF5G5ag';
+      const upiId = document.getElementById('cfg-upi-id').value.trim() || 'raoseefresh@upi';
+
+      if (typeof updateStoreConfig === 'function') {
+        state.config = updateStoreConfig({
+          whatsappNumber: waNum,
+          supportPhone: '+' + waNum,
+          storeName: storeName || 'Raosee Fresh Supermarket',
+          companyName: compName || 'Raosee Fresh Retail Private Limited',
+          outletName: outletName || 'Main Dark Store - HSR Layout Hub #01',
+          tagline: tagline || 'Farm Fresh Groceries Delivered in 10-15 Mins',
+          gstin: gstin || '29ABCDE1234F1Z5',
+          fssaiNumber: fssai || '11223344000123',
+          freeDeliveryThreshold: freeDel,
+          standardDeliveryFee: stdDel,
+          storeAddress: address,
+          payment: {
+            razorpayKeyId: rzpKey,
+            upiId: upiId
+          }
+        });
+      }
+
+      applyBranding();
+      updateCartUI();
+      closeStoreSettingsModal();
+      alert("Settings, Company & Outlet Profile updated successfully!");
+    }
+
+    // PWA & Mobile App Installation Handler
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.classList.remove('hidden');
+    });
+
+    function triggerAppInstall() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('User installed Raosee Fresh app');
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        // Detect iOS device
+        const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIos) {
+          alert("📱 Install Raosee Fresh on iPhone:\n\n1. Tap the Share button (⎋) at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.\n3. Tap 'Add' in the top right corner!");
+        } else {
+          alert("📱 Install on Android / PC:\n\nOpen this website in Google Chrome, tap the 3 dots (⋮) menu, and tap 'Install App' or 'Add to Home screen'!");
+        }
+      }
+    }
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.log('Service Worker registration skipped/failed', err);
+        });
+      });
+    }
+  </script>
+
+</body>
+</html>

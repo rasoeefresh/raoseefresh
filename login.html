@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Customer Login | Raosee Fresh Supermarket</title>
+  <meta name="description" content="Login to Raosee Fresh Supermarket for express 10-15 minute grocery deliveries, live order tracking, and exclusive discounts." />
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0C831F" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            blinkit: {
+              yellow: '#F8CB46',
+              green: '#0C831F',
+              greenHover: '#0a6c1a',
+              dark: '#1C1C1C',
+              lightGray: '#F4F6FB'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#F4F6FB] min-h-screen flex flex-col justify-between font-sans antialiased text-gray-900 selection:bg-green-100 selection:text-green-800">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="bg-white border-b border-gray-200 py-3.5 px-4 sm:px-8 sticky top-0 z-20 shadow-sm">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2.5 group">
+        <div class="w-10 h-10 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-xl shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden">
+          ⚡
+        </div>
+        <div>
+          <span class="font-black text-xl tracking-tight text-blinkit-green js-store-name">Raosee Fresh</span>
+          <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 js-outlet-name">Supermarket</span>
+        </div>
+      </a>
+
+      <div class="flex items-center gap-3">
+        <a href="track.html" class="text-xs font-bold text-gray-600 hover:text-blinkit-green hidden sm:flex items-center gap-1">
+          <span>📦 Track Order</span>
+        </a>
+        <a href="index.html" class="bg-green-50 hover:bg-green-100 text-blinkit-green border border-green-200 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1">
+          <span>← Back to Store</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN LOGIN CONTAINER ================= -->
+  <main class="flex-1 flex items-center justify-center p-4 sm:p-6 my-4">
+    <div class="max-w-md w-full">
+      
+      <!-- Card Container -->
+      <div class="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
+        
+        <!-- Header Banner -->
+        <div class="bg-gradient-to-r from-green-900 via-emerald-800 to-green-950 text-white p-6 relative overflow-hidden text-center">
+          <div class="absolute -right-6 -bottom-6 text-7xl opacity-10 select-none">🛒</div>
+          <div class="w-16 h-16 rounded-2xl bg-blinkit-yellow text-blinkit-dark font-black text-3xl mx-auto flex items-center justify-center shadow-lg mb-3 js-store-logo overflow-hidden">
+            ⚡
+          </div>
+          <h1 class="text-xl sm:text-2xl font-black tracking-tight js-store-tagline">Farm Fresh Groceries in 10-15 Mins</h1>
+          <p class="text-xs text-green-200 mt-1">Log in for 10-15 minute grocery delivery &amp; live tracking</p>
+          
+          <div class="inline-flex items-center gap-1.5 bg-white/20 text-white px-3 py-1 rounded-full text-[11px] font-bold mt-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Express Store Open • Delivering in 10-15 Mins</span>
+          </div>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-6">
+
+          <!-- STEP 1: PHONE NUMBER FORM -->
+          <div id="login-step-phone" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                Enter Mobile Number
+              </label>
+              <div class="relative flex items-center">
+                <span class="absolute left-3.5 flex items-center gap-1 text-sm font-bold text-gray-700 border-r border-gray-300 pr-2.5">
+                  <span>🇮🇳</span>
+                  <span>+91</span>
+                </span>
+                <input 
+                  type="tel" 
+                  id="login-phone-input"
+                  maxlength="10" 
+                  placeholder="98765 43210"
+                  class="w-full pl-20 pr-4 py-3 bg-gray-50 hover:bg-white focus:bg-white rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none text-base font-bold tracking-wider text-gray-800 transition-all"
+                  oninput="this.value = this.value.replace(/\D/g, '')"
+                  onkeypress="if(event.key === 'Enter') handleSendOtp();"
+                />
+              </div>
+              <p class="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1">
+                <span>🔒</span> We will send a 4-digit verification code to this number.
+              </p>
+            </div>
+
+            <button 
+              id="btn-send-otp"
+              onclick="handleSendOtp()"
+              class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-3.5 rounded-2xl font-black text-sm tracking-wide shadow-md hover:shadow-lg active:scale-98 transition-all flex items-center justify-center gap-2"
+            >
+              <span>Continue with OTP</span>
+              <span>➔</span>
+            </button>
+
+            <!-- Quick Demo Accounts -->
+            <div class="pt-4 border-t border-gray-100">
+              <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider block text-center mb-3">
+                ⚡ Or 1-Click Instant Demo Login:
+              </span>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <button 
+                  onclick="quickLogin('Rahul Sharma', '9876543210', 'Flat 402, Green Glen Layout, HSR Sector 2')"
+                  class="p-2.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-xl text-left transition-all group"
+                >
+                  <div class="font-bold text-gray-800 group-hover:text-blinkit-green">👤 Rahul Sharma</div>
+                  <div class="text-[10px] text-gray-500 truncate">HSR Layout (Bangalore)</div>
+                </button>
+
+                <button 
+                  onclick="quickLogin('Priya Patel', '9898989898', 'Villa 12, Palm Meadows, Koramangala')"
+                  class="p-2.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-xl text-left transition-all group"
+                >
+                  <div class="font-bold text-gray-800 group-hover:text-blinkit-green">👤 Priya Patel</div>
+                  <div class="text-[10px] text-gray-500 truncate">Koramangala 4th Block</div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2: OTP VERIFICATION FORM -->
+          <div id="login-step-otp" class="space-y-4 hidden">
+            <div class="text-center">
+              <span class="text-2xl">📱</span>
+              <h3 class="text-base font-black text-gray-900 mt-1">Verify Mobile Number</h3>
+              <p class="text-xs text-gray-500">
+                OTP sent to <strong id="otp-phone-display" class="text-gray-800">+91 98765 43210</strong>
+                <button onclick="backToPhoneStep()" class="text-blinkit-green font-bold ml-1 hover:underline text-[11px]">Edit</button>
+              </p>
+            </div>
+
+            <!-- OTP Input Boxes -->
+            <div class="flex justify-center gap-3 my-4">
+              <input type="text" maxlength="1" class="otp-digit w-12 h-14 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+              <input type="text" maxlength="1" class="otp-digit w-12 h-14 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+              <input type="text" maxlength="1" class="otp-digit w-12 h-14 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+              <input type="text" maxlength="1" class="otp-digit w-12 h-14 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            </div>
+
+            <!-- Demo OTP Helper Hint -->
+            <div class="bg-amber-50 border border-amber-200 text-amber-900 p-2.5 rounded-xl text-xs flex items-center justify-between">
+              <span>💡 Demo verification code is <strong>1234</strong></span>
+              <button onclick="fillDemoOtp()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold px-2 py-1 rounded-lg text-[10px]">
+                Auto-fill
+              </button>
+            </div>
+
+            <button 
+              id="btn-verify-otp"
+              onclick="handleVerifyOtp()"
+              class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-3.5 rounded-2xl font-black text-sm tracking-wide shadow-md hover:shadow-lg active:scale-98 transition-all"
+            >
+              Verify &amp; Continue
+            </button>
+
+            <div class="text-center">
+              <button onclick="handleResendOtp()" id="btn-resend-otp" class="text-xs font-semibold text-gray-500 hover:text-blinkit-green">
+                Didn't receive code? <span class="font-bold text-blinkit-green">Resend OTP</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 3: PROFILE SETUP (FOR NEW USERS) -->
+          <div id="login-step-profile" class="space-y-4 hidden">
+            <div class="text-center">
+              <span class="text-3xl">🎉</span>
+              <h3 class="text-base font-black text-gray-900 mt-1">Complete Your Profile</h3>
+              <p class="text-xs text-gray-500">Provide your name &amp; delivery address for fast 10-15m deliveries</p>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Your Full Name *</label>
+                <input type="text" id="profile-name-input" placeholder="e.g. Vikram Rao" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green focus:ring-2 focus:ring-green-100 outline-none font-semibold text-sm" />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Flat / House / Apartment No. *</label>
+                <input type="text" id="profile-flat-input" placeholder="e.g. Flat 301, Tower B, Sunshine Apts" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-medium" />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Street / Locality / Sector *</label>
+                <input type="text" id="profile-street-input" placeholder="e.g. 19th Main, Sector 2, HSR Layout" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-medium" />
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Landmark (Optional)</label>
+                <input type="text" id="profile-landmark-input" placeholder="e.g. Near BDA Complex" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-medium" />
+              </div>
+            </div>
+
+            <button 
+              onclick="saveProfileAndFinish()"
+              class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-3.5 rounded-2xl font-black text-sm tracking-wide shadow-md active:scale-98 transition-all"
+            >
+              Save &amp; Start Shopping ➔
+            </button>
+          </div>
+
+          <!-- SUCCESS STATE -->
+          <div id="login-step-success" class="text-center py-6 space-y-4 hidden">
+            <div class="w-16 h-16 rounded-full bg-green-100 text-blinkit-green flex items-center justify-center text-3xl mx-auto shadow-inner animate-bounce">
+              ✓
+            </div>
+            <div>
+              <h3 class="text-lg font-black text-gray-900">Welcome Back!</h3>
+              <p class="text-xs text-gray-600 mt-1" id="success-welcome-msg">You are successfully logged in.</p>
+            </div>
+            <div class="pt-2">
+              <a href="index.html" class="inline-block bg-blinkit-green hover:bg-blinkit-greenHover text-white px-6 py-3 rounded-2xl font-black text-xs shadow-md">
+                Continue to Store ➔
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer Guarantees -->
+        <div class="bg-gray-50 border-t border-gray-100 p-4 text-center">
+          <div class="flex items-center justify-center gap-4 text-[11px] text-gray-500 font-medium">
+            <span>⚡ 10-15m Express</span>
+            <span>•</span>
+            <span>💳 Online Payments</span>
+            <span>•</span>
+            <span>💬 WhatsApp Updates</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Terms & Privacy disclaimer -->
+      <p class="text-[11px] text-gray-500 text-center mt-4">
+        By continuing, you agree to Raosee Fresh Supermarket's Terms of Service &amp; Privacy Policy.
+      </p>
+
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="store-config.js"></script>
+  <script>
+    let activePhone = '';
+    let generatedOtp = '1234';
+
+    // Auto-focus OTP digit boxes & store branding
+    document.addEventListener('DOMContentLoaded', () => {
+      applyStoreBranding();
+
+      // Check if already logged in
+      const currentUser = getCurrentLoggedInUser();
+      if (currentUser) {
+        showSuccessState(currentUser);
+      }
+
+      const otpInputs = document.querySelectorAll('.otp-digit');
+      otpInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+          if (e.target.value.length === 1 && index < otpInputs.length - 1) {
+            otpInputs[index + 1].focus();
+          }
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !e.target.value && index > 0) {
+            otpInputs[index - 1].focus();
+          }
+        });
+      });
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'raosee_fresh_config') {
+          applyStoreBranding();
+        }
+      });
+    });
+
+    function applyStoreBranding() {
+      const cfg = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
+
+      document.querySelectorAll('.js-store-name').forEach(el => el.textContent = cfg.storeName || 'Raosee Fresh');
+      document.querySelectorAll('.js-company-name').forEach(el => el.textContent = cfg.companyName || 'Raosee Fresh Retail Pvt Ltd');
+      document.querySelectorAll('.js-outlet-name').forEach(el => el.textContent = cfg.outletName ? cfg.outletName.split('-')[0].trim() : 'Supermarket');
+      document.querySelectorAll('.js-store-tagline').forEach(el => el.textContent = cfg.tagline || 'Farm Fresh Groceries in 10-15 Mins');
+
+      const logoEls = document.querySelectorAll('.js-store-logo');
+      logoEls.forEach(el => {
+        if (cfg.logoUrl) {
+          el.innerHTML = `<img src="${cfg.logoUrl}" alt="${cfg.storeName || 'Logo'}" class="w-full h-full object-contain rounded-2xl" onerror="this.onerror=null; this.parentElement.innerHTML='${cfg.logoEmoji || '⚡'}';" />`;
+        } else {
+          el.innerHTML = cfg.logoEmoji || '⚡';
+        }
+      });
+    }
+
+    function getCurrentLoggedInUser() {
+      try {
+        const u = localStorage.getItem('raosee_current_user');
+        return u ? JSON.parse(u) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function handleSendOtp() {
+      const phoneInput = document.getElementById('login-phone-input');
+      const phone = phoneInput.value.trim().replace(/\D/g, '');
+
+      if (phone.length < 10) {
+        alert("Please enter a valid 10-digit mobile number.");
+        phoneInput.focus();
+        return;
+      }
+
+      activePhone = phone;
+      document.getElementById('otp-phone-display').textContent = `+91 ${phone}`;
+
+      // Switch to OTP step
+      document.getElementById('login-step-phone').classList.add('hidden');
+      document.getElementById('login-step-otp').classList.remove('hidden');
+
+      // Focus first OTP box
+      const firstOtp = document.querySelector('.otp-digit');
+      if (firstOtp) firstOtp.focus();
+    }
+
+    function backToPhoneStep() {
+      document.getElementById('login-step-otp').classList.add('hidden');
+      document.getElementById('login-step-phone').classList.remove('hidden');
+    }
+
+    function fillDemoOtp() {
+      const otpInputs = document.querySelectorAll('.otp-digit');
+      ['1', '2', '3', '4'].forEach((digit, i) => {
+        if (otpInputs[i]) otpInputs[i].value = digit;
+      });
+      if (otpInputs[3]) otpInputs[3].focus();
+    }
+
+    function handleResendOtp() {
+      alert("New OTP sent: 1234");
+      fillDemoOtp();
+    }
+
+    function handleVerifyOtp() {
+      const otpInputs = document.querySelectorAll('.otp-digit');
+      let enteredOtp = '';
+      otpInputs.forEach(i => enteredOtp += i.value);
+
+      if (enteredOtp.length < 4) {
+        alert("Please enter the complete 4-digit verification code.");
+        return;
+      }
+
+      // Check if user exists in registered database
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+      } catch (e) {
+        users = [];
+      }
+
+      const existing = users.find(u => u.phone === activePhone);
+
+      if (existing) {
+        // Complete login
+        setUserSession(existing);
+        showSuccessState(existing);
+      } else {
+        // Move to step 3: profile details
+        document.getElementById('login-step-otp').classList.add('hidden');
+        document.getElementById('login-step-profile').classList.remove('hidden');
+      }
+    }
+
+    function saveProfileAndFinish() {
+      const name = document.getElementById('profile-name-input').value.trim();
+      const flat = document.getElementById('profile-flat-input').value.trim();
+      const street = document.getElementById('profile-street-input').value.trim();
+      const landmark = document.getElementById('profile-landmark-input').value.trim();
+
+      if (!name) {
+        alert("Please enter your name.");
+        return;
+      }
+      if (!flat || !street) {
+        alert("Please enter your address for delivery.");
+        return;
+      }
+
+      const newUser = {
+        id: 'usr_' + Date.now().toString().slice(-6),
+        name: name,
+        phone: activePhone,
+        address: {
+          flat: flat,
+          street: street,
+          landmark: landmark,
+          city: 'Bangalore',
+          pincode: '560102'
+        },
+        savedAddresses: [
+          { type: 'Home', flat: flat, street: street, landmark: landmark }
+        ],
+        createdAt: new Date().toISOString(),
+        orderCount: 0
+      };
+
+      // Save to users registry
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+      } catch (e) {
+        users = [];
+      }
+      users.push(newUser);
+      localStorage.setItem('raosee_users', JSON.stringify(users));
+
+      // Save active session
+      setUserSession(newUser);
+      showSuccessState(newUser);
+    }
+
+    function quickLogin(name, phone, addressStr) {
+      const parts = addressStr.split(',');
+      const user = {
+        id: 'usr_' + phone.slice(-4),
+        name: name,
+        phone: phone,
+        address: {
+          flat: parts[0]?.trim() || '',
+          street: parts[1]?.trim() || '',
+          landmark: parts[2]?.trim() || '',
+          city: 'Bangalore'
+        },
+        savedAddresses: [
+          { type: 'Home', flat: parts[0]?.trim() || '', street: parts[1]?.trim() || '' }
+        ],
+        createdAt: new Date().toISOString(),
+        orderCount: 3
+      };
+
+      // Add to users registry if not present
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+      } catch (e) {
+        users = [];
+      }
+      if (!users.some(u => u.phone === phone)) {
+        users.push(user);
+        localStorage.setItem('raosee_users', JSON.stringify(users));
+      }
+
+      setUserSession(user);
+      showSuccessState(user);
+    }
+
+    function setUserSession(user) {
+      localStorage.setItem('raosee_current_user', JSON.stringify(user));
+      // Also update delivery address for checkout
+      if (user.address) {
+        const addr = {
+          name: user.name,
+          phone: user.phone,
+          flat: user.address.flat || '',
+          street: user.address.street || '',
+          landmark: user.address.landmark || '',
+          instructions: 'Ring doorbell and leave at door'
+        };
+        localStorage.setItem('raosee_address', JSON.stringify(addr));
+      }
+    }
+
+    function showSuccessState(user) {
+      document.getElementById('login-step-phone').classList.add('hidden');
+      document.getElementById('login-step-otp').classList.add('hidden');
+      document.getElementById('login-step-profile').classList.add('hidden');
+      
+      const successEl = document.getElementById('login-step-success');
+      document.getElementById('success-welcome-msg').textContent = `Logged in as ${user.name} (+91 ${user.phone}). Redirecting to store...`;
+      successEl.classList.remove('hidden');
+
+      // Check redirect URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirect = urlParams.get('redirect') || 'index.html';
+
+      setTimeout(() => {
+        window.location.href = redirect;
+      }, 1200);
+    }
+  </script>
+
+</body>
+</html>

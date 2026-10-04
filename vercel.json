@@ -1,0 +1,14 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/track", "destination": "/track.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/outlet", "destination": "/outlet.html" },
+    { "source": "/admin.html", "destination": "/admin.html" },
+    { "source": "/track.html", "destination": "/track.html" },
+    { "source": "/login.html", "destination": "/login.html" },
+    { "source": "/outlet.html", "destination": "/outlet.html" }
+  ]
+}
