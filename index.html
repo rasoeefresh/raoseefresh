@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Raosee Fresh Supermarket | 10-15 Mins Grocery Delivery</title>
-  <meta name="description" content="Raosee Fresh Supermarket - Order farm fresh fruits, vegetables, dairy, atta, snacks & household essentials delivered in 10-15 minutes with Razorpay online payment, Instant UPI, and WhatsApp support." />
+  <title>Raosee Fresh Supermarket | Fresh Grocery Delivery</title>
+  <meta name="description" content="Raosee Fresh Supermarket - Order farm fresh fruits, vegetables, dairy, atta, snacks & household essentials delivered fresh with Razorpay online payment, Instant UPI, and WhatsApp support." />
   
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>" />
@@ -78,7 +78,7 @@
     <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-6">
         
-        <!-- Logo & Delivery ETA -->
+        <!-- Logo -->
         <div class="flex items-center gap-3 sm:gap-6 min-w-0">
           <a href="#" class="flex items-center gap-2 flex-shrink-0 group">
             <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-xl sm:text-2xl shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden">
@@ -91,41 +91,6 @@
               <span class="block text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 js-outlet-name">Supermarket</span>
             </div>
           </a>
-
-          <!-- Location Selector & 10 Min Badge -->
-          <div class="hidden md:flex items-center gap-2 pl-4 border-l border-gray-200">
-            <div class="bg-green-50 border border-green-200 text-blinkit-green font-bold text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-blinkit-green animate-ping"></span>
-              <span>10-15 MINS</span>
-            </div>
-            <button onclick="openLocationModal()" class="text-left group flex items-center gap-1 hover:text-blinkit-green transition-colors">
-              <div>
-                <div class="text-[11px] font-bold uppercase text-gray-500 flex items-center gap-1">
-                  Delivery to
-                  <span class="text-xs">▾</span>
-                </div>
-                <div class="text-xs font-bold text-gray-800 truncate max-w-[180px] js-selected-address-summary">
-                  HSR Layout, Bangalore
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Search Bar (Desktop & Tablet) -->
-        <div class="flex-1 max-w-xl hidden sm:block relative">
-          <div class="relative flex items-center">
-            <span class="absolute left-3.5 text-gray-400 text-base">🔍</span>
-            <input 
-              type="text" 
-              id="search-input"
-              placeholder="Search 'farm fresh milk' or 'potatoes'..."
-              class="w-full bg-gray-100 hover:bg-gray-50 focus:bg-white text-gray-800 pl-10 pr-10 py-2.5 rounded-xl border border-transparent focus:border-blinkit-green focus:ring-2 focus:ring-green-100 text-sm outline-none transition-all shadow-inner"
-            />
-            <button onclick="document.getElementById('search-input').value=''; state.searchQuery=''; renderProducts();" class="absolute right-3 text-gray-400 hover:text-gray-600 text-xs font-bold">
-              ✕
-            </button>
-          </div>
         </div>
 
         <!-- Header Actions: WhatsApp Support, Track Order, Login, Settings & Cart -->
@@ -164,7 +129,7 @@
 
           <!-- Store Settings / Admin Modal -->
           <button 
-            onclick="openStoreSettingsModal()"
+            onclick="openStoreSettingsModal()" 
             class="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors" 
             title="Store Settings & Payment Gateway Setup"
           >
@@ -183,19 +148,6 @@
             </span>
           </button>
 
-        </div>
-      </div>
-
-      <!-- Mobile Search Bar -->
-      <div class="sm:hidden pb-3">
-        <div class="relative flex items-center">
-          <span class="absolute left-3 text-gray-400 text-sm">🔍</span>
-          <input 
-            type="text" 
-            oninput="state.searchQuery = this.value; renderProducts();"
-            placeholder="Search groceries & daily fresh items..."
-            class="w-full bg-gray-100 text-gray-800 pl-9 pr-8 py-2 rounded-xl border border-transparent focus:border-blinkit-green focus:bg-white text-xs outline-none shadow-inner"
-          />
         </div>
       </div>
 
@@ -284,8 +236,8 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
         <div class="flex flex-col items-center">
           <div class="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-2xl mb-3">⚡</div>
-          <h4 class="font-bold text-gray-800 text-sm mb-1">10-15 Min Delivery</h4>
-          <p class="text-xs text-gray-500">Direct from our neighborhood fresh dark store to your door.</p>
+          <h4 class="font-bold text-gray-800 text-sm mb-1">Express Delivery</h4>
+          <p class="text-xs text-gray-500">Direct from our fresh supermarket store to your door.</p>
         </div>
         <div class="flex flex-col items-center">
           <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl mb-3">🥬</div>
@@ -376,9 +328,9 @@
           © 2026 <span class="js-company-name font-semibold text-gray-600">Raosee Fresh Retail Private Limited</span>. All rights reserved.
         </div>
         <div class="flex items-center gap-3">
-          <span>⚡ 10-15 Min Express Quick Commerce</span>
+          <span>⚡ Express Grocery Delivery</span>
           <span>•</span>
-          <span class="text-blinkit-green font-bold">Bangalore Dark Store Network</span>
+          <span class="text-blinkit-green font-bold">Bangalore Store Network</span>
         </div>
       </div>
     </footer>
