@@ -88,6 +88,21 @@ function loadConfigAndData() {
   applyBranding();
   renderBanners();
   renderAnnouncement();
+
+  // Async cloud sync pull if enabled
+  if (typeof syncFromCloud === 'function') {
+    syncFromCloud().then(updated => {
+      if (updated) {
+        state.config = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
+        state.products = typeof getStoredProducts === 'function' ? getStoredProducts() : [];
+        applyBranding();
+        renderBanners();
+        renderAnnouncement();
+        renderCategories();
+        renderProducts();
+      }
+    }).catch(e => console.warn("Cloud sync check error", e));
+  }
 }
 
 function applyBranding() {

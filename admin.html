@@ -8,6 +8,7 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -69,8 +70,12 @@
             <span class="text-xs">↗</span>
           </a>
 
-          <button onclick="saveAllMasterChanges()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5">
+          <button onclick="saveAllMasterChanges()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs sm:text-sm px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5" title="Save changes locally in browser">
             <span>💾 Save All</span>
+          </button>
+
+          <button onclick="switchTab('sync')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs sm:text-sm px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5" title="Configure Live Firebase Cloud Sync & Vercel Deployment">
+            <span>☁️ Cloud Sync &amp; Deploy</span>
           </button>
         </div>
 
@@ -83,6 +88,9 @@
         </button>
         <button onclick="switchTab('rates')" id="tab-btn-rates" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
           <span>🏷️</span><span>Daily Rates & Quick Price</span>
+        </button>
+        <button onclick="switchTab('sync')" id="tab-btn-sync" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-black flex-shrink-0 transition-all flex items-center gap-1.5 bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 shadow-sm">
+          <span>☁️</span><span>Cloud Sync &amp; Deploy</span>
         </button>
         <button onclick="switchTab('items')" id="tab-btn-items" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all flex items-center gap-1.5 text-gray-700 hover:bg-gray-100">
           <span>📦</span><span>Items & Inventory</span>
@@ -1033,11 +1041,272 @@
 
       </div>
 
+    <!-- ================= TAB 11: PERMANENT DEPLOY & CLOUD SYNC ================= -->
+    <div id="tab-content-sync" class="hidden space-y-6">
+      
+      <!-- Top Alert / Explanation Banner -->
+      <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
+        <div class="relative z-10 max-w-3xl space-y-3">
+          <div class="inline-flex items-center gap-2 bg-blue-500/20 text-blue-200 border border-blue-400/30 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+            <span>💡 Cloud Persistence Guide</span>
+            <span>•</span>
+            <span>Permanent Storage Architecture</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black">Why did changes reset across sessions or devices?</h2>
+          <p class="text-xs sm:text-sm text-blue-100 opacity-90 leading-relaxed">
+            Your website is hosted on <strong>Vercel as static files</strong>. When you edit rates, outlet details, or banners in this admin panel, your browser saves them to private <code>localStorage</code> on this computer only.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
+            <div class="bg-white/10 rounded-2xl p-3 border border-white/10">
+              <span class="font-black text-amber-300 block mb-1">❌ Why new sessions see default values:</span>
+              <p class="text-blue-100">Customers on their phones, incognito sessions, or other devices don't have access to your computer's browser storage. They load the static default code from Vercel.</p>
+            </div>
+            <div class="bg-white/10 rounded-2xl p-3 border border-white/10">
+              <span class="font-black text-emerald-300 block mb-1">✅ How to make your changes permanent:</span>
+              <p class="text-blue-100">Use <strong>1-Click Code Export</strong> below to download updated code files and upload them to Vercel, or connect <strong>Live Cloud Sync</strong> for real-time live updates without redeploying!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid: 3 Pillars (Permanent Vercel Export, Backup/Restore, Live Cloud Sync) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Pillar 1: 1-Click Code Exporter for Vercel -->
+        <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col justify-between space-y-5">
+          <div class="space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl font-black">
+              🚀
+            </div>
+            <h3 class="text-base font-black text-gray-900">1. Permanent Code Export for Vercel</h3>
+            <p class="text-xs text-gray-500 leading-relaxed">
+              Generates fresh code files containing your current rates, catalog, company info, outlet address, and banners baked directly into the default code.
+            </p>
+            <div class="space-y-2 pt-2">
+              <div class="text-[11px] font-bold text-gray-600 flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                <span>Products in Catalog:</span>
+                <span id="sync-kpi-prods" class="font-mono text-gray-900 font-black">0 items</span>
+              </div>
+              <div class="text-[11px] font-bold text-gray-600 flex items-center justify-between bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                <span>Active Banners:</span>
+                <span id="sync-kpi-banners" class="font-mono text-gray-900 font-black">0 banners</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2.5 pt-2">
+            <button 
+              onclick="downloadCompleteDeployZip()" 
+              class="w-full bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span>📦 Download Deploy ZIP (All Files)</span>
+            </button>
+            <div class="grid grid-cols-2 gap-2">
+              <button 
+                onclick="downloadPermanentProducts()" 
+                class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+              >
+                <span>📥 products.js</span>
+              </button>
+              <button 
+                onclick="downloadPermanentStoreConfig()" 
+                class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+              >
+                <span>📥 store-config.js</span>
+              </button>
+            </div>
+            <p class="text-[10px] text-gray-400 text-center">Drop into your repository or Vercel dashboard to deploy permanently</p>
+          </div>
+        </div>
+
+        <!-- Pillar 2: 1-Click Store Backup & Restore -->
+        <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col justify-between space-y-5">
+          <div class="space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl font-black">
+              💾
+            </div>
+            <h3 class="text-base font-black text-gray-900">2. Backup &amp; Restore (JSON)</h3>
+            <p class="text-xs text-gray-500 leading-relaxed">
+              Export your entire store database into a portable JSON backup file. Restore it on any phone, tablet, or browser with 1 click.
+            </p>
+            <div class="bg-blue-50/70 border border-blue-100 rounded-2xl p-3 text-xs text-blue-800 space-y-1">
+              <span class="font-black block">Includes in 1 file:</span>
+              <ul class="text-[11px] list-disc list-inside space-y-0.5 text-blue-700">
+                <li>All products, prices &amp; inventory</li>
+                <li>Outlet profile &amp; tax compliance</li>
+                <li>All customer order history</li>
+                <li>Registered customer accounts</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="space-y-2.5 pt-2">
+            <button 
+              onclick="exportStoreBackupJson()" 
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs py-3 px-4 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span>💾 Export Full Backup (JSON)</span>
+            </button>
+            <label class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer text-center">
+              <span>📂 Import Backup File</span>
+              <input type="file" accept=".json" onchange="importStoreBackupFile(event)" class="hidden" />
+            </label>
+            <p class="text-[10px] text-gray-400 text-center">Zero loss: transfer your store between any computer or phone</p>
+          </div>
+        </div>
+
+        <!-- Pillar 3: Live Cloud Sync -->
+        <div class="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col justify-between space-y-5">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl font-black">
+                ☁️
+              </div>
+              <span id="cloud-sync-status-badge" class="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
+                Not Connected
+              </span>
+            </div>
+            <h3 class="text-base font-black text-gray-900">3. Live Cloud Sync (Instant Multi-Device)</h3>
+            <p class="text-xs text-gray-500 leading-relaxed">
+              Sync price changes and banners in real-time across all customer phones and sessions without re-deploying to Vercel!
+            </p>
+
+            <div class="space-y-2.5 pt-1">
+              <div>
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">Sync Provider</label>
+                <select id="cloud-provider-select" onchange="toggleCloudProviderInputs()" class="w-full p-2 border border-gray-200 rounded-xl text-xs font-semibold outline-none focus:border-blinkit-green bg-white">
+                  <option value="firebase">Firebase Realtime Database (Free)</option>
+                  <option value="jsonbin">JSONBin.io (Free)</option>
+                  <option value="custom">Custom Webhook / REST URL</option>
+                </select>
+              </div>
+
+              <!-- Firebase URL Input -->
+              <div id="field-firebase-url">
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">Firebase Database URL</label>
+                <input 
+                  type="url" 
+                  id="cloud-firebase-url" 
+                  placeholder="https://your-app-default-rtdb.firebaseio.com" 
+                  class="w-full p-2 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-blinkit-green"
+                />
+              </div>
+
+              <!-- JSONBin Inputs -->
+              <div id="field-jsonbin" class="hidden space-y-2">
+                <div>
+                  <label class="block text-[11px] font-bold text-gray-700 mb-1">JSONBin Bin ID</label>
+                  <input type="text" id="cloud-jsonbin-id" placeholder="e.g. 64b8f..." class="w-full p-2 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-blinkit-green" />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-gray-700 mb-1">X-Master-Key</label>
+                  <input type="password" id="cloud-jsonbin-key" placeholder="$2b$10..." class="w-full p-2 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-blinkit-green" />
+                </div>
+              </div>
+
+              <!-- Custom URL Input -->
+              <div id="field-custom-url" class="hidden">
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">Custom REST Endpoint URL</label>
+                <input type="url" id="cloud-custom-url" placeholder="https://api.yourdomain.com/store" class="w-full p-2 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-blinkit-green" />
+              </div>
+
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <button 
+              onclick="saveCloudSyncSettings()" 
+              class="w-full bg-slate-900 hover:bg-black text-white font-black text-xs py-2.5 px-4 rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span>💾 Save Cloud Sync Credentials</span>
+            </button>
+            <button 
+              onclick="triggerManualCloudSync()" 
+              class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+            >
+              <span>🔄 Push Local Store to Cloud Now</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
     </div>
 
   </main>
 
   <!-- ================= MODALS ================= -->
+
+  <!-- Permanent Vercel Deploy Modal -->
+  <div id="deploy-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div onclick="closeDeployModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-gray-200 space-y-5 max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between border-b pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-xl">🚀</span>
+          <div>
+            <h3 class="font-black text-gray-900 text-base">Make Changes Permanent on Vercel</h3>
+            <p class="text-xs text-gray-500">Deploy your updated rates &amp; settings permanently worldwide</p>
+          </div>
+        </div>
+        <button onclick="closeDeployModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center font-black text-sm">✕</button>
+      </div>
+
+      <!-- Explanatory Box -->
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 space-y-1.5">
+        <span class="font-black text-amber-950 flex items-center gap-1">
+          <span>⚠️</span><span>Why this step is needed:</span>
+        </span>
+        <p class="leading-relaxed text-amber-800">
+          When you edit products or rates in this admin browser, changes save to your private browser storage. Vercel serves static code files to customers. To make your custom rates &amp; outlet profile the <strong>permanent defaults for every customer worldwide</strong>, deploy your updated files to Vercel.
+        </p>
+      </div>
+
+      <!-- Download Actions -->
+      <div class="space-y-3">
+        <button 
+          onclick="downloadCompleteDeployZip()" 
+          class="w-full bg-blinkit-green hover:bg-emerald-800 text-white font-black text-sm py-3.5 px-5 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+        >
+          <span>📦 Download 1-Click Complete Deploy ZIP</span>
+        </button>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button 
+            onclick="downloadPermanentProducts()" 
+            class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+          >
+            <span>📥 products.js</span>
+          </button>
+          <button 
+            onclick="downloadPermanentStoreConfig()" 
+            class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+          >
+            <span>📥 store-config.js</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick 3-Step Vercel Deployment Guide -->
+      <div class="border-t pt-4 space-y-2">
+        <h4 class="font-black text-xs text-gray-900 uppercase tracking-wider">How to deploy to Vercel (1 Minute):</h4>
+        <ol class="text-xs text-gray-600 space-y-1.5 list-decimal list-inside leading-relaxed">
+          <li>Click <strong>Download Deploy ZIP</strong> above.</li>
+          <li>Open your <strong><a href="https://vercel.com" target="_blank" class="text-blue-600 underline font-semibold">Vercel Dashboard</a></strong> and select your project.</li>
+          <li>Go to <strong>Deployments</strong> &gt; drag and drop the downloaded ZIP file.</li>
+          <li>Done! Your custom rates, company name, and banners are permanently active for all visitors forever!</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="closeDeployModal()" class="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-all">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
 
   <!-- Add / Edit Product Modal -->
   <div id="product-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
@@ -1456,7 +1725,7 @@
 
     // Tabs Switcher
     function switchTab(tabId) {
-      const tabs = ['overview', 'rates', 'items', 'categories', 'banners', 'operations', 'payment', 'orders', 'customers', 'outlet'];
+      const tabs = ['overview', 'rates', 'items', 'categories', 'banners', 'operations', 'payment', 'orders', 'customers', 'outlet', 'sync'];
       tabs.forEach(t => {
         const content = document.getElementById(`tab-content-${t}`);
         const btn = document.getElementById(`tab-btn-${t}`);
@@ -1478,6 +1747,7 @@
       if (tabId === 'orders') renderAllOrders();
       if (tabId === 'outlet') populateOutletSettings();
       if (tabId === 'banners') renderBannersList();
+      if (tabId === 'sync') populateSyncTab();
     }
 
     // Update KPIs
@@ -1532,7 +1802,7 @@
       tbody.innerHTML = filtered.map(p => {
         const discount = Math.round(((p.mrp - p.price) / p.mrp) * 100);
         return `
-          <tr class="hover:bg-gray-50/80 transition-colors">
+          <tr id="rate-row-${p.id}" class="hover:bg-gray-50/80 transition-colors">
             <td class="p-3">
               <div class="flex items-center gap-2.5">
                 <img src="${p.image}" class="w-9 h-9 object-cover rounded-lg bg-gray-100 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'" />
@@ -1548,7 +1818,8 @@
               <input 
                 type="number" 
                 value="${p.mrp || p.price}" 
-                onchange="updateProductField('${p.id}', 'mrp', this.value)" 
+                oninput="updateProductField('${p.id}', 'mrp', this.value, false)"
+                onchange="updateProductField('${p.id}', 'mrp', this.value, true)" 
                 class="w-20 p-1.5 border border-gray-200 rounded-lg text-xs outline-none focus:border-blinkit-green"
               />
             </td>
@@ -1558,13 +1829,14 @@
                 <input 
                   type="number" 
                   value="${p.price}" 
-                  onchange="updateProductField('${p.id}', 'price', this.value)" 
+                  oninput="updateProductField('${p.id}', 'price', this.value, false)"
+                  onchange="updateProductField('${p.id}', 'price', this.value, true)" 
                   class="w-full pl-5 pr-2 py-1.5 border-2 border-green-600 rounded-lg text-xs font-black text-gray-900 outline-none shadow-sm"
                 />
               </div>
             </td>
             <td class="p-3">
-              <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">${discount}% OFF</span>
+              <span class="js-rate-discount text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">${discount > 0 ? discount + '% OFF' : '0%'}</span>
             </td>
             <td class="p-3">
               <button 
@@ -1588,16 +1860,35 @@
       }).join('');
     }
 
-    function updateProductField(id, field, val) {
+    function updateProductField(id, field, val, shouldRerender = false) {
       const p = productsList.find(item => item.id === id);
       if (p) {
         if (field === 'price' || field === 'mrp') {
-          p[field] = parseInt(val, 10) || p[field];
+          const num = parseInt(val, 10);
+          if (!isNaN(num) && num >= 0) {
+            p[field] = num;
+          }
         } else {
           p[field] = val;
         }
         saveProducts(productsList);
-        renderRateCard(document.getElementById('rate-filter-category').value);
+
+        // Update discount badge live without destroying input focus
+        const row = document.getElementById(`rate-row-${id}`);
+        if (row) {
+          const badge = row.querySelector('.js-rate-discount');
+          if (badge) {
+            const mrp = p.mrp || p.price;
+            const disc = mrp > p.price ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
+            badge.textContent = disc > 0 ? `${disc}% OFF` : '0%';
+          }
+        }
+
+        if (shouldRerender) {
+          const cat = document.getElementById('rate-filter-category')?.value || 'all';
+          renderRateCard(cat);
+        }
+        updateKpis();
       }
     }
 
@@ -2819,14 +3110,23 @@
       const file = event.target.files[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        currentUploadedLogoDataUrl = e.target.result;
-        const urlInput = document.getElementById('outlet-logo-url-input');
-        if (urlInput) urlInput.value = '';
-        updateLogoPreview(currentUploadedLogoDataUrl, '');
-      };
-      reader.readAsDataURL(file);
+      if (typeof compressImageFile === 'function') {
+        compressImageFile(file, 256, 256, 0.85, function(compressedData) {
+          currentUploadedLogoDataUrl = compressedData;
+          const urlInput = document.getElementById('outlet-logo-url-input');
+          if (urlInput) urlInput.value = '';
+          updateLogoPreview(currentUploadedLogoDataUrl, '');
+        });
+      } else {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          currentUploadedLogoDataUrl = e.target.result;
+          const urlInput = document.getElementById('outlet-logo-url-input');
+          if (urlInput) urlInput.value = '';
+          updateLogoPreview(currentUploadedLogoDataUrl, '');
+        };
+        reader.readAsDataURL(file);
+      }
     }
 
     function handleLogoUrlInput(url) {
@@ -2928,14 +3228,243 @@
     }
 
     // Save All Master Changes
-    function saveAllMasterChanges() {
+    function saveAllMasterChanges(silent = false) {
       saveProducts(productsList);
       saveCategories(categoriesList);
       saveBanners(bannersList);
       saveOperationsSettings();
       savePaymentSettings();
       saveOutletSettings(true);
-      alert("🎉 All customizations (Rates, Items, Categories, Banners, Operations & Outlet Settings) saved!");
+      if (!silent) {
+        alert("🎉 All customizations (Rates, Items, Categories, Banners, Operations & Outlet Settings) saved!");
+      }
+    }
+
+    // ================= PERMANENT VERCEL DEPLOYMENT & EXPORT =================
+    function openDeployModal() {
+      const modal = document.getElementById('deploy-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+      }
+    }
+
+    function closeDeployModal() {
+      const modal = document.getElementById('deploy-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+    }
+
+    function downloadPermanentProducts() {
+      saveAllMasterChanges(true);
+      if (typeof generatePermanentProductsJs === 'function' && typeof downloadTextFile === 'function') {
+        const code = generatePermanentProductsJs(productsList);
+        downloadTextFile('products.js', code);
+        alert("✓ products.js downloaded!\nReplace products.js in your project and deploy to Vercel to make all rates permanent.");
+      }
+    }
+
+    function downloadPermanentStoreConfig() {
+      saveAllMasterChanges(true);
+      if (typeof generatePermanentStoreConfigJs === 'function' && typeof downloadTextFile === 'function') {
+        const code = generatePermanentStoreConfigJs(currentConfig, categoriesList, bannersList);
+        downloadTextFile('store-config.js', code);
+        alert("✓ store-config.js downloaded!\nReplace store-config.js in your project and deploy to Vercel to make company and outlet info permanent.");
+      }
+    }
+
+    async function downloadCompleteDeployZip() {
+      saveAllMasterChanges(true);
+      if (typeof JSZip === 'undefined') {
+        alert("JSZip library is still loading. Please check internet connection or download individual files.");
+        return;
+      }
+
+      const zip = new JSZip();
+
+      // List of files to package into the zip
+      const filesToFetch = [
+        'index.html',
+        'admin.html',
+        'outlet.html',
+        'track.html',
+        'login.html',
+        'app.js',
+        'manifest.json',
+        'vercel.json',
+        'firebase.json',
+        'sw.js',
+        'capacitor.config.json',
+        'README.md'
+      ];
+
+      try {
+        // Fetch existing files from local host
+        for (const file of filesToFetch) {
+          try {
+            const resp = await fetch(file);
+            if (resp.ok) {
+              const text = await resp.text();
+              zip.file(file, text);
+            }
+          } catch (e) {
+            console.warn(`Could not include ${file} from live host`, e);
+          }
+        }
+
+        // Bake the actual current customized data into products.js and store-config.js
+        const customProductsJs = generatePermanentProductsJs(productsList);
+        const customStoreConfigJs = generatePermanentStoreConfigJs(currentConfig, categoriesList, bannersList);
+
+        zip.file('products.js', customProductsJs);
+        zip.file('store-config.js', customStoreConfigJs);
+
+        // Generate zip blob
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'raosee-fresh-supermarket-deploy.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        alert("🎉 Complete Deployable ZIP generated and downloaded!\nDrag & drop this file into Vercel to make all changes 100% permanent for everyone worldwide!");
+      } catch (err) {
+        console.error("Error creating ZIP archive:", err);
+        alert("Could not generate ZIP automatically. Downloading products.js and store-config.js instead.");
+        downloadPermanentProducts();
+        downloadPermanentStoreConfig();
+      }
+    }
+
+    // ================= BACKUP & RESTORE (JSON) =================
+    function exportStoreBackupJson() {
+      saveAllMasterChanges(true);
+      if (typeof exportAllStoreDataJson === 'function' && typeof downloadJsonFile === 'function') {
+        const data = exportAllStoreDataJson();
+        const dateStr = new Date().toISOString().slice(0, 10);
+        downloadJsonFile(`raosee-store-backup-${dateStr}.json`, data);
+        alert("✓ Full store backup exported successfully!");
+      }
+    }
+
+    function importStoreBackupFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (typeof importAllStoreDataJson === 'function') {
+            importAllStoreDataJson(parsed);
+            loadMasterData();
+            alert("🎉 Store backup imported successfully! All products, rates, settings, and orders restored.");
+          }
+        } catch (err) {
+          alert("Error importing backup: invalid JSON file format.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ================= CLOUD SYNC TAB LOGIC =================
+    function populateSyncTab() {
+      const prodsCountEl = document.getElementById('sync-kpi-prods');
+      const bannersCountEl = document.getElementById('sync-kpi-banners');
+      if (prodsCountEl) prodsCountEl.textContent = `${productsList.length} items`;
+      if (bannersCountEl) bannersCountEl.textContent = `${bannersList.length} banners`;
+
+      const cfg = typeof getCloudSyncConfig === 'function' ? getCloudSyncConfig() : {};
+      const providerSelect = document.getElementById('cloud-provider-select');
+      const badge = document.getElementById('cloud-sync-status-badge');
+
+      if (providerSelect && cfg.type) {
+        providerSelect.value = cfg.type;
+      }
+      toggleCloudProviderInputs();
+
+      if (cfg.firebaseUrl) {
+        const el = document.getElementById('cloud-firebase-url');
+        if (el) el.value = cfg.firebaseUrl;
+      }
+      if (cfg.jsonbinId) {
+        const el = document.getElementById('cloud-jsonbin-id');
+        if (el) el.value = cfg.jsonbinId;
+      }
+      if (cfg.apiKey) {
+        const el = document.getElementById('cloud-jsonbin-key');
+        if (el) el.value = cfg.apiKey;
+      }
+      if (cfg.customUrl) {
+        const el = document.getElementById('cloud-custom-url');
+        if (el) el.value = cfg.customUrl;
+      }
+
+      if (badge) {
+        if (cfg.enabled) {
+          badge.className = "text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800";
+          badge.textContent = "Live Cloud Sync Active ✅";
+        } else {
+          badge.className = "text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-gray-100 text-gray-500";
+          badge.textContent = "Not Connected";
+        }
+      }
+    }
+
+    function toggleCloudProviderInputs() {
+      const provider = document.getElementById('cloud-provider-select')?.value || 'firebase';
+      const fbBox = document.getElementById('field-firebase-url');
+      const jbBox = document.getElementById('field-jsonbin');
+      const customBox = document.getElementById('field-custom-url');
+
+      if (fbBox) fbBox.classList.toggle('hidden', provider !== 'firebase');
+      if (jbBox) jbBox.classList.toggle('hidden', provider !== 'jsonbin');
+      if (customBox) customBox.classList.toggle('hidden', provider !== 'custom');
+    }
+
+    function saveCloudSyncSettings() {
+      const provider = document.getElementById('cloud-provider-select')?.value || 'firebase';
+      const fbUrl = document.getElementById('cloud-firebase-url')?.value.trim() || '';
+      const jbId = document.getElementById('cloud-jsonbin-id')?.value.trim() || '';
+      const jbKey = document.getElementById('cloud-jsonbin-key')?.value.trim() || '';
+      const customUrl = document.getElementById('cloud-custom-url')?.value.trim() || '';
+
+      const isEnabled = (provider === 'firebase' && !!fbUrl) || (provider === 'jsonbin' && !!jbId && !!jbKey) || (provider === 'custom' && !!customUrl);
+
+      const cfg = {
+        enabled: isEnabled,
+        type: provider,
+        firebaseUrl: fbUrl,
+        jsonbinId: jbId,
+        apiKey: jbKey,
+        customUrl: customUrl
+      };
+
+      if (typeof saveCloudSyncConfig === 'function') {
+        saveCloudSyncConfig(cfg);
+        populateSyncTab();
+        if (isEnabled) {
+          triggerManualCloudSync();
+        } else {
+          alert("Cloud Sync disabled or credentials incomplete.");
+        }
+      }
+    }
+
+    async function triggerManualCloudSync() {
+      if (typeof syncToCloud === 'function') {
+        const res = await syncToCloud();
+        if (res.success) {
+          alert("🎉 Store data pushed to Cloud successfully!\nAll connected customer apps will now receive your updated rates and banners live.");
+        } else {
+          alert("Cloud sync check failed: " + (res.reason || "Check your URL / API key"));
+        }
+      }
     }
   </script>
 

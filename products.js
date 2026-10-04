@@ -453,9 +453,23 @@ function getStoredProducts() {
 }
 
 function saveProducts(products) {
-  localStorage.setItem("raosee_fresh_products", JSON.stringify(products));
+  try {
+    localStorage.setItem("raosee_fresh_products", JSON.stringify(products));
+  } catch (e) {
+    console.warn("Could not save products to localStorage (quota exceeded or blocked)", e);
+  }
+  if (typeof saveToIndexedDB === "function") {
+    saveToIndexedDB("raosee_fresh_products", products);
+  }
+  if (typeof syncToCloud === "function") {
+    syncToCloud();
+  }
+  if (typeof window !== "undefined") {
+    try { window.dispatchEvent(new Event("storage")); } catch (e) {}
+  }
 }
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { DEFAULT_PRODUCTS, getStoredProducts, saveProducts };
 }
+
