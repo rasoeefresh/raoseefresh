@@ -1,8 +1,9 @@
 /**
- * Raosee Fresh Supermarket - Service Worker
- * Provides offline caching & fast app loading for installable PWA
+ * Raosee Fresh Supermarket - Service Worker (v2)
+ * Network-first for HTML pages so deployments update instantly,
+ * with fast offline caching for static assets.
  */
-const CACHE_NAME = 'raosee-fresh-v1';
+const CACHE_NAME = 'raosee-fresh-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -12,7 +13,6 @@ const ASSETS_TO_CACHE = [
   './outlet.html',
   './store-config.js',
   './products.js',
-  './app.js',
   './manifest.json'
 ];
 
@@ -35,21 +35,34 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Stale-while-revalidate for local assets, network-first for external CDNs
+  // Navigation requests (HTML pages): Network-first with cache fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request) || caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Assets: Stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Fetch background update
-        fetch(event.request).then((networkResponse) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse.clone());
-            });
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
           }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-      return fetch(event.request);
+          return networkResponse;
+        })
+        .catch(() => {});
+      return cachedResponse || fetchPromise;
     })
   );
 });
