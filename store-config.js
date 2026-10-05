@@ -117,6 +117,15 @@ const DEFAULT_CONFIG = {
     directPhotoListOrder: true,
   },
 
+  // Security & Manager Access Gate
+  security: {
+    adminUser: "admin",
+    adminPassword: "admin@raosee2026",
+    adminPin: "7890",
+    sessionTimeoutHours: 24,
+    requireLogin: true
+  },
+
   // Cloud Sync (Firebase Realtime Database / JSONBin)
   cloudSync: {
     enabled: true,
@@ -137,7 +146,8 @@ function getStoreConfig() {
         ...parsed,
         payment: { ...DEFAULT_CONFIG.payment, ...(parsed.payment || {}) },
         outletAddress: { ...DEFAULT_CONFIG.outletAddress, ...(parsed.outletAddress || {}) },
-        cloudSync: { ...DEFAULT_CONFIG.cloudSync, ...(parsed.cloudSync || {}) }
+        cloudSync: { ...DEFAULT_CONFIG.cloudSync, ...(parsed.cloudSync || {}) },
+        security: { ...DEFAULT_CONFIG.security, ...(parsed.security || {}) }
       };
     }
   } catch (e) {
@@ -154,7 +164,8 @@ function updateStoreConfig(newConfig) {
       ...newConfig,
       payment: { ...current.payment, ...(newConfig.payment || {}) },
       outletAddress: { ...current.outletAddress, ...(newConfig.outletAddress || {}) },
-      cloudSync: { ...current.cloudSync, ...(newConfig.cloudSync || {}) }
+      cloudSync: { ...current.cloudSync, ...(newConfig.cloudSync || {}) },
+      security: { ...current.security, ...(newConfig.security || {}) }
     };
     try {
       localStorage.setItem("raosee_fresh_config", JSON.stringify(merged));
@@ -175,6 +186,47 @@ function updateStoreConfig(newConfig) {
     console.error("Error in updateStoreConfig:", err);
     return DEFAULT_CONFIG;
   }
+}
+
+// ================= ADMIN DASHBOARD AUTHENTICATION & SECURITY =================
+function getAdminSecurityConfig() {
+  const cfg = getStoreConfig();
+  return { ...DEFAULT_CONFIG.security, ...(cfg.security || {}) };
+}
+
+function verifyAdminCredentials(inputUserOrPin, inputPassword) {
+  const sec = getAdminSecurityConfig();
+  const trimmedInput = String(inputUserOrPin || '').trim();
+  const trimmedPass = String(inputPassword || '').trim();
+
+  // Mode 1: 4-digit Master PIN
+  if (!trimmedPass && trimmedInput === String(sec.adminPin || '7890')) {
+    return { success: true, method: 'pin' };
+  }
+  if (trimmedInput === String(sec.adminPin || '7890')) {
+    return { success: true, method: 'pin' };
+  }
+
+  // Mode 2: Username & Password
+  const expectedUser = String(sec.adminUser || 'admin').toLowerCase();
+  const expectedPass = String(sec.adminPassword || 'admin@raosee2026');
+
+  if (trimmedInput.toLowerCase() === expectedUser && trimmedPass === expectedPass) {
+    return { success: true, method: 'password' };
+  }
+
+  return { success: false, reason: 'Invalid Username, Password, or PIN.' };
+}
+
+function updateAdminSecurityCredentials(newUsername, newPassword, newPin) {
+  const currentSec = getAdminSecurityConfig();
+  const updatedSec = {
+    ...currentSec,
+    adminUser: newUsername ? String(newUsername).trim() : currentSec.adminUser,
+    adminPassword: newPassword ? String(newPassword).trim() : currentSec.adminPassword,
+    adminPin: newPin ? String(newPin).trim() : currentSec.adminPin
+  };
+  return updateStoreConfig({ security: updatedSec });
 }
 
 // Categories storage
@@ -606,7 +658,9 @@ function getStoreConfig() {
         ...DEFAULT_CONFIG, 
         ...parsed,
         payment: { ...DEFAULT_CONFIG.payment, ...(parsed.payment || {}) },
-        outletAddress: { ...DEFAULT_CONFIG.outletAddress, ...(parsed.outletAddress || {}) }
+        outletAddress: { ...DEFAULT_CONFIG.outletAddress, ...(parsed.outletAddress || {}) },
+        cloudSync: { ...DEFAULT_CONFIG.cloudSync, ...(parsed.cloudSync || {}) },
+        security: { ...DEFAULT_CONFIG.security, ...(parsed.security || {}) }
       };
     }
   } catch (e) {
@@ -622,7 +676,9 @@ function updateStoreConfig(newConfig) {
       ...current, 
       ...newConfig,
       payment: { ...current.payment, ...(newConfig.payment || {}) },
-      outletAddress: { ...current.outletAddress, ...(newConfig.outletAddress || {}) }
+      outletAddress: { ...current.outletAddress, ...(newConfig.outletAddress || {}) },
+      cloudSync: { ...current.cloudSync, ...(newConfig.cloudSync || {}) },
+      security: { ...current.security, ...(newConfig.security || {}) }
     };
     try {
       localStorage.setItem("raosee_fresh_config", JSON.stringify(merged));
@@ -729,6 +785,35 @@ function initDemoDataIfEmpty() {
   } catch (e) {}
 }
 
+// Admin Security Helpers
+function getAdminSecurityConfig() {
+  const cfg = getStoreConfig();
+  return { ...DEFAULT_CONFIG.security, ...(cfg.security || {}) };
+}
+
+function verifyAdminCredentials(inputUserOrPin, inputPassword) {
+  const sec = getAdminSecurityConfig();
+  const trimmedInput = String(inputUserOrPin || '').trim();
+  const trimmedPass = String(inputPassword || '').trim();
+  if (!trimmedPass && trimmedInput === String(sec.adminPin || '7890')) return { success: true, method: 'pin' };
+  if (trimmedInput === String(sec.adminPin || '7890')) return { success: true, method: 'pin' };
+  const expectedUser = String(sec.adminUser || 'admin').toLowerCase();
+  const expectedPass = String(sec.adminPassword || 'admin@raosee2026');
+  if (trimmedInput.toLowerCase() === expectedUser && trimmedPass === expectedPass) return { success: true, method: 'password' };
+  return { success: false, reason: 'Invalid Username, Password, or PIN.' };
+}
+
+function updateAdminSecurityCredentials(newUsername, newPassword, newPin) {
+  const currentSec = getAdminSecurityConfig();
+  const updatedSec = {
+    ...currentSec,
+    adminUser: newUsername ? String(newUsername).trim() : currentSec.adminUser,
+    adminPassword: newPassword ? String(newPassword).trim() : currentSec.adminPassword,
+    adminPin: newPin ? String(newPin).trim() : currentSec.adminPin
+  };
+  return updateStoreConfig({ security: updatedSec });
+}
+
 if (typeof window !== "undefined") {
   initDemoDataIfEmpty();
 }
@@ -744,7 +829,10 @@ if (typeof module !== "undefined" && module.exports) {
     saveCategories,
     getStoredBanners,
     saveBanners,
-    initDemoDataIfEmpty
+    initDemoDataIfEmpty,
+    getAdminSecurityConfig,
+    verifyAdminCredentials,
+    updateAdminSecurityCredentials
   };
 }
 `;
@@ -920,7 +1008,10 @@ if (typeof module !== "undefined" && module.exports) {
     saveCategories,
     getStoredBanners,
     saveBanners,
-    initDemoDataIfEmpty
+    initDemoDataIfEmpty,
+    getAdminSecurityConfig,
+    verifyAdminCredentials,
+    updateAdminSecurityCredentials
   };
 }
 

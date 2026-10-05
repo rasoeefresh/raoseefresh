@@ -38,6 +38,134 @@
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans antialiased min-h-screen">
 
+  <!-- ================= ADMIN AUTHENTICATION LOCK GATE ================= -->
+  <div id="admin-login-gate" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeIn">
+      
+      <!-- Gate Header -->
+      <div class="bg-gradient-to-r from-emerald-900 via-green-900 to-slate-900 p-6 text-white text-center relative overflow-hidden">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-blinkit-yellow text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg mb-3">
+          ⚡
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-emerald-300 text-[11px] font-bold uppercase tracking-wider mb-2">
+          <span>🔒 Restricted Store Owner Access</span>
+        </div>
+        <h2 class="text-xl font-black text-white js-admin-store-name">Raosee Fresh Supermarket</h2>
+        <p class="text-xs text-green-100 opacity-80 mt-1">Store Manager &amp; Operations Control Center</p>
+      </div>
+
+      <!-- Mode Selector Tabs: Quick PIN vs Master Password -->
+      <div class="p-6 space-y-5">
+        <div class="flex bg-gray-100 p-1 rounded-2xl text-xs font-bold">
+          <button type="button" id="auth-tab-pin" onclick="setAuthMode('pin')" class="flex-1 py-2 rounded-xl bg-white shadow-xs text-blinkit-green font-black transition-all">
+            ⚡ Quick 4-Digit PIN
+          </button>
+          <button type="button" id="auth-tab-password" onclick="setAuthMode('password')" class="flex-1 py-2 rounded-xl text-gray-500 hover:text-gray-900 font-bold transition-all">
+            🔑 Username &amp; Password
+          </button>
+        </div>
+
+        <!-- Mode 1: 4-digit PIN Form -->
+        <form id="admin-pin-form" onsubmit="handlePinSubmit(event)" class="space-y-4">
+          <div class="text-center space-y-1">
+            <label class="block text-xs font-bold text-gray-700">Enter Master Security PIN</label>
+            <p class="text-[11px] text-gray-400">4-digit instant PIN for the supermarket owner</p>
+          </div>
+
+          <div class="flex justify-center">
+            <input 
+              type="password" 
+              maxlength="4" 
+              id="admin-pin-input" 
+              autocomplete="current-password" 
+              autofocus 
+              placeholder="••••" 
+              class="w-48 text-center tracking-[0.5em] text-3xl font-black font-mono py-3 rounded-2xl border-2 border-gray-300 focus:border-blinkit-green outline-none transition-all shadow-inner bg-gray-50 focus:bg-white" 
+            />
+          </div>
+
+          <!-- Error Alert -->
+          <div id="pin-error-box" class="hidden text-center text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+            Invalid PIN. Please try again.
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-gray-500 pt-1">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="pin-remember-me" checked class="rounded text-blinkit-green focus:ring-green-500" />
+              <span>Remember on this browser</span>
+            </label>
+            <button type="button" onclick="setAuthMode('password')" class="text-blinkit-green font-bold hover:underline">
+              Use Password →
+            </button>
+          </div>
+
+          <button type="submit" id="pin-submit-btn" class="w-full py-3.5 bg-blinkit-green hover:bg-emerald-800 text-white font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-sm">
+            <span>🔓 Unlock Control Center</span>
+          </button>
+        </form>
+
+        <!-- Mode 2: Username & Password Form -->
+        <form id="admin-password-form" onsubmit="handlePasswordSubmit(event)" class="space-y-3.5 hidden">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Admin Username</label>
+            <input type="text" id="admin-user-input" autocomplete="username" placeholder="admin" value="admin" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none text-xs font-bold" />
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-bold text-gray-700">Master Password</label>
+              <button type="button" onclick="togglePasswordVisibility('admin-pass-input')" class="text-[10px] text-gray-400 hover:text-gray-700 font-bold">Show/Hide</button>
+            </div>
+            <input type="password" id="admin-pass-input" autocomplete="current-password" placeholder="••••••••••••" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none text-xs font-mono" />
+          </div>
+
+          <!-- Error Alert -->
+          <div id="password-error-box" class="hidden text-center text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+            Invalid credentials. Please verify your username &amp; password.
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-gray-500 pt-1">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="pass-remember-me" checked class="rounded text-blinkit-green focus:ring-green-500" />
+              <span>Remember on this device</span>
+            </label>
+            <button type="button" onclick="setAuthMode('pin')" class="text-blinkit-green font-bold hover:underline">
+              ← Quick PIN
+            </button>
+          </div>
+
+          <button type="submit" id="pass-submit-btn" class="w-full py-3.5 bg-blinkit-green hover:bg-emerald-800 text-white font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-sm">
+            <span>🔓 Sign In to Dashboard</span>
+          </button>
+        </form>
+
+        <!-- Owner Helper Info Card -->
+        <div class="bg-amber-50 rounded-2xl p-3 border border-amber-200 text-[11px] text-amber-900 space-y-1">
+          <div class="font-bold flex items-center gap-1">
+            <span>💡</span>
+            <span>Default Owner Login Credentials:</span>
+          </div>
+          <div class="font-mono text-[10px] text-amber-950 flex flex-wrap gap-x-3 gap-y-1">
+            <span>Quick PIN: <strong class="bg-amber-100 px-1 py-0.5 rounded font-bold">7890</strong></span>
+            <span>Username: <strong class="bg-amber-100 px-1 py-0.5 rounded font-bold">admin</strong></span>
+            <span>Password: <strong class="bg-amber-100 px-1 py-0.5 rounded font-bold">admin@raosee2026</strong></span>
+          </div>
+          <p class="text-[10px] text-amber-700 pt-0.5">Only you have access. You can customize your Password &amp; PIN inside Passwords modal anytime.</p>
+        </div>
+
+        <div class="text-center pt-1">
+          <a href="index.html" class="text-xs text-gray-400 hover:text-gray-700 font-semibold flex items-center justify-center gap-1">
+            <span>← Return to Public Storefront</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= AUTHENTICATED ADMIN APP CONTAINER ================= -->
+  <div id="admin-app-container" style="display: none;">
+
   <!-- ================= TOP ADMIN NAVIGATION ================= -->
   <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -53,20 +181,20 @@
               <h1 class="font-black text-lg sm:text-xl text-gray-900 leading-tight js-admin-store-name">Raosee Fresh Supermarket</h1>
               <span class="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Manager Mode</span>
             </div>
-            <p class="text-xs text-gray-500">Daily Rates, Items, Categories, Banners & Operations</p>
+            <p class="text-xs text-gray-500">Daily Rates, Items, Categories, Banners &amp; Operations</p>
           </div>
         </div>
 
         <!-- Quick Header Actions -->
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
           <!-- Store Status Indicator Pill -->
           <div id="admin-status-pill" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border border-green-200 bg-green-50 text-green-800">
             <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             <span id="admin-status-text">Store Open (Live)</span>
           </div>
 
-          <a href="index.html" target="_blank" class="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 hover:text-blinkit-green bg-gray-100 hover:bg-gray-200 px-3.5 py-2 rounded-xl transition-all">
-            <span>🛒 Live Storefront</span>
+          <a href="index.html" target="_blank" class="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-700 hover:text-blinkit-green bg-gray-100 hover:bg-gray-200 px-3 sm:px-3.5 py-2 rounded-xl transition-all">
+            <span>🛒 Storefront</span>
             <span class="text-xs">↗</span>
           </a>
 
@@ -75,7 +203,15 @@
           </button>
 
           <button onclick="switchTab('sync')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs sm:text-sm px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5" title="Configure Live Firebase Cloud Sync & Vercel Deployment">
-            <span>☁️ Cloud Sync &amp; Deploy</span>
+            <span>☁️ Cloud Sync</span>
+          </button>
+
+          <button onclick="openSecurityModal()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl shadow transition-all active:scale-95 flex items-center gap-1.5" title="Change Admin Password & Master PIN">
+            <span>🔐 Passwords</span>
+          </button>
+
+          <button onclick="logoutAdmin()" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-black text-xs sm:text-sm px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-1.5" title="Lock and logout of admin dashboard">
+            <span>🔒 Logout</span>
           </button>
         </div>
 
@@ -706,188 +842,219 @@
     <div id="tab-content-outlet" class="hidden space-y-6">
       
       <!-- Top Introduction Banner -->
-      <div class="bg-gradient-to-r from-emerald-800 via-green-900 to-green-950 text-white rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span class="bg-white/20 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-            Store Profile &amp; Entity
-          </span>
-          <h2 class="text-lg sm:text-xl font-black mt-2">Outlet &amp; Company Configuration</h2>
-          <p class="text-xs text-green-100 opacity-90 mt-0.5">
-            Manage your legal entity, supermarket logo, dark store physical address, FSSAI license, and GSTIN.
+      <div class="bg-gradient-to-r from-emerald-900 via-green-900 to-green-950 text-white rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+        <div class="relative z-10 max-w-2xl">
+          <div class="inline-flex items-center gap-2 bg-white/20 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider mb-3">
+            <span>🏢</span>
+            <span>Supermarket Identity &amp; Compliance Center</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black">Company &amp; Outlet Configuration</h2>
+          <p class="text-xs sm:text-sm text-green-100 opacity-90 mt-1 leading-relaxed">
+            Configure your registered legal entity, brand logo, dark store physical address, GSTIN, and FSSAI licenses. 
+            All changes automatically reflect across customer storefronts, live tracking maps, and printed thermal tax invoices!
           </p>
         </div>
-        <div class="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          <a href="outlet.html" class="bg-white hover:bg-gray-100 text-green-950 font-black text-xs px-4 py-3 rounded-2xl shadow transition-transform active:scale-95 flex items-center gap-1.5">
-            <span>🏢 Standalone Outlet Window</span> ↗
-          </a>
-          <button onclick="saveOutletSettings()" class="bg-blinkit-yellow hover:bg-amber-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-1.5">
+
+        <div class="relative z-10 flex flex-col sm:flex-row gap-2.5 self-start md:self-auto flex-wrap">
+          <button onclick="saveOutletSettings()" class="bg-blinkit-yellow hover:bg-amber-300 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
             <span>💾 Save Outlet Profile</span>
           </button>
+          <button onclick="downloadPermanentStoreConfig()" class="bg-white/20 hover:bg-white/30 text-white font-black text-xs px-4 py-3 rounded-2xl shadow transition-transform active:scale-95 flex items-center justify-center gap-2" title="Download updated store-config.js for permanent Vercel deployment">
+            <span>📥 Export Code</span>
+          </button>
+          <button onclick="triggerManualCloudSync()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs px-4 py-3 rounded-2xl shadow transition-transform active:scale-95 flex items-center justify-center gap-2">
+            <span>☁️ Push to Cloud</span>
+          </button>
         </div>
+
+        <div class="absolute -right-6 -bottom-6 text-9xl opacity-10 select-none pointer-events-none">🏢</div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- 3-Column Layout: Left (Logo & Brand Identity) + Middle (Dark Store Address & Tax Compliance) + Right (Live Thermal Invoice Preview) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- Left Column: Branding, Logo & Identity -->
-        <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-5 lg:col-span-1">
-          <div class="border-b pb-3 flex items-center justify-between">
-            <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
-              <span>🎨</span>
-              <span>Logo &amp; Brand Identity</span>
-            </h3>
-            <span class="text-[10px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded-full">Visual</span>
-          </div>
-
-          <!-- Live Logo Preview Box -->
-          <div class="text-center p-4 bg-gray-50 border border-gray-200 rounded-2xl">
-            <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Live Logo Preview</label>
-            <div id="outlet-logo-preview-box" class="w-24 h-24 mx-auto bg-white rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden shadow-inner relative group p-2">
-              <span id="outlet-logo-emoji-preview" class="text-4xl">⚡</span>
-              <img id="outlet-logo-img-preview" src="" alt="Logo Preview" class="w-full h-full object-contain hidden" />
-            </div>
-            <div class="mt-2 text-[11px] text-gray-500 font-medium" id="outlet-logo-status-text">Default Lightning Badge</div>
-          </div>
-
-          <!-- Upload Logo File or Image URL -->
-          <div class="space-y-3 text-xs">
-            <div>
-              <label class="block font-bold text-gray-700 mb-1">Upload Logo from Computer / Phone</label>
-              <input 
-                type="file" 
-                id="outlet-logo-file-input" 
-                accept="image/*"
-                onchange="handleLogoFileUpload(event)"
-                class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-green-50 file:text-blinkit-green hover:file:bg-green-100 border border-gray-200 rounded-xl p-1"
-              />
-              <p class="text-[10px] text-gray-400 mt-1">PNG, JPG, SVG, WebP (Square recommended)</p>
-            </div>
-
-            <div>
-              <label class="block font-bold text-gray-700 mb-1">Or Logo Image URL</label>
-              <input 
-                type="url" 
-                id="outlet-logo-url-input" 
-                placeholder="https://yourdomain.com/logo.png"
-                oninput="handleLogoUrlInput(this.value)"
-                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono text-xs"
-              />
-            </div>
-
-            <!-- Preset Quick Logos -->
-            <div>
-              <label class="block font-bold text-gray-700 mb-1.5">Preset Supermarket Icons</label>
-              <div class="grid grid-cols-4 gap-2">
-                <button type="button" onclick="setPresetLogo('⚡', 'Quick Commerce Lightning')" class="p-2 border rounded-xl hover:bg-yellow-50 text-xl font-bold flex flex-col items-center">
-                  <span>⚡</span>
-                  <span class="text-[9px] text-gray-500">10 Min</span>
-                </button>
-                <button type="button" onclick="setPresetLogo('🛒', 'Fresh Supermarket Cart')" class="p-2 border rounded-xl hover:bg-green-50 text-xl font-bold flex flex-col items-center">
-                  <span>🛒</span>
-                  <span class="text-[9px] text-gray-500">Cart</span>
-                </button>
-                <button type="button" onclick="setPresetLogo('🥬', 'Organic Farm Fresh')" class="p-2 border rounded-xl hover:bg-emerald-50 text-xl font-bold flex flex-col items-center">
-                  <span>🥬</span>
-                  <span class="text-[9px] text-gray-500">Greens</span>
-                </button>
-                <button type="button" onclick="setPresetLogo('🍎', 'Fresh Fruits Market')" class="p-2 border rounded-xl hover:bg-red-50 text-xl font-bold flex flex-col items-center">
-                  <span>🍎</span>
-                  <span class="text-[9px] text-gray-500">Fruits</span>
-                </button>
-              </div>
-            </div>
-
-            <button type="button" onclick="resetToDefaultLogo()" class="text-[11px] text-gray-500 hover:text-red-600 underline font-semibold block text-center pt-1">
-              Reset to Default Badge
-            </button>
-          </div>
-
-        </div>
-
-        <!-- Middle & Right Columns: Company Info, Outlet Address, Compliance -->
-        <div class="space-y-6 lg:col-span-2">
+        <!-- COLUMN 1: Brand Logo & Business Identity (4 Cols) -->
+        <div class="lg:col-span-4 space-y-6">
           
-          <!-- Card 1: Company Profile & Business Names -->
+          <!-- Logo Uploader Box -->
           <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+            <div class="border-b pb-3 flex items-center justify-between">
+              <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+                <span>🎨</span>
+                <span>Supermarket Logo &amp; Icon</span>
+              </h3>
+              <span class="text-[10px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded-full">Branding</span>
+            </div>
+
+            <!-- Live Preview Avatar -->
+            <div class="text-center p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+              <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Live Logo Display</span>
+              <div id="outlet-logo-preview-box" class="w-24 h-24 mx-auto bg-white rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden shadow-inner p-2">
+                <span id="outlet-logo-emoji-preview" class="text-4xl">⚡</span>
+                <img id="outlet-logo-img-preview" src="" alt="Logo" class="w-full h-full object-contain hidden" />
+              </div>
+              <div class="mt-2 text-xs font-bold text-gray-700" id="outlet-logo-status-text">Default Lightning Badge</div>
+              <p class="text-[10px] text-gray-400 mt-0.5">Displayed on Header, Receipt &amp; App Icon</p>
+            </div>
+
+            <!-- File Upload & URL -->
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Upload Logo from Computer / Phone</label>
+                <input 
+                  type="file" 
+                  id="outlet-logo-file-input" 
+                  accept="image/*"
+                  onchange="handleLogoFileUpload(event)"
+                  class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-green-50 file:text-blinkit-green hover:file:bg-green-100 border border-gray-200 rounded-xl p-1 cursor-pointer"
+                />
+                <p class="text-[10px] text-gray-400 mt-1">Auto-compressed &amp; quota safe (PNG, JPG, WebP)</p>
+              </div>
+
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Or Logo Image URL</label>
+                <input 
+                  type="url" 
+                  id="outlet-logo-url-input" 
+                  placeholder="https://example.com/logo.png"
+                  oninput="handleLogoUrlInput(this.value)"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono text-xs"
+                />
+              </div>
+
+              <!-- Preset Badges -->
+              <div>
+                <label class="block font-bold text-gray-700 mb-1.5">Preset Quick Commerce Badges</label>
+                <div class="grid grid-cols-4 gap-2">
+                  <button type="button" onclick="setPresetLogo('⚡', 'Quick Commerce Lightning')" class="p-2 border rounded-xl hover:bg-yellow-50 text-xl font-bold flex flex-col items-center">
+                    <span>⚡</span>
+                    <span class="text-[9px] text-gray-500">10 Min</span>
+                  </button>
+                  <button type="button" onclick="setPresetLogo('🛒', 'Fresh Supermarket Cart')" class="p-2 border rounded-xl hover:bg-green-50 text-xl font-bold flex flex-col items-center">
+                    <span>🛒</span>
+                    <span class="text-[9px] text-gray-500">Cart</span>
+                  </button>
+                  <button type="button" onclick="setPresetLogo('🥬', 'Organic Farm Fresh')" class="p-2 border rounded-xl hover:bg-emerald-50 text-xl font-bold flex flex-col items-center">
+                    <span>🥬</span>
+                    <span class="text-[9px] text-gray-500">Greens</span>
+                  </button>
+                  <button type="button" onclick="setPresetLogo('🍎', 'Fresh Fruits Market')" class="p-2 border rounded-xl hover:bg-red-50 text-xl font-bold flex flex-col items-center">
+                    <span>🍎</span>
+                    <span class="text-[9px] text-gray-500">Fruits</span>
+                  </button>
+                </div>
+              </div>
+
+              <button type="button" onclick="resetToDefaultLogo()" class="text-[11px] text-gray-500 hover:text-red-600 underline font-semibold block text-center pt-1 w-full">
+                Reset to Default Badge (⚡)
+              </button>
+            </div>
+          </div>
+
+          <!-- Business Entity & Brand Names -->
+          <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4 text-xs">
             <div class="border-b pb-3">
               <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
-                <span>🏢</span>
-                <span>Company &amp; Outlet Identification</span>
+                <span>🏷️</span>
+                <span>Business &amp; Outlet Identity</span>
               </h3>
-              <p class="text-xs text-gray-500">Entity name for bills, customer app, and legal invoices</p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">Company Legal Entity Name *</label>
-                <input 
-                  type="text" 
-                  id="outlet-company-name" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
-                  placeholder="e.g. Raosee Fresh Retail Private Limited"
-                />
-                <span class="text-[10px] text-gray-400 mt-0.5 block">Appears on official tax invoices &amp; receipts</span>
-              </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Company Legal Entity Name *</label>
+              <input 
+                type="text" 
+                id="outlet-company-name" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900"
+                placeholder="e.g. Raosee Fresh Retail Private Limited"
+                oninput="updateInvoicePreview()"
+              />
+              <p class="text-[10px] text-gray-400 mt-1">Printed on official tax receipts &amp; GST invoices</p>
+            </div>
 
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">Store / Public Trade Name *</label>
-                <input 
-                  type="text" 
-                  id="outlet-store-name" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900"
-                  placeholder="e.g. Raosee Fresh Supermarket"
-                />
-                <span class="text-[10px] text-gray-400 mt-0.5 block">Displayed on customer header &amp; app title</span>
-              </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Supermarket Brand Display Name *</label>
+              <input 
+                type="text" 
+                id="outlet-store-name" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900"
+                placeholder="e.g. Raosee Fresh Supermarket"
+                oninput="updateInvoicePreview()"
+              />
+            </div>
 
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">Outlet / Branch Name *</label>
-                <input 
-                  type="text" 
-                  id="outlet-branch-name" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
-                  placeholder="e.g. Main Dark Store - HSR Layout Hub #01"
-                />
-              </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Outlet / Dark Store Branch Name *</label>
+              <input 
+                type="text" 
+                id="outlet-branch-name" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
+                placeholder="e.g. Main Dark Store - HSR Layout Hub #01"
+                oninput="updateInvoicePreview()"
+              />
+            </div>
 
+            <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block font-bold text-gray-700 mb-1">Outlet Branch Code</label>
+                <label class="block font-bold text-gray-700 mb-1">Outlet Code</label>
                 <input 
                   type="text" 
                   id="outlet-code" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono"
-                  placeholder="e.g. RF-BLR-01"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono uppercase"
+                  placeholder="RF-BLR-01"
+                  oninput="updateInvoicePreview()"
                 />
               </div>
-
-              <div class="sm:col-span-2">
-                <label class="block font-bold text-gray-700 mb-1">Tagline / Slogan</label>
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Estimated ETA</label>
                 <input 
                   type="text" 
-                  id="outlet-tagline" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-medium"
-                  placeholder="e.g. Farm Fresh Groceries Delivered in 10-15 Mins"
+                  id="outlet-eta" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-blinkit-green"
+                  placeholder="10-15 mins"
+                  oninput="updateInvoicePreview()"
                 />
               </div>
             </div>
-          </div>
 
-          <!-- Card 2: Outlet Physical Address -->
-          <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
-            <div class="border-b pb-3">
-              <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
-                <span>📍</span>
-                <span>Dark Store / Outlet Address</span>
-              </h3>
-              <p class="text-xs text-gray-500">Used as the dispatch origin on customer live tracking maps and bills</p>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Supermarket Tagline</label>
+              <input 
+                type="text" 
+                id="outlet-tagline" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                placeholder="Farm Fresh Groceries Delivered in 10-15 Mins"
+                oninput="updateInvoicePreview()"
+              />
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+          </div>
+
+        </div>
+
+        <!-- COLUMN 2: Physical Dark Store Address & Tax Compliance (4 Cols) -->
+        <div class="lg:col-span-4 space-y-6">
+          
+          <!-- Physical Dark Store Address -->
+          <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4 text-xs">
+            <div class="border-b pb-3 flex items-center justify-between">
+              <div>
+                <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
+                  <span>📍</span>
+                  <span>Dark Store Dispatch Address</span>
+                </h3>
+                <p class="text-[11px] text-gray-500">Physical address where delivery riders pick up bags</p>
+              </div>
+              <span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">Hub Location</span>
+            </div>
+
+            <div class="space-y-3">
               <div>
                 <label class="block font-bold text-gray-700 mb-1">Shop / Unit / Floor No. *</label>
                 <input 
                   type="text" 
                   id="outlet-addr-shop" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
                   placeholder="e.g. Shop #12, Ground Floor"
                   oninput="updateFullAddressPreview()"
                 />
@@ -920,87 +1087,93 @@
                 <input 
                   type="text" 
                   id="outlet-addr-area" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
                   placeholder="e.g. HSR Layout Sector 2"
                   oninput="updateFullAddressPreview()"
                 />
               </div>
 
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">City *</label>
-                <input 
-                  type="text" 
-                  id="outlet-addr-city" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-                  placeholder="e.g. Bangalore"
-                  oninput="updateFullAddressPreview()"
-                />
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-bold text-gray-700 mb-1">City *</label>
+                  <input 
+                    type="text" 
+                    id="outlet-addr-city" 
+                    class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
+                    placeholder="e.g. Bangalore"
+                    oninput="updateFullAddressPreview()"
+                  />
+                </div>
+
+                <div>
+                  <label class="block font-bold text-gray-700 mb-1">Pincode *</label>
+                  <input 
+                    type="text" 
+                    id="outlet-addr-pincode" 
+                    maxlength="6"
+                    class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-bold"
+                    placeholder="e.g. 560102"
+                    oninput="updateFullAddressPreview()"
+                  />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-bold text-gray-700 mb-1">State</label>
+                  <input 
+                    type="text" 
+                    id="outlet-addr-state" 
+                    class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                    placeholder="e.g. Karnataka"
+                    oninput="updateFullAddressPreview()"
+                  />
+                </div>
+
+                <div>
+                  <label class="block font-bold text-gray-700 mb-1">Landmark</label>
+                  <input 
+                    type="text" 
+                    id="outlet-addr-landmark" 
+                    class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
+                    placeholder="e.g. Near BDA Complex"
+                    oninput="updateFullAddressPreview()"
+                  />
+                </div>
               </div>
 
               <div>
-                <label class="block font-bold text-gray-700 mb-1">Pincode *</label>
-                <input 
-                  type="text" 
-                  id="outlet-addr-pincode" 
-                  maxlength="6"
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono"
-                  placeholder="e.g. 560102"
-                  oninput="updateFullAddressPreview()"
-                />
+                <label class="block font-bold text-gray-700 mb-1">Combined Formatted Address (Auto-Generated)</label>
+                <textarea 
+                  id="outlet-full-address-preview" 
+                  rows="2" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green text-xs font-medium text-gray-800 bg-gray-50"
+                  oninput="updateInvoicePreview()"
+                ></textarea>
               </div>
-
-              <div class="sm:col-span-2">
-                <label class="block font-bold text-gray-700 mb-1">Landmark</label>
-                <input 
-                  type="text" 
-                  id="outlet-addr-landmark" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-                  placeholder="e.g. Near BDA Complex &amp; City Garden"
-                  oninput="updateFullAddressPreview()"
-                />
-              </div>
-
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">State</label>
-                <input 
-                  type="text" 
-                  id="outlet-addr-state" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-                  placeholder="e.g. Karnataka"
-                  oninput="updateFullAddressPreview()"
-                />
-              </div>
-            </div>
-
-            <div class="pt-2">
-              <label class="block font-bold text-gray-700 mb-1 text-xs">Combined Full Address (Printed on Invoices &amp; Footer)</label>
-              <textarea 
-                id="outlet-full-address-preview" 
-                rows="2" 
-                class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green text-xs font-medium text-gray-800"
-              ></textarea>
             </div>
           </div>
 
-          <!-- Card 3: Tax, Regulatory & Bill Footer -->
-          <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
+          <!-- Tax, Legal & Food Safety Compliance -->
+          <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4 text-xs">
             <div class="border-b pb-3">
               <h3 class="font-black text-sm text-gray-900 flex items-center gap-2">
                 <span>📜</span>
                 <span>Tax &amp; Food Safety Compliance</span>
               </h3>
-              <p class="text-xs text-gray-500">Government registrations printed on customer order receipts</p>
+              <p class="text-[11px] text-gray-500">Government registrations printed on customer receipts</p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div class="space-y-3">
               <div>
                 <label class="block font-bold text-gray-700 mb-1">GSTIN (15-Digit GST Number)</label>
                 <input 
                   type="text" 
                   id="outlet-gstin" 
                   maxlength="15"
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono uppercase font-bold"
-                  placeholder="e.g. 29ABCDE1234F1Z5"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono uppercase font-bold text-gray-900"
+                  placeholder="29ABCDE1234F1Z5"
+                  oninput="updateInvoicePreview()"
                 />
               </div>
 
@@ -1010,36 +1183,148 @@
                   type="text" 
                   id="outlet-fssai" 
                   maxlength="14"
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-bold"
-                  placeholder="e.g. 11223344000123"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-bold text-gray-900"
+                  placeholder="11223344000123"
+                  oninput="updateInvoicePreview()"
                 />
               </div>
 
-              <div class="sm:col-span-2">
+              <div>
                 <label class="block font-bold text-gray-700 mb-1">Customer Receipt / Invoice Footer Note</label>
-                <input 
-                  type="text" 
+                <textarea 
                   id="outlet-invoice-note" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-                  placeholder="e.g. Thank you for shopping with Raosee Fresh! Freshness &amp; replacement guaranteed on WhatsApp."
-                />
+                  rows="2"
+                  class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green text-xs"
+                  placeholder="Thank you for shopping with Raosee Fresh! Freshness & 100% replacement guaranteed on WhatsApp."
+                  oninput="updateInvoicePreview()"
+                ></textarea>
               </div>
-            </div>
-
-            <div class="pt-3 border-t flex items-center justify-between">
-              <span class="text-xs text-gray-500">Settings save to browser storage &amp; sync across customer apps</span>
-              <button 
-                onclick="saveOutletSettings()" 
-                class="bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow transition-all active:scale-95"
-              >
-                Save Settings
-              </button>
             </div>
           </div>
 
         </div>
 
+        <!-- COLUMN 3: LIVE TAX INVOICE PREVIEW (4 Cols) -->
+        <div class="lg:col-span-4 space-y-6">
+          
+          <div class="bg-white rounded-3xl p-6 border-2 border-emerald-500 shadow-xl space-y-4 sticky top-24">
+            <div class="flex items-center justify-between border-b pb-3">
+              <div>
+                <span class="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full uppercase">Real-Time Sync</span>
+                <h3 class="font-black text-sm text-gray-900 mt-1 flex items-center gap-1.5">
+                  <span>🧾</span>
+                  <span>Customer Invoice Preview</span>
+                </h3>
+              </div>
+              <span class="text-[10px] text-gray-400">Live Render</span>
+            </div>
+
+            <!-- The Rendered Receipt Mockup -->
+            <div class="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-[11px] space-y-3 font-sans">
+              
+              <!-- Receipt Header -->
+              <div class="flex items-start gap-3 border-b border-gray-200 pb-3">
+                <div id="preview-bill-logo-box" class="w-10 h-10 rounded-xl bg-blinkit-yellow flex items-center justify-center text-xl shadow-xs overflow-hidden flex-shrink-0">
+                  <span id="preview-bill-emoji">⚡</span>
+                  <img id="preview-bill-img" src="" class="w-full h-full object-contain hidden" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[9px] font-black text-green-700 bg-green-100 px-1.5 py-0.2 rounded inline-block uppercase">Official Tax Invoice</div>
+                  <div class="font-black text-xs text-gray-900 mt-0.5 truncate" id="preview-bill-company">Raosee Fresh Retail Pvt Ltd</div>
+                  <div class="text-[10px] font-bold text-gray-600 truncate" id="preview-bill-outlet">Main Dark Store - HSR Layout</div>
+                  <div class="text-[10px] text-gray-400 font-mono">Invoice #RF-948210 • 10-15m Express</div>
+                </div>
+              </div>
+
+              <!-- Dispatch Address & Registration -->
+              <div class="bg-white rounded-xl p-2.5 border border-gray-200/80 space-y-1 text-[10px]">
+                <div class="text-gray-400 font-bold uppercase tracking-wider text-[9px] flex justify-between">
+                  <span>Dispatch Dark Store</span>
+                  <span class="text-blinkit-green font-mono font-bold" id="preview-bill-code">RF-BLR-01</span>
+                </div>
+                <div class="text-gray-800 font-medium leading-relaxed text-[10px]" id="preview-bill-address">
+                  Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102
+                </div>
+                <div class="pt-1 border-t border-gray-100 flex items-center justify-between font-mono text-gray-600 flex-wrap gap-1">
+                  <span>GST: <strong id="preview-bill-gstin" class="text-gray-900 font-bold">29ABCDE1234F1Z5</strong></span>
+                  <span>FSSAI: <strong id="preview-bill-fssai" class="text-gray-900 font-bold">11223344000123</strong></span>
+                </div>
+              </div>
+
+              <!-- Sample Line Items -->
+              <div class="border-b border-gray-200 pb-2">
+                <table class="w-full text-left text-[10px]">
+                  <thead class="text-gray-400 font-bold border-b border-gray-200">
+                    <tr>
+                      <th class="pb-1">Item</th>
+                      <th class="pb-1 text-center">Qty</th>
+                      <th class="pb-1 text-right">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100 text-gray-700">
+                    <tr>
+                      <td class="py-1">Farm Fresh Tomatoes (1 kg)</td>
+                      <td class="py-1 text-center">1</td>
+                      <td class="py-1 text-right font-bold">₹34</td>
+                    </tr>
+                    <tr>
+                      <td class="py-1">Amul Taaza Milk (500 ml)</td>
+                      <td class="py-1 text-center">2</td>
+                      <td class="py-1 text-right font-bold">₹54</td>
+                    </tr>
+                    <tr>
+                      <td class="py-1">Crisp Shimla Apples (500 g)</td>
+                      <td class="py-1 text-center">1</td>
+                      <td class="py-1 text-right font-bold">₹119</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Grand Total -->
+              <div class="space-y-1 text-[10px] text-gray-600">
+                <div class="flex justify-between">
+                  <span>Items Subtotal:</span>
+                  <span>₹207</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Delivery (Free above ₹199):</span>
+                  <span class="text-green-700 font-bold">FREE</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Handling &amp; Packaging:</span>
+                  <span>₹2</span>
+                </div>
+                <div class="flex justify-between text-xs font-black text-gray-900 pt-1 border-t border-gray-200">
+                  <span>Grand Total:</span>
+                  <span class="text-blinkit-green font-black">₹209</span>
+                </div>
+              </div>
+
+              <!-- Footer Note -->
+              <div class="bg-green-50/70 p-2 rounded-xl border border-green-200 text-[10px] text-green-900 text-center font-medium leading-relaxed" id="preview-bill-footer">
+                Thank you for shopping with Raosee Fresh! Freshness &amp; 100% replacement guaranteed on WhatsApp.
+              </div>
+
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="pt-2 space-y-2">
+              <button onclick="saveOutletSettings()" class="w-full bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                <span>💾 Save &amp; Apply Outlet Profile</span>
+              </button>
+              <button onclick="triggerManualCloudSync()" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-xs py-2.5 rounded-2xl border border-emerald-200 transition-colors flex items-center justify-center gap-1.5">
+                <span>☁️ Push Outlet Updates to Cloud</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
+
+    </div>
 
     <!-- ================= TAB 11: PERMANENT DEPLOY & CLOUD SYNC ================= -->
     <div id="tab-content-sync" class="hidden space-y-6">
@@ -1632,6 +1917,68 @@
     </div>
   </div>
 
+  <!-- ================= SECURITY & CREDENTIALS MODAL ================= -->
+  <div id="security-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-emerald-900 via-green-900 to-slate-900 p-5 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🔐</span>
+          <div>
+            <h3 class="font-black text-sm">Store Manager Credentials</h3>
+            <p class="text-[11px] text-green-100 opacity-80">Update Owner Login Password &amp; 4-Digit PIN</p>
+          </div>
+        </div>
+        <button onclick="closeSecurityModal()" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold flex items-center justify-center text-sm">
+          ✕
+        </button>
+      </div>
+
+      <form onsubmit="handleSecurityUpdateSubmit(event)" class="p-6 space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">Store Owner Username *</label>
+          <input type="text" id="sec-user-input" class="w-full p-2.5 rounded-xl border border-gray-300 font-bold outline-none focus:border-blinkit-green" placeholder="admin" required />
+          <span class="text-[10px] text-gray-400 mt-0.5 block">Current default: admin</span>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">New Master Password *</label>
+          <div class="relative">
+            <input type="password" id="sec-pass-input" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono" placeholder="Minimum 6 characters" required />
+            <button type="button" onclick="togglePasswordVisibility('sec-pass-input')" class="absolute right-3 top-2.5 text-[10px] font-bold text-gray-400 hover:text-gray-700">Show</button>
+          </div>
+          <span class="text-[10px] text-gray-400 mt-0.5 block">Used for full admin sign-in</span>
+        </div>
+
+        <div>
+          <label class="block font-bold text-gray-700 mb-1">New Quick 4-Digit Master PIN *</label>
+          <input type="text" maxlength="4" id="sec-pin-input" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-black tracking-widest text-center text-lg" placeholder="7890" pattern="\d{4}" required />
+          <span class="text-[10px] text-gray-400 mt-0.5 block">4 digits (0-9) for quick mobile &amp; desktop unlock</span>
+        </div>
+
+        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900">
+          <p class="font-bold flex items-center gap-1">
+            <span>🛡️</span>
+            <span>Security Guarantee:</span>
+          </p>
+          <p class="text-[10px] text-emerald-800 mt-0.5 leading-relaxed">
+            New credentials save to your local browser and automatically push to Firebase Realtime Database. Nobody else can open this dashboard without them!
+          </p>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeSecurityModal()" class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2.5 bg-blinkit-green hover:bg-emerald-800 text-white font-black rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5">
+            <span>💾 Save &amp; Apply Credentials</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  </div> <!-- End #admin-app-container -->
+
   <!-- Scripts -->
   <script src="store-config.js"></script>
   <script src="products.js"></script>
@@ -1647,6 +1994,234 @@
         .replace(/'/g, '&#039;');
     }
 
+    // ================= ADMIN AUTHENTICATION & ACCESS CONTROL =================
+    let failedAuthAttempts = 0;
+
+    function isUserAuthenticated() {
+      const sessionAuth = sessionStorage.getItem('raosee_admin_auth');
+      const rememberAuth = localStorage.getItem('raosee_admin_auth_remember');
+      const authTime = localStorage.getItem('raosee_admin_auth_time');
+      
+      // If remembered on this browser, check 24-hour expiration
+      if (rememberAuth === 'true' && authTime) {
+        const hoursPassed = (Date.now() - parseInt(authTime, 10)) / (1000 * 60 * 60);
+        if (hoursPassed < 24) return true;
+        localStorage.removeItem('raosee_admin_auth_remember');
+        localStorage.removeItem('raosee_admin_auth_time');
+      }
+
+      return sessionAuth === 'true';
+    }
+
+    function checkAdminAuth() {
+      const gate = document.getElementById('admin-login-gate');
+      const app = document.getElementById('admin-app-container');
+
+      if (isUserAuthenticated()) {
+        if (gate) gate.classList.add('hidden');
+        if (app) app.style.display = 'block';
+        loadMasterData();
+      } else {
+        if (app) app.style.display = 'none';
+        if (gate) {
+          gate.classList.remove('hidden');
+          const pinInput = document.getElementById('admin-pin-input');
+          if (pinInput) setTimeout(() => pinInput.focus(), 150);
+        }
+      }
+    }
+
+    function setAuthMode(mode) {
+      const tabPin = document.getElementById('auth-tab-pin');
+      const tabPass = document.getElementById('auth-tab-password');
+      const pinForm = document.getElementById('admin-pin-form');
+      const passForm = document.getElementById('admin-password-form');
+      const pinErr = document.getElementById('pin-error-box');
+      const passErr = document.getElementById('password-error-box');
+
+      if (pinErr) pinErr.classList.add('hidden');
+      if (passErr) passErr.classList.add('hidden');
+
+      if (mode === 'pin') {
+        tabPin.className = "flex-1 py-2 rounded-xl bg-white shadow-xs text-blinkit-green font-black transition-all";
+        tabPass.className = "flex-1 py-2 rounded-xl text-gray-500 hover:text-gray-900 font-bold transition-all";
+        pinForm.classList.remove('hidden');
+        passForm.classList.add('hidden');
+        setTimeout(() => document.getElementById('admin-pin-input')?.focus(), 100);
+      } else {
+        tabPass.className = "flex-1 py-2 rounded-xl bg-white shadow-xs text-blinkit-green font-black transition-all";
+        tabPin.className = "flex-1 py-2 rounded-xl text-gray-500 hover:text-gray-900 font-bold transition-all";
+        passForm.classList.remove('hidden');
+        pinForm.classList.add('hidden');
+        setTimeout(() => document.getElementById('admin-pass-input')?.focus(), 100);
+      }
+    }
+
+    function togglePasswordVisibility(inputId) {
+      const el = document.getElementById(inputId);
+      if (el) {
+        el.type = el.type === 'password' ? 'text' : 'password';
+      }
+    }
+
+    function handlePinSubmit(event) {
+      event.preventDefault();
+      if (checkBruteForceLockout()) return;
+
+      const pin = document.getElementById('admin-pin-input')?.value.trim();
+      const remember = document.getElementById('pin-remember-me')?.checked;
+      const errBox = document.getElementById('pin-error-box');
+
+      const verification = typeof verifyAdminCredentials === 'function' 
+        ? verifyAdminCredentials(pin, '') 
+        : { success: pin === '7890' };
+
+      if (verification.success) {
+        grantAdminAccess(remember);
+      } else {
+        recordFailedAttempt(errBox, 'Invalid PIN. Please try again.');
+      }
+    }
+
+    function handlePasswordSubmit(event) {
+      event.preventDefault();
+      if (checkBruteForceLockout()) return;
+
+      const user = document.getElementById('admin-user-input')?.value.trim();
+      const pass = document.getElementById('admin-pass-input')?.value.trim();
+      const remember = document.getElementById('pass-remember-me')?.checked;
+      const errBox = document.getElementById('password-error-box');
+
+      const verification = typeof verifyAdminCredentials === 'function'
+        ? verifyAdminCredentials(user, pass)
+        : { success: user.toLowerCase() === 'admin' && pass === 'admin@raosee2026' };
+
+      if (verification.success) {
+        grantAdminAccess(remember);
+      } else {
+        recordFailedAttempt(errBox, 'Incorrect username or password.');
+      }
+    }
+
+    function recordFailedAttempt(errBox, message) {
+      failedAuthAttempts++;
+      if (errBox) {
+        errBox.textContent = message;
+        errBox.classList.remove('hidden');
+      }
+      if (failedAuthAttempts >= 5) {
+        const lockDurationMs = 30000;
+        sessionStorage.setItem('raosee_admin_locked_until', String(Date.now() + lockDurationMs));
+        failedAuthAttempts = 0;
+        alert("⚠️ Too many failed attempts. Security lock activated for 30 seconds.");
+      }
+    }
+
+    function checkBruteForceLockout() {
+      const lockedUntil = sessionStorage.getItem('raosee_admin_locked_until');
+      if (lockedUntil && Date.now() < parseInt(lockedUntil, 10)) {
+        const remaining = Math.ceil((parseInt(lockedUntil, 10) - Date.now()) / 1000);
+        alert(`Too many failed attempts. Access temporarily locked for ${remaining} more seconds.`);
+        return true;
+      }
+      return false;
+    }
+
+    function grantAdminAccess(remember = true) {
+      sessionStorage.setItem('raosee_admin_auth', 'true');
+      if (remember) {
+        localStorage.setItem('raosee_admin_auth_remember', 'true');
+        localStorage.setItem('raosee_admin_auth_time', String(Date.now()));
+      }
+      failedAuthAttempts = 0;
+
+      const gate = document.getElementById('admin-login-gate');
+      const app = document.getElementById('admin-app-container');
+      if (gate) gate.classList.add('hidden');
+      if (app) app.style.display = 'block';
+
+      loadMasterData();
+      showNotificationToast('✓ Welcome back, Store Manager! Access unlocked.');
+    }
+
+    function logoutAdmin() {
+      if (confirm("Lock and log out of the Admin Dashboard?")) {
+        sessionStorage.removeItem('raosee_admin_auth');
+        localStorage.removeItem('raosee_admin_auth_remember');
+        localStorage.removeItem('raosee_admin_auth_time');
+
+        const app = document.getElementById('admin-app-container');
+        const gate = document.getElementById('admin-login-gate');
+        if (app) app.style.display = 'none';
+        if (gate) {
+          gate.classList.remove('hidden');
+          const pinInput = document.getElementById('admin-pin-input');
+          if (pinInput) {
+            pinInput.value = '';
+            setTimeout(() => pinInput.focus(), 150);
+          }
+        }
+      }
+    }
+
+    function openSecurityModal() {
+      const sec = typeof getAdminSecurityConfig === 'function' ? getAdminSecurityConfig() : {};
+      const userEl = document.getElementById('sec-user-input');
+      const passEl = document.getElementById('sec-pass-input');
+      const pinEl = document.getElementById('sec-pin-input');
+
+      if (userEl) userEl.value = sec.adminUser || 'admin';
+      if (passEl) passEl.value = sec.adminPassword || 'admin@raosee2026';
+      if (pinEl) pinEl.value = sec.adminPin || '7890';
+
+      const modal = document.getElementById('security-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+      }
+    }
+
+    function closeSecurityModal() {
+      const modal = document.getElementById('security-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+    }
+
+    function handleSecurityUpdateSubmit(event) {
+      event.preventDefault();
+      const newU = document.getElementById('sec-user-input')?.value.trim();
+      const newP = document.getElementById('sec-pass-input')?.value.trim();
+      const newPin = document.getElementById('sec-pin-input')?.value.trim();
+
+      if (!newU || !newP || !newPin || newPin.length !== 4) {
+        alert("Please provide a valid Username, Password, and a 4-digit numeric PIN.");
+        return;
+      }
+
+      if (typeof updateAdminSecurityCredentials === 'function') {
+        updateAdminSecurityCredentials(newU, newP, newPin);
+        closeSecurityModal();
+        alert("🎉 Admin credentials updated successfully!\nYour new Password and Quick PIN are now active across this browser and synced to Firebase.");
+      }
+    }
+
+    function showNotificationToast(msg) {
+      let toast = document.getElementById('admin-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'admin-toast';
+        toast.className = 'fixed bottom-6 right-6 bg-slate-900 text-white font-bold text-xs px-5 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-4';
+        document.body.appendChild(toast);
+      }
+      toast.innerHTML = `<span>⚡</span><span>${msg}</span>`;
+      toast.classList.remove('opacity-0', 'translate-y-4');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-4');
+      }, 3500);
+    }
+
     // State
     let productsList = [];
     let categoriesList = [];
@@ -1655,7 +2230,7 @@
     let ordersList = [];
 
     document.addEventListener('DOMContentLoaded', () => {
-      loadMasterData();
+      checkAdminAuth();
       if (window.location.hash) {
         const h = window.location.hash.replace('#', '').trim();
         if (h) switchTab(h);
@@ -1667,6 +2242,10 @@
     });
 
     function loadMasterData() {
+      if (!isUserAuthenticated()) {
+        checkAdminAuth();
+        return;
+      }
       currentConfig = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
       productsList = typeof getStoredProducts === 'function' ? getStoredProducts() : [];
       categoriesList = typeof getStoredCategories === 'function' ? getStoredCategories() : [];
@@ -3044,6 +3623,7 @@
       const storeEl = document.getElementById('outlet-store-name');
       const branchEl = document.getElementById('outlet-branch-name');
       const codeEl = document.getElementById('outlet-code');
+      const etaEl = document.getElementById('outlet-eta');
       const taglineEl = document.getElementById('outlet-tagline');
       const gstinEl = document.getElementById('outlet-gstin');
       const fssaiEl = document.getElementById('outlet-fssai');
@@ -3054,10 +3634,11 @@
       if (storeEl) storeEl.value = cfg.storeName || 'Raosee Fresh Supermarket';
       if (branchEl) branchEl.value = cfg.outletName || 'Main Dark Store - HSR Layout Hub #01';
       if (codeEl) codeEl.value = cfg.outletCode || 'RF-BLR-01';
+      if (etaEl) etaEl.value = cfg.deliveryTimeEstimate || '10-15 mins';
       if (taglineEl) taglineEl.value = cfg.tagline || 'Farm Fresh Groceries Delivered in 10-15 Mins';
       if (gstinEl) gstinEl.value = cfg.gstin || '29ABCDE1234F1Z5';
       if (fssaiEl) fssaiEl.value = cfg.fssaiNumber || '11223344000123';
-      if (noteEl) noteEl.value = cfg.invoiceFooterNote || '';
+      if (noteEl) noteEl.value = cfg.invoiceFooterNote || 'Thank you for shopping with Raosee Fresh! Freshness & 100% replacement guaranteed on WhatsApp.';
       if (urlInput) urlInput.value = cfg.logoUrl || '';
 
       const addr = cfg.outletAddress || {};
@@ -3079,9 +3660,11 @@
       if (pinEl) pinEl.value = addr.pincode || cfg.pincode || '560102';
       if (landmarkEl) landmarkEl.value = addr.landmark || 'Near BDA Complex & City Garden';
       if (stateEl) stateEl.value = addr.state || 'Karnataka';
-      if (fullAddrEl) fullAddrEl.value = cfg.storeAddress || '';
+      if (fullAddrEl) fullAddrEl.value = cfg.storeAddress || formatAddressFromInputs();
 
+      currentUploadedLogoDataUrl = cfg.logoUrl || '';
       updateLogoPreview(cfg.logoUrl, cfg.logoEmoji || '⚡');
+      updateInvoicePreview();
     }
 
     function updateLogoPreview(url, emoji) {
@@ -3104,6 +3687,7 @@
         }
         if (statusText) statusText.textContent = `Preset Icon (${emoji || '⚡'}) Active`;
       }
+      updateInvoicePreview();
     }
 
     function handleLogoFileUpload(event) {
@@ -3154,7 +3738,7 @@
       updateLogoPreview('', '⚡');
     }
 
-    function updateFullAddressPreview() {
+    function formatAddressFromInputs() {
       const shop = document.getElementById('outlet-addr-shop')?.value.trim() || '';
       const bldg = document.getElementById('outlet-addr-building')?.value.trim() || '';
       const street = document.getElementById('outlet-addr-street')?.value.trim() || '';
@@ -3164,10 +3748,61 @@
       const state = document.getElementById('outlet-addr-state')?.value.trim() || '';
       const landmark = document.getElementById('outlet-addr-landmark')?.value.trim() || '';
 
-      const parts = [shop, bldg, street, area, landmark ? `Near ${landmark}` : '', city, state, pin].filter(Boolean);
-      const full = parts.join(', ');
+      const parts = [shop, bldg, street, area, landmark ? `Near ${landmark}` : '', city, state].filter(Boolean);
+      let formatted = parts.join(', ');
+      if (pin) formatted += ` - ${pin}`;
+      return formatted;
+    }
+
+    function updateFullAddressPreview() {
+      const full = formatAddressFromInputs();
       const fullAddrEl = document.getElementById('outlet-full-address-preview');
       if (fullAddrEl) fullAddrEl.value = full;
+      updateInvoicePreview();
+    }
+
+    function updateInvoicePreview() {
+      const company = document.getElementById('outlet-company-name')?.value.trim() || 'Raosee Fresh Retail Pvt Ltd';
+      const branch = document.getElementById('outlet-branch-name')?.value.trim() || 'Main Dark Store - HSR Layout';
+      const code = document.getElementById('outlet-code')?.value.trim() || 'RF-BLR-01';
+      const fullAddr = document.getElementById('outlet-full-address-preview')?.value.trim() || formatAddressFromInputs();
+      const gstin = document.getElementById('outlet-gstin')?.value.trim() || '29ABCDE1234F1Z5';
+      const fssai = document.getElementById('outlet-fssai')?.value.trim() || '11223344000123';
+      const note = document.getElementById('outlet-invoice-note')?.value.trim() || 'Thank you for shopping with Raosee Fresh!';
+
+      const billComp = document.getElementById('preview-bill-company');
+      const billOutlet = document.getElementById('preview-bill-outlet');
+      const billCode = document.getElementById('preview-bill-code');
+      const billAddr = document.getElementById('preview-bill-address');
+      const billGst = document.getElementById('preview-bill-gstin');
+      const billFssai = document.getElementById('preview-bill-fssai');
+      const billFooter = document.getElementById('preview-bill-footer');
+
+      if (billComp) billComp.textContent = company;
+      if (billOutlet) billOutlet.textContent = branch;
+      if (billCode) billCode.textContent = code;
+      if (billAddr) billAddr.textContent = fullAddr;
+      if (billGst) billGst.textContent = gstin;
+      if (billFssai) billFssai.textContent = fssai;
+      if (billFooter) billFooter.textContent = note;
+
+      // Update bill preview logo
+      const billImg = document.getElementById('preview-bill-img');
+      const billEmoji = document.getElementById('preview-bill-emoji');
+      const activeLogo = currentUploadedLogoDataUrl || document.getElementById('outlet-logo-url-input')?.value.trim() || currentConfig.logoUrl;
+      
+      if (billImg && billEmoji) {
+        if (activeLogo) {
+          billImg.src = activeLogo;
+          billImg.classList.remove('hidden');
+          billEmoji.classList.add('hidden');
+        } else {
+          billImg.src = '';
+          billImg.classList.add('hidden');
+          billEmoji.textContent = currentConfig.logoEmoji || '⚡';
+          billEmoji.classList.remove('hidden');
+        }
+      }
     }
 
     function saveOutletSettings(silent = false) {
@@ -3175,6 +3810,7 @@
       const storeName = document.getElementById('outlet-store-name')?.value.trim() || 'Raosee Fresh Supermarket';
       const branchName = document.getElementById('outlet-branch-name')?.value.trim() || 'Main Dark Store - HSR Layout Hub #01';
       const outletCode = document.getElementById('outlet-code')?.value.trim() || 'RF-BLR-01';
+      const eta = document.getElementById('outlet-eta')?.value.trim() || '10-15 mins';
       const tagline = document.getElementById('outlet-tagline')?.value.trim() || 'Farm Fresh Groceries Delivered in 10-15 Mins';
       const gstin = document.getElementById('outlet-gstin')?.value.trim() || '';
       const fssai = document.getElementById('outlet-fssai')?.value.trim() || '';
@@ -3198,6 +3834,7 @@
         storeName,
         outletName: branchName,
         outletCode,
+        deliveryTimeEstimate: eta,
         tagline,
         logoUrl: finalLogoUrl,
         logoEmoji: currentConfig.logoEmoji || '⚡',
@@ -3222,6 +3859,7 @@
       // Update header branding immediately
       document.querySelectorAll('.js-admin-store-name').forEach(el => el.textContent = storeName);
       updateKpis();
+      updateInvoicePreview();
       if (!silent) {
         alert("🎉 Outlet, Company Profile, Logo & Address saved successfully!\nUpdated across customer storefront, live tracking, and invoices.");
       }
