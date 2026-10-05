@@ -1,14 +1,31 @@
 {
-  "cleanUrls": true,
+  "cleanUrls": false,
   "trailingSlash": false,
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/track", "destination": "/track.html" },
     { "source": "/login", "destination": "/login.html" },
-    { "source": "/outlet", "destination": "/outlet.html" },
-    { "source": "/admin.html", "destination": "/admin.html" },
-    { "source": "/track.html", "destination": "/track.html" },
-    { "source": "/login.html", "destination": "/login.html" },
-    { "source": "/outlet.html", "destination": "/outlet.html" }
+    { "source": "/outlet", "destination": "/admin.html" },
+    { "source": "/index", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*\\.html)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
   ]
 }
