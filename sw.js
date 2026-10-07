@@ -1,9 +1,9 @@
 /**
- * Raosee Fresh Supermarket - Service Worker (v2)
+ * Rasoee Fresh Supermarket - Service Worker (v3)
  * Network-first for HTML pages so deployments update instantly,
  * with fast offline caching for static assets.
  */
-const CACHE_NAME = 'raosee-fresh-v2';
+const CACHE_NAME = 'rasoee-fresh-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

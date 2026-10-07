@@ -1,5 +1,5 @@
 /**
- * Raosee Fresh Supermarket - Core Application Logic
+ * Rasoee Fresh Supermarket - Core Application Logic
  * Integrates Blinkit-style quick commerce with Razorpay Online Payment Gateway,
  * Instant Direct UPI (0% Fee), and WhatsApp order dispatch.
  */
@@ -49,7 +49,7 @@ function loadConfigAndData() {
 
   // Load saved cart
   try {
-    const savedCart = localStorage.getItem('raosee_cart');
+    const savedCart = localStorage.getItem('Rasoee_cart');
     if (savedCart) state.cart = JSON.parse(savedCart);
   } catch (e) {
     state.cart = {};
@@ -57,7 +57,7 @@ function loadConfigAndData() {
 
   // Load current logged-in customer profile
   try {
-    const savedUser = localStorage.getItem('raosee_current_user');
+    const savedUser = localStorage.getItem('Rasoee_current_user');
     if (savedUser) {
       state.currentUser = JSON.parse(savedUser);
       if (state.currentUser.address) {
@@ -75,7 +75,7 @@ function loadConfigAndData() {
 
   // Load saved address
   try {
-    const savedAddress = localStorage.getItem('raosee_address');
+    const savedAddress = localStorage.getItem('Rasoee_address');
     if (savedAddress) {
       const parsedAddr = JSON.parse(savedAddress);
       state.deliveryAddress = { ...state.deliveryAddress, ...parsedAddr };
@@ -109,10 +109,10 @@ function applyBranding() {
   const cfg = state.config || {};
 
   const storeNameEls = document.querySelectorAll('.js-store-name');
-  storeNameEls.forEach(el => el.textContent = cfg.storeName || 'Raosee Fresh');
+  storeNameEls.forEach(el => el.textContent = cfg.storeName || 'Rasoee Fresh');
 
   const companyNameEls = document.querySelectorAll('.js-company-name');
-  companyNameEls.forEach(el => el.textContent = cfg.companyName || cfg.storeName || 'Raosee Fresh Retail Pvt Ltd');
+  companyNameEls.forEach(el => el.textContent = cfg.companyName || cfg.storeName || 'Rasoee Fresh Retail Pvt Ltd');
 
   const outletNameEls = document.querySelectorAll('.js-outlet-name');
   outletNameEls.forEach(el => el.textContent = cfg.outletName || 'Main Dark Store');
@@ -127,13 +127,13 @@ function applyBranding() {
   fssaiEls.forEach(el => el.textContent = cfg.fssaiNumber || '11223344000123');
 
   const taglineEls = document.querySelectorAll('.js-store-tagline');
-  taglineEls.forEach(el => el.textContent = cfg.tagline || 'Farm Fresh Groceries Delivered in 10-15 Mins');
+  taglineEls.forEach(el => el.textContent = cfg.tagline || 'Farm Fresh Groceries Delivered to Your Doorstep');
 
   const outletCodeEls = document.querySelectorAll('.js-outlet-code');
   outletCodeEls.forEach(el => el.textContent = cfg.outletCode || 'RF-BLR-01');
 
   const emailEls = document.querySelectorAll('.js-store-email');
-  emailEls.forEach(el => el.textContent = cfg.email || 'support@raoseefresh.com');
+  emailEls.forEach(el => el.textContent = cfg.email || 'support@Rasoeefresh.com');
 
   // Handle Logo display
   const logoEls = document.querySelectorAll('.js-store-logo');
@@ -149,7 +149,7 @@ function applyBranding() {
   phoneEls.forEach(el => el.textContent = cfg.supportPhone || '+91 98765 43210');
 
   const deliveryTimeEls = document.querySelectorAll('.js-delivery-time');
-  deliveryTimeEls.forEach(el => el.textContent = cfg.deliveryTimeEstimate || '10-15 mins');
+  deliveryTimeEls.forEach(el => el.textContent = cfg.deliveryTimeEstimate || 'Standard');
 
   const storeStatusBadge = document.getElementById('store-status-badge');
   if (storeStatusBadge) {
@@ -163,27 +163,10 @@ function applyBranding() {
   }
 }
 
-// Dynamic Announcement Ticker
+// Dynamic Announcement Ticker (Removed from storefront)
 function renderAnnouncement() {
   const container = document.getElementById('announcement-ticker');
-  if (!container) return;
-
-  if (state.config.showAnnouncementBar !== false && state.config.storeNotice) {
-    container.innerHTML = `
-      <div class="bg-gradient-to-r from-green-900 via-emerald-800 to-green-950 text-white text-xs py-2 px-3 sm:px-6 flex items-center justify-between shadow-sm">
-        <div class="flex items-center gap-2 overflow-hidden truncate">
-          <span class="bg-amber-400 text-gray-900 text-[10px] font-black px-1.5 py-0.5 rounded uppercase flex-shrink-0">Live Update</span>
-          <span class="truncate font-medium">${escapeHtml(state.config.storeNotice)}</span>
-        </div>
-        <button onclick="openWhatsAppChat('Hi Raosee Fresh team, I would like to inquire about today\\'s stock/rates.')" class="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 hover:text-amber-200 ml-3 flex-shrink-0">
-          <span>Inquire on WhatsApp</span> ➔
-        </button>
-      </div>
-    `;
-    container.classList.remove('hidden');
-  } else {
-    container.classList.add('hidden');
-  }
+  if (container) container.remove();
 }
 
 // Dynamic Promotional Banners
@@ -201,7 +184,7 @@ function renderBanners() {
   container.classList.remove('hidden');
 
   container.innerHTML = activeBanners.map(banner => {
-    let actionAttr = `onclick="openWhatsAppChat('Hi Raosee Fresh team, I would like to know more about: ${encodeURIComponent(banner.title)}')"`;
+    let actionAttr = `onclick="openWhatsAppChat('Hi Rasoee Fresh team, I would like to know more about: ${encodeURIComponent(banner.title)}')"`;
     if (banner.action === 'photo-whatsapp') {
       actionAttr = `onclick="openPhotoOrderWhatsApp()"`;
     } else if (banner.action === 'explore') {
@@ -309,7 +292,7 @@ function renderProducts() {
         <div class="w-20 h-20 mx-auto mb-4 bg-amber-50 rounded-full flex items-center justify-center text-3xl">🔍</div>
         <h3 class="text-lg font-bold text-gray-800 mb-1">No products found</h3>
         <p class="text-sm text-gray-500 max-w-sm mx-auto mb-5">We couldn't find anything matching "${state.searchQuery}". Would you like us to arrange it via WhatsApp?</p>
-        <button onclick="openWhatsAppChat('Hi Raosee Fresh team, do you have ${encodeURIComponent(state.searchQuery || 'this item')} available?')" class="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md transition-transform active:scale-95">
+        <button onclick="openWhatsAppChat('Hi Rasoee Fresh team, do you have ${encodeURIComponent(state.searchQuery || 'this item')} available?')" class="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md transition-transform active:scale-95">
           <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
           Ask on WhatsApp
         </button>
@@ -425,7 +408,7 @@ function updateCartItem(productId, delta) {
     state.cart[productId] = newQty;
   }
 
-  localStorage.setItem('raosee_cart', JSON.stringify(state.cart));
+  localStorage.setItem('Rasoee_cart', JSON.stringify(state.cart));
 
   const btnContainer = document.getElementById(`btn-container-${productId}`);
   if (btnContainer) {
@@ -729,7 +712,7 @@ function extractAddressForm() {
     if (addrSection) {
       addrSection.scrollIntoView({ behavior: 'smooth' });
     }
-    alert("Please fill your mobile number and house/flat address for 10-15 min delivery!");
+    alert("Please fill your mobile number and house/flat address for grocery delivery!");
     return null;
   }
 
@@ -741,7 +724,7 @@ function extractAddressForm() {
     landmark,
     instructions: notes
   };
-  localStorage.setItem('raosee_address', JSON.stringify(state.deliveryAddress));
+  localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
 
   return state.deliveryAddress;
 }
@@ -797,13 +780,13 @@ function initiateRazorpayPayment(orderId, summary, customer) {
     key: keyId,
     amount: amountInPaise,
     currency: "INR",
-    name: state.config.storeName || "Raosee Fresh Supermarket",
-    description: `Express Grocery Delivery (Order #${orderId})`,
+    name: state.config.storeName || "Rasoee Fresh Supermarket",
+    description: `Grocery Delivery (Order #${orderId})`,
     image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=120&auto=format&fit=crop&q=80",
     prefill: {
       name: customer.name,
       contact: customer.phone.replace(/\D/g, '').slice(-10),
-      email: state.config.email || "customer@raoseefresh.com"
+      email: state.config.email || "customer@Rasoeefresh.com"
     },
     theme: {
       color: "#0C831F"
@@ -837,10 +820,10 @@ function initiateRazorpayPayment(orderId, summary, customer) {
 
 // 2. Direct Instant UPI (0% Fee) QR & App Intent
 function initiateDirectUpiPayment(orderId, summary, customer) {
-  const upiId = state.config.payment?.upiId || 'raoseefresh@upi';
-  const upiName = encodeURIComponent(state.config.storeName || 'Raosee Fresh Supermarket');
+  const upiId = state.config.payment?.upiId || 'Rasoeefresh@upi';
+  const upiName = encodeURIComponent(state.config.storeName || 'Rasoee Fresh Supermarket');
   const amount = summary.grandTotal.toFixed(2);
-  const note = encodeURIComponent(`Order ${orderId} Raosee Fresh`);
+  const note = encodeURIComponent(`Order ${orderId} Rasoee Fresh`);
 
   // Standard UPI URI
   const upiUri = `upi://pay?pa=${upiId}&pn=${upiName}&am=${amount}&cu=INR&tn=${note}`;
@@ -899,10 +882,10 @@ function processOrderCompletion(orderId, summary, customer, paymentDetails) {
   const dateStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   // Build clean, professional WhatsApp Message
-  let message = `🛒 *NEW ORDER: RAOSEE FRESH SUPERMARKET*\n`;
+  let message = `🛒 *NEW ORDER: Rasoee Fresh SUPERMARKET*\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `🔖 *Order ID:* #${orderId}\n`;
-  message += `⏰ *Time:* ${dateStr} (10-15 Min Express Delivery)\n\n`;
+  message += `⏰ *Time:* ${dateStr} \n\n`;
 
   message += `💳 *PAYMENT DETAILS:*\n`;
   message += `• Status: *${paymentDetails.status}*\n`;
@@ -950,7 +933,7 @@ function processOrderCompletion(orderId, summary, customer, paymentDetails) {
 
   // Clear cart and close drawer
   state.cart = {};
-  localStorage.removeItem('raosee_cart');
+  localStorage.removeItem('Rasoee_cart');
   updateCartUI();
   toggleCartDrawer(false);
 
@@ -968,14 +951,14 @@ function processOrderCompletion(orderId, summary, customer, paymentDetails) {
 // WhatsApp Customer Support Quick Actions
 function openWhatsAppChat(customMessage = '') {
   const waNumber = (state.config.whatsappNumber || '919876543210').replace(/\D/g, '');
-  const defaultMsg = customMessage || `Hello Raosee Fresh Supermarket team, I need help with grocery ordering/delivery.`;
+  const defaultMsg = customMessage || `Hello Rasoee Fresh Supermarket team, I need help with grocery ordering/delivery.`;
   const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(defaultMsg)}`;
   window.open(url, '_blank');
 }
 
 function openPhotoOrderWhatsApp() {
   const waNumber = (state.config.whatsappNumber || '919876543210').replace(/\D/g, '');
-  const msg = `Hi Raosee Fresh! I am sending a photo/text list of groceries I want to order for home delivery. Please check and reply with bill and delivery ETA!`;
+  const msg = `Hi Rasoee Fresh! I am sending a photo/text list of groceries I want to order for home delivery. Please check and reply with bill and delivery ETA!`;
   const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
 }
@@ -1076,7 +1059,7 @@ function handleModalVerifyOtp() {
   // Lookup in saved users registry
   let users = [];
   try {
-    users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+    users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
   } catch (e) {
     users = [];
   }
@@ -1115,16 +1098,16 @@ function handleModalSaveProfile() {
 
   let users = [];
   try {
-    users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+    users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
   } catch (e) {
     users = [];
   }
   users.push(newUser);
-  localStorage.setItem('raosee_users', JSON.stringify(users));
+  localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
   setCustomerSession(newUser);
   closeLoginModal();
-  alert(`Welcome to Raosee Fresh Supermarket, ${newUser.name}! 🛒`);
+  alert(`Welcome to Rasoee Fresh Supermarket, ${newUser.name}! 🛒`);
 }
 
 function quickModalLogin(name, phone, flat) {
@@ -1140,13 +1123,13 @@ function quickModalLogin(name, phone, flat) {
 
   let users = [];
   try {
-    users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+    users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
   } catch (e) {
     users = [];
   }
   if (!users.some(u => u.phone === phone)) {
     users.push(user);
-    localStorage.setItem('raosee_users', JSON.stringify(users));
+    localStorage.setItem('Rasoee_users', JSON.stringify(users));
   }
 
   setCustomerSession(user);
@@ -1155,7 +1138,7 @@ function quickModalLogin(name, phone, flat) {
 
 function setCustomerSession(user) {
   state.currentUser = user;
-  localStorage.setItem('raosee_current_user', JSON.stringify(user));
+  localStorage.setItem('Rasoee_current_user', JSON.stringify(user));
   
   // Auto-populate cart drawer delivery fields
   if (user.address) {
@@ -1163,7 +1146,7 @@ function setCustomerSession(user) {
     state.deliveryAddress.phone = user.phone || '';
     state.deliveryAddress.flat = user.address.flat || '';
     state.deliveryAddress.street = user.address.street || '';
-    localStorage.setItem('raosee_address', JSON.stringify(state.deliveryAddress));
+    localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
 
     const nameInp = document.getElementById('addr-name');
     const phoneInp = document.getElementById('addr-phone');
@@ -1181,7 +1164,7 @@ function setCustomerSession(user) {
 function logoutCustomer() {
   if (confirm("Are you sure you want to log out?")) {
     state.currentUser = null;
-    localStorage.removeItem('raosee_current_user');
+    localStorage.removeItem('Rasoee_current_user');
     updateHeaderUserUI();
     closeAccountDrawer();
   }
@@ -1234,7 +1217,7 @@ function renderAccountOrders() {
 
   let allOrders = [];
   try {
-    allOrders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+    allOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
   } catch (e) {
     allOrders = [];
   }
@@ -1250,7 +1233,7 @@ function renderAccountOrders() {
       <div class="py-12 text-center text-gray-400 space-y-2">
         <span class="text-4xl block">🛍️</span>
         <p class="text-xs font-bold text-gray-700">No Orders Placed Yet</p>
-        <p class="text-[11px] text-gray-400">Order fresh groceries delivered in 10-15 minutes!</p>
+        <p class="text-[11px] text-gray-400">Order fresh groceries delivered to your doorstep!</p>
         <button onclick="closeAccountDrawer()" class="mt-2 bg-blinkit-green text-white font-bold px-4 py-2 rounded-xl text-xs">
           Start Shopping ➔
         </button>
@@ -1311,7 +1294,7 @@ function renderAccountOrders() {
 function reorderOrder(orderId) {
   let allOrders = [];
   try {
-    allOrders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+    allOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
   } catch (e) {
     allOrders = [];
   }
@@ -1326,7 +1309,7 @@ function reorderOrder(orderId) {
     }
   });
 
-  localStorage.setItem('raosee_cart', JSON.stringify(state.cart));
+  localStorage.setItem('Rasoee_cart', JSON.stringify(state.cart));
   updateCartUI();
   closeAccountDrawer();
   toggleCartDrawer(true);
@@ -1340,7 +1323,7 @@ function openOrderReceipt(orderId) {
 
   let allOrders = [];
   try {
-    allOrders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+    allOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
   } catch (e) {
     allOrders = [];
   }
@@ -1360,7 +1343,7 @@ function openOrderReceipt(orderId) {
   const cfg = state.config || (typeof getStoreConfig === 'function' ? getStoreConfig() : {});
   
   const receiptCompanyEl = document.getElementById('receipt-company-name');
-  if (receiptCompanyEl) receiptCompanyEl.textContent = cfg.companyName || cfg.storeName || 'Raosee Fresh Retail Pvt Ltd';
+  if (receiptCompanyEl) receiptCompanyEl.textContent = cfg.companyName || cfg.storeName || 'Rasoee Fresh Retail Pvt Ltd';
 
   const receiptOutletNameEl = document.getElementById('receipt-outlet-name');
   if (receiptOutletNameEl) receiptOutletNameEl.textContent = cfg.outletName || 'Main Dark Store - HSR Layout Hub #01';
@@ -1375,7 +1358,7 @@ function openOrderReceipt(orderId) {
   if (receiptFssaiEl) receiptFssaiEl.textContent = cfg.fssaiNumber || '11223344000123';
 
   const receiptFooterNoteEl = document.getElementById('receipt-footer-note');
-  if (receiptFooterNoteEl) receiptFooterNoteEl.textContent = cfg.invoiceFooterNote || 'Thank you for shopping with Raosee Fresh! Freshness guaranteed.';
+  if (receiptFooterNoteEl) receiptFooterNoteEl.textContent = cfg.invoiceFooterNote || 'Thank you for shopping with Rasoee Fresh! Freshness guaranteed.';
 
   // Order Details
   const orderIdEl = document.getElementById('receipt-order-id');
@@ -1466,7 +1449,7 @@ function closeOrderReceipt() {
 function trackOrder(orderId) {
   let allOrders = [];
   try {
-    allOrders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+    allOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
   } catch (e) {
     allOrders = [];
   }
@@ -1595,11 +1578,11 @@ function startOrderTrackingAnimation() {
 // Cross-Tab Live Synchronization for Real-Time Order Status
 function setupCrossTabSync() {
   window.addEventListener('storage', (e) => {
-    if (e.key === 'raosee_orders') {
+    if (e.key === 'Rasoee_orders') {
       if (state.currentTrackingOrder) {
         let orders = [];
         try {
-          orders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+          orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
         } catch (err) {}
         const updated = orders.find(o => o.id === state.currentTrackingOrder.id);
         if (updated) {
@@ -1608,15 +1591,15 @@ function setupCrossTabSync() {
         }
       }
       renderAccountOrders();
-    } else if (e.key === 'raosee_current_user') {
+    } else if (e.key === 'Rasoee_current_user') {
       try {
-        const u = localStorage.getItem('raosee_current_user');
+        const u = localStorage.getItem('Rasoee_current_user');
         state.currentUser = u ? JSON.parse(u) : null;
         updateHeaderUserUI();
       } catch (err) {}
-    } else if (e.key === 'raosee_banners' || !e.key) {
+    } else if (e.key === 'Rasoee_banners' || !e.key) {
       renderBanners();
-    } else if (e.key === 'raosee_fresh_config') {
+    } else if (e.key === 'Rasoee_fresh_config') {
       try {
         state.config = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
         applyBranding();
@@ -1629,14 +1612,14 @@ function setupCrossTabSync() {
 // Order History & Customer Directory Registry
 function saveRecentOrder(order) {
   try {
-    let orders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+    let orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
     orders.unshift(order);
     if (orders.length > 30) orders = orders.slice(0, 30);
-    localStorage.setItem('raosee_orders', JSON.stringify(orders));
+    localStorage.setItem('Rasoee_orders', JSON.stringify(orders));
 
-    // Also register or update customer in raosee_users directory for Admin
+    // Also register or update customer in Rasoee_users directory for Admin
     if (order.customer && order.customer.phone) {
-      let users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+      let users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
       const existingIdx = users.findIndex(u => u.phone === order.customer.phone);
       if (existingIdx >= 0) {
         users[existingIdx].orderCount = (users[existingIdx].orderCount || 0) + 1;
@@ -1660,7 +1643,7 @@ function saveRecentOrder(order) {
           totalSpend: order.total || 0
         });
       }
-      localStorage.setItem('raosee_users', JSON.stringify(users));
+      localStorage.setItem('Rasoee_users', JSON.stringify(users));
     }
   } catch (e) {
     console.warn("Could not save order", e);
@@ -1710,7 +1693,7 @@ function setupEventListeners() {
       }
       el.addEventListener('change', () => {
         state.deliveryAddress[key] = el.value.trim();
-        localStorage.setItem('raosee_address', JSON.stringify(state.deliveryAddress));
+        localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
       });
     }
   });
@@ -1735,7 +1718,7 @@ function checkUrlParamsForTracking() {
   const urlParams = new URLSearchParams(window.location.search);
   const trackId = urlParams.get('track');
   if (trackId) {
-    const orders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+    const orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
     if (trackId === 'last' && orders.length > 0) {
       showLiveTrackingModal(orders[0]);
     } else {

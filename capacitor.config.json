@@ -1,6 +1,6 @@
 {
-  "appId": "com.raoseefresh.supermarket",
-  "appName": "Raosee Fresh",
+  "appId": "com.rasoeefresh.supermarket",
+  "appName": "Rasoee Fresh",
   "webDir": ".",
   "bundledWebRuntime": false,
   "server": {

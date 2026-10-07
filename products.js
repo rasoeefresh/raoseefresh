@@ -1,5 +1,5 @@
 /**
- * Raosee Fresh Supermarket - Product Catalog Data
+ * Rasoee Fresh Supermarket - Product Catalog Data
  * Contains realistic grocery items across all major supermarket categories
  */
 const DEFAULT_PRODUCTS = [
@@ -17,7 +17,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Fresh Arrival",
     rating: 4.8,
     reviewsCount: 320,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "veg-2",
@@ -32,7 +32,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Bestseller",
     rating: 4.7,
     reviewsCount: 450,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "veg-3",
@@ -47,7 +47,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Daily Essential",
     rating: 4.9,
     reviewsCount: 680,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "veg-4",
@@ -62,7 +62,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Organic",
     rating: 4.6,
     reviewsCount: 180,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "veg-5",
@@ -77,7 +77,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Farm Fresh",
     rating: 4.8,
     reviewsCount: 290,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "veg-6",
@@ -92,7 +92,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Premium",
     rating: 4.9,
     reviewsCount: 145,
-    deliveryTime: "12 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "veg-7",
@@ -107,7 +107,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Hydroponic",
     rating: 4.7,
     reviewsCount: 110,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "veg-8",
@@ -122,7 +122,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Fresh",
     rating: 4.5,
     reviewsCount: 95,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
 
   // --- Dairy, Bread & Eggs ---
@@ -139,7 +139,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Daily Essential",
     rating: 4.9,
     reviewsCount: 1200,
-    deliveryTime: "8 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "dairy-2",
@@ -154,7 +154,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Popular",
     rating: 4.9,
     reviewsCount: 880,
-    deliveryTime: "8 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "dairy-3",
@@ -169,7 +169,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Fresh Made",
     rating: 4.8,
     reviewsCount: 420,
-    deliveryTime: "8 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "dairy-4",
@@ -184,7 +184,7 @@ const DEFAULT_PRODUCTS = [
     tag: "High Protein",
     rating: 4.8,
     reviewsCount: 640,
-    deliveryTime: "8 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "dairy-5",
@@ -199,7 +199,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Healthy",
     rating: 4.7,
     reviewsCount: 390,
-    deliveryTime: "8 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "dairy-6",
@@ -214,7 +214,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Probiotic",
     rating: 4.8,
     reviewsCount: 310,
-    deliveryTime: "8 mins"
+    deliveryTime: "Fresh Delivery"
   },
 
   // --- Atta, Rice, Oil & Dals ---
@@ -231,7 +231,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Bestseller",
     rating: 4.9,
     reviewsCount: 950,
-    deliveryTime: "12 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "staple-2",
@@ -246,7 +246,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Heart Care",
     rating: 4.8,
     reviewsCount: 520,
-    deliveryTime: "12 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "staple-3",
@@ -261,7 +261,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Aromatic",
     rating: 4.8,
     reviewsCount: 410,
-    deliveryTime: "12 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "staple-4",
@@ -276,7 +276,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Pure Protein",
     rating: 4.7,
     reviewsCount: 380,
-    deliveryTime: "12 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "staple-5",
@@ -291,7 +291,7 @@ const DEFAULT_PRODUCTS = [
     tag: "100% Pure",
     rating: 4.9,
     reviewsCount: 610,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
 
   // --- Snacks & Munchies ---
@@ -308,7 +308,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Favorite",
     rating: 4.9,
     reviewsCount: 1500,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "snack-2",
@@ -323,7 +323,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Party Pack",
     rating: 4.8,
     reviewsCount: 920,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "snack-3",
@@ -338,7 +338,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Crispy",
     rating: 4.8,
     reviewsCount: 540,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "snack-4",
@@ -353,7 +353,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Tea-Time Classic",
     rating: 4.9,
     reviewsCount: 1100,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
 
   // --- Cold Drinks & Juices ---
@@ -370,7 +370,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Chilled",
     rating: 4.8,
     reviewsCount: 780,
-    deliveryTime: "8 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "drink-2",
@@ -385,7 +385,7 @@ const DEFAULT_PRODUCTS = [
     tag: "100% Natural",
     rating: 4.7,
     reviewsCount: 390,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "drink-3",
@@ -400,7 +400,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Electrolytes",
     rating: 4.9,
     reviewsCount: 520,
-    deliveryTime: "8 mins"
+    deliveryTime: "Fresh Delivery"
   },
 
   // --- Cleaning & Essentials ---
@@ -417,7 +417,7 @@ const DEFAULT_PRODUCTS = [
     tag: "Tough Stain Removal",
     rating: 4.8,
     reviewsCount: 420,
-    deliveryTime: "12 mins"
+    deliveryTime: "Fresh Delivery"
   },
   {
     id: "clean-2",
@@ -432,14 +432,14 @@ const DEFAULT_PRODUCTS = [
     tag: "Grease Fighter",
     rating: 4.8,
     reviewsCount: 360,
-    deliveryTime: "10 mins"
+    deliveryTime: "Fresh Delivery"
   }
 ];
 
 // Helper functions for catalog
 function getStoredProducts() {
   try {
-    const saved = localStorage.getItem("raosee_fresh_products");
+    const saved = (localStorage.getItem("rasoee_fresh_products") || localStorage.getItem("raosee_fresh_products"));
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -454,12 +454,12 @@ function getStoredProducts() {
 
 function saveProducts(products) {
   try {
-    localStorage.setItem("raosee_fresh_products", JSON.stringify(products));
+    localStorage.setItem("rasoee_fresh_products", JSON.stringify(products)); localStorage.setItem("raosee_fresh_products", JSON.stringify(products));
   } catch (e) {
     console.warn("Could not save products to localStorage (quota exceeded or blocked)", e);
   }
   if (typeof saveToIndexedDB === "function") {
-    saveToIndexedDB("raosee_fresh_products", products);
+    saveToIndexedDB("rasoee_fresh_products", products); saveToIndexedDB("raosee_fresh_products", products);
   }
   if (typeof syncToCloud === "function") {
     syncToCloud();

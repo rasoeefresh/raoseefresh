@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Customer Login | Raosee Fresh Supermarket</title>
-  <meta name="description" content="Login to Raosee Fresh Supermarket for express 10-15 minute grocery deliveries, live order tracking, and exclusive discounts." />
+  <title>Customer Login | Rasoee Fresh Supermarket</title>
+  <meta name="description" content="Login to Rasoee Fresh Supermarket for farm fresh grocery deliveries, live order tracking, and exclusive discounts." />
   
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>" />
   <link rel="manifest" href="manifest.json" />
@@ -40,7 +40,7 @@
           ⚡
         </div>
         <div>
-          <span class="font-black text-xl tracking-tight text-blinkit-green js-store-name">Raosee Fresh</span>
+          <span class="font-black text-xl tracking-tight text-blinkit-green js-store-name">Rasoee Fresh</span>
           <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 js-outlet-name">Supermarket</span>
         </div>
       </a>
@@ -69,12 +69,12 @@
           <div class="w-16 h-16 rounded-2xl bg-blinkit-yellow text-blinkit-dark font-black text-3xl mx-auto flex items-center justify-center shadow-lg mb-3 js-store-logo overflow-hidden">
             ⚡
           </div>
-          <h1 class="text-xl sm:text-2xl font-black tracking-tight js-store-tagline">Farm Fresh Groceries in 10-15 Mins</h1>
-          <p class="text-xs text-green-200 mt-1">Log in for 10-15 minute grocery delivery &amp; live tracking</p>
+          <h1 class="text-xl sm:text-2xl font-black tracking-tight js-store-tagline">Farm Fresh Groceries Delivered to Your Doorstep</h1>
+          <p class="text-xs text-green-200 mt-1">Log in for fresh grocery delivery &amp; live tracking</p>
           
           <div class="inline-flex items-center gap-1.5 bg-white/20 text-white px-3 py-1 rounded-full text-[11px] font-bold mt-3">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span>Express Store Open • Delivering in 10-15 Mins</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Store Open • Delivering Fresh Groceries</span>
           </div>
         </div>
 
@@ -187,7 +187,7 @@
             <div class="text-center">
               <span class="text-3xl">🎉</span>
               <h3 class="text-base font-black text-gray-900 mt-1">Complete Your Profile</h3>
-              <p class="text-xs text-gray-500">Provide your name &amp; delivery address for fast 10-15m deliveries</p>
+              <p class="text-xs text-gray-500">Provide your name &amp; delivery address for fast doorstep deliveries</p>
             </div>
 
             <div class="space-y-3 text-xs">
@@ -241,7 +241,7 @@
         <!-- Footer Guarantees -->
         <div class="bg-gray-50 border-t border-gray-100 p-4 text-center">
           <div class="flex items-center justify-center gap-4 text-[11px] text-gray-500 font-medium">
-            <span>⚡ 10-15m Express</span>
+            <span>⚡ Doorstep Delivery</span>
             <span>•</span>
             <span>💳 Online Payments</span>
             <span>•</span>
@@ -253,7 +253,7 @@
 
       <!-- Terms & Privacy disclaimer -->
       <p class="text-[11px] text-gray-500 text-center mt-4">
-        By continuing, you agree to Raosee Fresh Supermarket's Terms of Service &amp; Privacy Policy.
+        By continuing, you agree to Rasoee Fresh Supermarket's Terms of Service &amp; Privacy Policy.
       </p>
 
     </div>
@@ -290,7 +290,7 @@
       });
 
       window.addEventListener('storage', (e) => {
-        if (e.key === 'raosee_fresh_config') {
+        if (e.key === 'Rasoee_fresh_config') {
           applyStoreBranding();
         }
       });
@@ -299,10 +299,10 @@
     function applyStoreBranding() {
       const cfg = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
 
-      document.querySelectorAll('.js-store-name').forEach(el => el.textContent = cfg.storeName || 'Raosee Fresh');
-      document.querySelectorAll('.js-company-name').forEach(el => el.textContent = cfg.companyName || 'Raosee Fresh Retail Pvt Ltd');
+      document.querySelectorAll('.js-store-name').forEach(el => el.textContent = cfg.storeName || 'Rasoee Fresh');
+      document.querySelectorAll('.js-company-name').forEach(el => el.textContent = cfg.companyName || 'Rasoee Fresh Retail Pvt Ltd');
       document.querySelectorAll('.js-outlet-name').forEach(el => el.textContent = cfg.outletName ? cfg.outletName.split('-')[0].trim() : 'Supermarket');
-      document.querySelectorAll('.js-store-tagline').forEach(el => el.textContent = cfg.tagline || 'Farm Fresh Groceries in 10-15 Mins');
+      document.querySelectorAll('.js-store-tagline').forEach(el => el.textContent = cfg.tagline || 'Farm Fresh Groceries Delivered to Your Doorstep');
 
       const logoEls = document.querySelectorAll('.js-store-logo');
       logoEls.forEach(el => {
@@ -316,7 +316,7 @@
 
     function getCurrentLoggedInUser() {
       try {
-        const u = localStorage.getItem('raosee_current_user');
+        const u = localStorage.getItem('Rasoee_current_user');
         return u ? JSON.parse(u) : null;
       } catch (e) {
         return null;
@@ -376,7 +376,7 @@
       // Check if user exists in registered database
       let users = [];
       try {
-        users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+        users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
       } catch (e) {
         users = [];
       }
@@ -430,12 +430,12 @@
       // Save to users registry
       let users = [];
       try {
-        users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+        users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
       } catch (e) {
         users = [];
       }
       users.push(newUser);
-      localStorage.setItem('raosee_users', JSON.stringify(users));
+      localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
       // Save active session
       setUserSession(newUser);
@@ -464,13 +464,13 @@
       // Add to users registry if not present
       let users = [];
       try {
-        users = JSON.parse(localStorage.getItem('raosee_users') || '[]');
+        users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
       } catch (e) {
         users = [];
       }
       if (!users.some(u => u.phone === phone)) {
         users.push(user);
-        localStorage.setItem('raosee_users', JSON.stringify(users));
+        localStorage.setItem('Rasoee_users', JSON.stringify(users));
       }
 
       setUserSession(user);
@@ -478,7 +478,7 @@
     }
 
     function setUserSession(user) {
-      localStorage.setItem('raosee_current_user', JSON.stringify(user));
+      localStorage.setItem('Rasoee_current_user', JSON.stringify(user));
       // Also update delivery address for checkout
       if (user.address) {
         const addr = {
@@ -489,7 +489,7 @@
           landmark: user.address.landmark || '',
           instructions: 'Ring doorbell and leave at door'
         };
-        localStorage.setItem('raosee_address', JSON.stringify(addr));
+        localStorage.setItem('Rasoee_address', JSON.stringify(addr));
       }
     }
 

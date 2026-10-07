@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Live Order Tracking | Raosee Fresh Supermarket</title>
-  <meta name="description" content="Live 10-15 minute delivery tracking for Raosee Fresh Supermarket orders." />
+  <title>Live Order Tracking | Rasoee Fresh Supermarket</title>
+  <meta name="description" content="Live delivery tracking for Rasoee Fresh Supermarket orders." />
   
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>" />
   <link rel="manifest" href="manifest.json" />
@@ -57,7 +57,7 @@
           ⚡
         </div>
         <div>
-          <span class="font-black text-xl tracking-tight text-blinkit-green js-store-name">Raosee Fresh</span>
+          <span class="font-black text-xl tracking-tight text-blinkit-green js-store-name">Rasoee Fresh</span>
           <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-500">Live Order Tracker</span>
         </div>
       </a>
@@ -99,7 +99,7 @@
       <div>
         <h3 class="text-lg font-black text-gray-900">No Active Order Found</h3>
         <p class="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-          We couldn't locate an order with that ID. Place a fresh 10-15 min grocery order to track it live here!
+          We couldn't locate an order with that ID. Place a fresh grocery order to track it live here!
         </p>
       </div>
       <div class="flex justify-center gap-3 pt-2">
@@ -175,7 +175,7 @@
               <div class="w-12 h-12 rounded-2xl bg-white border-2 border-green-600 shadow-md flex items-center justify-center text-2xl overflow-hidden p-1" id="track-store-logo-box">
                 🏪
               </div>
-              <span class="text-xs font-black text-gray-900 mt-1.5 truncate max-w-[110px]" id="track-store-name">Raosee Store</span>
+              <span class="text-xs font-black text-gray-900 mt-1.5 truncate max-w-[110px]" id="track-store-name">Rasoee Store</span>
               <span class="text-[10px] text-gray-500 font-semibold truncate max-w-[110px]" id="track-store-hub">Sector 2 Hub</span>
             </div>
 
@@ -217,14 +217,14 @@
           <div class="relative" id="step-node-1">
             <span class="step-indicator absolute -left-[35px] top-0.5 w-4 h-4 rounded-full bg-blinkit-green border-2 border-white ring-2 ring-green-100"></span>
             <div class="text-xs sm:text-sm font-black text-gray-900">Order Placed &amp; Confirmed</div>
-            <div class="text-xs text-gray-500 mt-0.5">Order received at Raosee Fresh Supermarket central dispatch.</div>
+            <div class="text-xs text-gray-500 mt-0.5">Order received at Rasoee Fresh Supermarket central dispatch.</div>
             <div class="text-[10px] font-mono text-gray-400 mt-0.5" id="step-time-1">Just now</div>
           </div>
 
           <!-- Stage 2 -->
           <div class="relative" id="step-node-2">
             <span class="step-indicator absolute -left-[35px] top-0.5 w-4 h-4 rounded-full bg-blinkit-green border-2 border-white ring-2 ring-green-100"></span>
-            <div class="text-xs sm:text-sm font-black text-gray-900">Packing at Raosee Fresh Dark Store</div>
+            <div class="text-xs sm:text-sm font-black text-gray-900">Packing at Rasoee Fresh Dark Store</div>
             <div class="text-xs text-gray-500 mt-0.5">Farm fresh produce hand-sorted, chilled dairy packed in insulated totes.</div>
             <div class="text-[10px] font-mono text-gray-400 mt-0.5" id="step-time-2">Estimated: 3 mins</div>
           </div>
@@ -272,7 +272,7 @@
                 <span>⭐</span><span>4.9</span>
               </span>
             </div>
-            <p class="text-[11px] text-gray-500 mt-0.5">Raosee Express Delivery Partner</p>
+            <p class="text-[11px] text-gray-500 mt-0.5">Rasoee Delivery Partner</p>
             <div class="text-[10px] font-semibold text-emerald-700 mt-0.5 flex items-center gap-1">
               <span>🛵 Hero Electric (KA-01-EQ-4021)</span>
               <span>•</span>
@@ -395,7 +395,7 @@
 
       // Store name
       document.querySelectorAll('.js-store-name').forEach(el => {
-        el.textContent = cfg.storeName || 'Raosee Fresh';
+        el.textContent = cfg.storeName || 'Rasoee Fresh';
       });
 
       // Map Store Hub Node
@@ -410,7 +410,7 @@
 
       const storeNameEl = document.getElementById('track-store-name');
       if (storeNameEl) {
-        storeNameEl.textContent = cfg.outletName ? cfg.outletName.split('-')[0].trim() : (cfg.storeName || 'Raosee Store');
+        storeNameEl.textContent = cfg.outletName ? cfg.outletName.split('-')[0].trim() : (cfg.storeName || 'Rasoee Store');
       }
 
       const storeHubEl = document.getElementById('track-store-hub');
@@ -426,7 +426,7 @@
 
       let orders = [];
       try {
-        orders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+        orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
       } catch (e) {
         orders = [];
       }
@@ -458,7 +458,7 @@
 
       let orders = [];
       try {
-        orders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+        orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
       } catch (e) {
         orders = [];
       }
@@ -569,7 +569,7 @@
         progressBar.style.width = '100%';
         scooterMarker.style.left = '100%';
         badgeStatus.textContent = "Delivered at Doorstep 🎉";
-        statusTagline.textContent = "Your express grocery bag has been safely handed over!";
+        statusTagline.textContent = "Your fresh grocery bag has been safely handed over!";
       } else if (status.includes('out') || status.includes('dispatched')) {
         // Out for Delivery
         setNodeActive(step1, true, true);
@@ -670,10 +670,10 @@
     // Cross-Tab live synchronization: updates immediately when Admin updates order status!
     function setupCrossTabSync() {
       window.addEventListener('storage', (e) => {
-        if (e.key === 'raosee_orders') {
+        if (e.key === 'Rasoee_orders') {
           console.log("Detected order update in localStorage from Admin!");
           loadOrderFromContext();
-        } else if (e.key === 'raosee_fresh_config') {
+        } else if (e.key === 'Rasoee_fresh_config') {
           console.log("Detected store branding/outlet update in localStorage from Admin!");
           applyStoreBranding();
         }
@@ -684,7 +684,7 @@
         if (activeOrder) {
           let orders = [];
           try {
-            orders = JSON.parse(localStorage.getItem('raosee_orders') || '[]');
+            orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
           } catch (e) {
             orders = [];
           }
@@ -709,7 +709,7 @@
 
     function chatRiderWhatsApp() {
       const orderId = activeOrder?.id || '';
-      const msg = `Hi Ramesh (Raosee Fresh Rider)! I am checking on my delivery for Order #${orderId}. Please let me know once you reach the building gate.`;
+      const msg = `Hi Ramesh (Rasoee Fresh Rider)! I am checking on my delivery for Order #${orderId}. Please let me know once you reach the building gate.`;
       window.open(`https://wa.me/919876543210?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
@@ -717,7 +717,7 @@
       const cfg = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
       const waNumber = (cfg.whatsappNumber || '919876543210').replace(/\D/g, '');
       const orderId = activeOrder?.id || '';
-      const msg = `Hello Raosee Fresh team! I need assistance with my live order #${orderId}.`;
+      const msg = `Hello Rasoee Fresh team! I need assistance with my live order #${orderId}.`;
       window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
@@ -725,7 +725,7 @@
       if (!activeOrder || !activeOrder.items) return;
       let cart = {};
       try {
-        cart = JSON.parse(localStorage.getItem('raosee_cart') || '{}');
+        cart = JSON.parse(localStorage.getItem('Rasoee_cart') || '{}');
       } catch (e) {
         cart = {};
       }
@@ -737,7 +737,7 @@
         }
       });
 
-      localStorage.setItem('raosee_cart', JSON.stringify(cart));
+      localStorage.setItem('Rasoee_cart', JSON.stringify(cart));
       alert("Items added to your cart! Taking you to supermarket aisle...");
       window.location.href = 'index.html';
     }

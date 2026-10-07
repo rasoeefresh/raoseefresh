@@ -1,7 +1,7 @@
 {
-  "name": "Raosee Fresh Supermarket",
-  "short_name": "Raosee Fresh",
-  "description": "Blinkit-style 10-15 min fresh grocery delivery with WhatsApp ordering & customer support",
+  "name": "Rasoee Fresh Supermarket",
+  "short_name": "Rasoee Fresh",
+  "description": "Fresh grocery delivery with WhatsApp ordering & customer support",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#F4F6FB",
