@@ -61,7 +61,7 @@ const DEFAULT_CONFIG = {
   storeName: "Rasoee Fresh Supermarket",
   outletName: "Main Dark Store - HSR Layout Hub #01",
   outletCode: "RF-BLR-01",
-  logoUrl: "", // URL or Base64 uploaded logo image
+  logoUrl: "logo.svg", // URL or Base64 uploaded logo image
   logoEmoji: "⚡",
   tagline: "Farm Fresh Groceries Delivered to Your Doorstep",
 
@@ -98,7 +98,7 @@ const DEFAULT_CONFIG = {
   minOrderValue: 99,
   freeDeliveryThreshold: 199,
   standardDeliveryFee: 25,
-  handlingFee: 2,
+  handlingFee: 0,
   currencySymbol: "₹",
   
   // Payment Gateway Configuration

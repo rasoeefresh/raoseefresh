@@ -439,9 +439,9 @@ function getCartSummary() {
   const standardDeliveryFee = state.config.standardDeliveryFee || 25;
   const isFreeDelivery = subtotal >= freeDeliveryThreshold || subtotal === 0;
   const deliveryFee = isFreeDelivery ? 0 : standardDeliveryFee;
-  const handlingFee = subtotal > 0 ? (state.config.handlingFee || 2) : 0;
+  const handlingFee = 0;
   const savings = Math.max(0, totalMrp - subtotal);
-  const grandTotal = subtotal + deliveryFee + handlingFee + (state.tipAmount || 0);
+  const grandTotal = subtotal + deliveryFee + (state.tipAmount || 0);
 
   return {
     items,
@@ -452,7 +452,7 @@ function getCartSummary() {
     isFreeDelivery,
     freeDeliveryThreshold,
     amountNeededForFreeDelivery: Math.max(0, freeDeliveryThreshold - subtotal),
-    handlingFee,
+    handlingFee: 0,
     tip: state.tipAmount || 0,
     savings,
     grandTotal
@@ -628,10 +628,6 @@ function renderCartDrawerContent(summary) {
         <span class="${summary.deliveryFee === 0 ? 'text-green-700 font-bold' : ''}">
           ${summary.deliveryFee === 0 ? 'FREE' : `₹${summary.deliveryFee}`}
         </span>
-      </div>
-      <div class="flex justify-between text-gray-600">
-        <span>Handling & Packaging Fee</span>
-        <span>₹${summary.handlingFee}</span>
       </div>
       ${summary.tip > 0 ? `
         <div class="flex justify-between text-gray-600">
@@ -909,7 +905,6 @@ function processOrderCompletion(orderId, summary, customer, paymentDetails) {
   message += `💰 *BILL SUMMARY:*\n`;
   message += `• Items Subtotal: ₹${summary.subtotal}\n`;
   message += `• Delivery Fee: ${summary.deliveryFee === 0 ? 'FREE' : '₹' + summary.deliveryFee}\n`;
-  message += `• Handling & Packaging: ₹${summary.handlingFee}\n`;
   if (summary.tip > 0) message += `• Rider Tip: ₹${summary.tip}\n`;
   if (summary.savings > 0) message += `• You Saved: ₹${summary.savings} 🎉\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;

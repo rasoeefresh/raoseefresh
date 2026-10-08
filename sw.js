@@ -3,7 +3,7 @@
  * Network-first for HTML pages so deployments update instantly,
  * with fast offline caching for static assets.
  */
-const CACHE_NAME = 'rasoee-fresh-v3';
+const CACHE_NAME = 'rasoee-fresh-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,9 +11,14 @@ const ASSETS_TO_CACHE = [
   './track.html',
   './login.html',
   './outlet.html',
+  './app.js',
   './store-config.js',
   './products.js',
-  './manifest.json'
+  './manifest.json',
+  './logo.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {

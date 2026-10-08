@@ -6,10 +6,13 @@
   <title>Rasoee Fresh Supermarket | Fresh Grocery Delivery</title>
   <meta name="description" content="Rasoee Fresh Supermarket - Order farm fresh fruits, vegetables, dairy, atta, snacks & household essentials delivered fresh with Razorpay online payment, Instant UPI, and WhatsApp support." />
   
-  <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>" />
+  <!-- Official Company Favicon & App Icons -->
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="Rasoee Fresh" />
   
-  <!-- Web App Manifest for PWA -->
+  <!-- Web App Manifest for PWA & Mobile Install -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0C831F" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -81,8 +84,8 @@
         <!-- Logo -->
         <div class="flex items-center gap-3 sm:gap-6 min-w-0">
           <a href="#" class="flex items-center gap-2 flex-shrink-0 group">
-            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-xl sm:text-2xl shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden">
-              ⚡
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white border border-gray-100 flex items-center justify-center p-0.5 shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden">
+              <img src="logo.svg" alt="Rasoee Fresh Logo" class="w-full h-full object-contain rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='⚡';" />
             </div>
             <div>
               <div class="flex items-center gap-1.5">
@@ -246,8 +249,8 @@
     <footer class="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm mt-8 space-y-6 text-xs text-gray-600">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-100">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-2xl shadow-sm js-store-logo overflow-hidden flex-shrink-0">
-            ⚡
+          <div class="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center p-0.5 shadow-sm js-store-logo overflow-hidden flex-shrink-0">
+            <img src="logo.svg" alt="Rasoee Fresh Logo" class="w-full h-full object-contain rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='⚡';" />
           </div>
           <div>
             <h4 class="font-black text-lg text-gray-900 js-store-name">Rasoee Fresh Supermarket</h4>
@@ -1077,8 +1080,8 @@
       <!-- Receipt Header -->
       <div class="p-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-2xl bg-blinkit-yellow flex items-center justify-center text-2xl shadow-sm js-store-logo overflow-hidden flex-shrink-0">
-            ⚡
+          <div class="w-12 h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center p-0.5 shadow-sm js-store-logo overflow-hidden flex-shrink-0">
+            <img src="logo.svg" alt="Rasoee Fresh Logo" class="w-full h-full object-contain rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='⚡';" />
           </div>
           <div>
             <span class="text-[10px] font-black text-green-700 bg-green-100 px-2 py-0.5 rounded-full uppercase tracking-wider">Official Tax Invoice</span>
@@ -1163,10 +1166,6 @@
           <div class="flex justify-between">
             <span>Delivery Fee</span>
             <span class="text-blinkit-green font-bold">FREE</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Handling Fee</span>
-            <span>₹2</span>
           </div>
           <div class="flex justify-between text-sm font-black text-gray-900 border-t pt-2">
             <span>Grand Total</span>
