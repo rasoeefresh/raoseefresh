@@ -5,12 +5,15 @@
 
 const DEFAULT_CATEGORIES = [
   { id: 'all', label: 'All Items', icon: '🛒', enabled: true },
-  { id: 'vegetables-fruits', label: 'Vegetables & Fruits', icon: '🥬', enabled: true },
-  { id: 'dairy-bread-eggs', label: 'Dairy & Breakfast', icon: '🥛', enabled: true },
-  { id: 'staples-atta-dal', label: 'Atta, Rice & Dals', icon: '🌾', enabled: true },
-  { id: 'snacks-munchies', label: 'Snacks & Munchies', icon: '🍿', enabled: true },
-  { id: 'beverages', label: 'Cold Drinks & Juices', icon: '🥤', enabled: true },
-  { id: 'cleaning-household', label: 'Cleaning & Essentials', icon: '🧼', enabled: true }
+  { id: 'fresh-vegetables', label: 'Fresh Vegetables', icon: '🥬', enabled: true },
+  { id: 'leafy-greens', label: 'Leafy Greens & Herbs', icon: '🌿', enabled: true },
+  { id: 'fresh-fruits', label: 'Fresh & Exotic Fruits', icon: '🍎', enabled: true },
+  { id: 'dairy-breakfast', label: 'Dairy, Milk & Paneer', icon: '🥛', enabled: true },
+  { id: 'beverages', label: 'Beverages & Coolers', icon: '🥤', enabled: true },
+  { id: 'spices-masalas', label: 'Spices & Masalas', icon: '🌶️', enabled: true },
+  { id: 'pickles-chutneys', label: 'Pickles & Chutneys', icon: '🥭', enabled: true },
+  { id: 'sauces-spreads', label: 'Sauces, Spreads & Syrups', icon: '🍯', enabled: true },
+  { id: 'instant-food', label: 'Instant Food & Soups', icon: '🍜', enabled: true }
 ];
 
 const DEFAULT_BANNERS = [
