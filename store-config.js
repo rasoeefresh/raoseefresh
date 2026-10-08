@@ -438,9 +438,16 @@ async function syncToCloud() {
   const syncCfg = getCloudSyncConfig();
   if (!syncCfg || !syncCfg.enabled) return { success: false, reason: "Sync disabled" };
 
+  const rawCfg = typeof getStoreConfig === "function" ? getStoreConfig() : DEFAULT_CONFIG;
+  const safeConfig = JSON.parse(JSON.stringify(rawCfg));
+  if (safeConfig.security) {
+    delete safeConfig.security.adminPassword;
+    delete safeConfig.security.adminPin;
+  }
+
   const payload = {
     updatedAt: new Date().toISOString(),
-    config: typeof getStoreConfig === "function" ? getStoreConfig() : DEFAULT_CONFIG,
+    config: safeConfig,
     products: typeof getStoredProducts === "function" ? getStoredProducts() : [],
     categories: typeof getStoredCategories === "function" ? getStoredCategories() : DEFAULT_CATEGORIES,
     banners: typeof getStoredBanners === "function" ? getStoredBanners() : DEFAULT_BANNERS
@@ -509,7 +516,16 @@ async function syncFromCloud() {
     if (data && typeof data === 'object') {
       let hasChanges = false;
       if (data.config) {
-        localStorage.setItem("raosee_fresh_config", JSON.stringify(data.config));
+        let currentCfg = {};
+        try {
+          currentCfg = JSON.parse(localStorage.getItem("raosee_fresh_config") || localStorage.getItem("rasoee_fresh_config") || '{}');
+        } catch(e) {}
+        const mergedConfig = {
+          ...data.config,
+          security: (currentCfg && currentCfg.security) ? currentCfg.security : (DEFAULT_CONFIG.security || {})
+        };
+        localStorage.setItem("raosee_fresh_config", JSON.stringify(mergedConfig));
+        localStorage.setItem("rasoee_fresh_config", JSON.stringify(mergedConfig));
         hasChanges = true;
       }
       if (Array.isArray(data.products) && data.products.length > 0) {

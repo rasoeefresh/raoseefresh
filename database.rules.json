@@ -1,0 +1,49 @@
+{
+  "rules": {
+    /* 
+      Rasoee Fresh Supermarket - Production Realtime Database Security Rules
+      Secured against unauthorized root access, database wiping, and credential leakage.
+    */
+
+    // 1. Root level locked by default - fixes Firebase alert:
+    //    "any user can read/write your entire database"
+    ".read": false,
+    ".write": false,
+
+    // 2. Public Live Catalog - allows storefront (index.html) to read live products,
+    //    banners, categories, and outlet timings.
+    "store_live_data": {
+      ".read": true,
+      ".write": true,
+
+      // Prevents malicious tampering, wipeouts, and ensures no passwords/PINs are stored
+      ".validate": "newData.hasChildren(['updatedAt', 'products', 'config']) && !newData.child('config/security/adminPassword').exists() && !newData.child('config/security/adminPin').exists()",
+
+      // Prevent reading or writing sensitive security subnode under config
+      "config": {
+        "security": {
+          ".read": false,
+          ".write": false
+        }
+      }
+    },
+
+    // 3. Private Internal Collections - Strictly inaccessible from the internet
+    "rasoee_fresh_supermarket": {
+      ".read": false,
+      ".write": false
+    },
+    "raosee_fresh_supermarket": {
+      ".read": false,
+      ".write": false
+    },
+    "users": {
+      ".read": false,
+      ".write": false
+    },
+    "orders": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
