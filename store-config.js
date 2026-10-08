@@ -620,7 +620,7 @@ const DEFAULT_PRODUCTS = ${JSON.stringify(prods, null, 2)};
 // Helper functions for catalog
 function getStoredProducts() {
   try {
-    const saved = localStorage.getItem("raosee_fresh_products");
+    const saved = localStorage.getItem("rasoee_fresh_products") || localStorage.getItem("raosee_fresh_products");
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -635,8 +635,10 @@ function getStoredProducts() {
 
 function saveProducts(products) {
   try {
+    localStorage.setItem("rasoee_fresh_products", JSON.stringify(products));
     localStorage.setItem("raosee_fresh_products", JSON.stringify(products));
     if (typeof saveToIndexedDB === "function") {
+      saveToIndexedDB("rasoee_fresh_products", products);
       saveToIndexedDB("raosee_fresh_products", products);
     }
     if (typeof syncToCloud === "function") {

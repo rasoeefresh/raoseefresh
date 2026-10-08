@@ -9,6 +9,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -402,6 +403,33 @@
           </div>
         </div>
 
+        <!-- Live Excel Bulk Manager Widget -->
+        <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 border-2 border-emerald-300/80 rounded-2xl p-4 sm:p-5 mb-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+          <div class="space-y-1.5 max-w-2xl">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">📊</span>
+              <h3 class="font-black text-sm sm:text-base text-emerald-950">Bulk Rate &amp; Inventory Excel Manager</h3>
+              <span class="bg-emerald-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">100% Live Site Data</span>
+            </div>
+            <p class="text-xs text-emerald-900 leading-relaxed">
+              Download the current live Excel template containing <strong>all items listed on the site at this exact moment</strong>. Edit <strong>Selling Rates, MRPs, Product Names, or Custom Product IDs</strong> in Excel and upload back to instantly update the entire store!
+            </p>
+            <div class="text-[11px] text-emerald-800 font-medium flex flex-wrap items-center gap-x-4 gap-y-1 pt-0.5">
+              <span class="flex items-center gap-1 font-semibold">🔒 <span><strong>Specific Product IDs</strong> are internal &amp; strictly hidden from customers</span></span>
+              <span class="flex items-center gap-1 font-semibold">⚡ <span><strong>Firebase Cloud Sync</strong> updates connected customers instantly</span></span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
+            <button type="button" onclick="downloadLiveCatalogExcel('csv')" class="bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-600 px-4 py-2.5 rounded-xl text-xs font-black shadow-xs flex items-center gap-1.5 transition-all active:scale-95">
+              <span>📥 Download Live Excel (.csv)</span>
+            </button>
+            <label class="bg-blinkit-green hover:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95">
+              <span>📤 Bulk Upload &amp; Update</span>
+              <input type="file" accept=".csv, text/csv, .xlsx, .xls" onchange="handleBulkExcelUpload(event)" class="hidden" />
+            </label>
+          </div>
+        </div>
+
         <!-- Bulk Rate Adjuster Widget -->
         <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div>
@@ -458,14 +486,21 @@
             <p class="text-xs text-gray-500">Add new grocery items, modify details, tags, photos and delivery times</p>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <input 
               type="text" 
               id="items-search-input" 
               oninput="renderItemsTable(this.value)" 
-              placeholder="Search items..." 
-              class="text-xs p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green w-48 sm:w-64"
+              placeholder="Search by name, category, or ID..." 
+              class="text-xs p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green w-44 sm:w-60"
             />
+            <button type="button" onclick="downloadLiveCatalogExcel('csv')" title="Download Excel template of all current items" class="bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-600 px-3 py-2 rounded-xl text-xs font-black shadow-xs flex items-center gap-1.5 flex-shrink-0 transition-all active:scale-95">
+              <span>📥 Live Excel</span>
+            </button>
+            <label title="Upload updated Excel/CSV to bulk update items" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 px-3 py-2 rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 flex-shrink-0 cursor-pointer transition-all active:scale-95">
+              <span>📤 Bulk Upload</span>
+              <input type="file" accept=".csv, text/csv, .xlsx, .xls" onchange="handleBulkExcelUpload(event)" class="hidden" />
+            </label>
             <button onclick="openProductModal()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 flex-shrink-0">
               <span>+ Add Item</span>
             </button>
@@ -1613,12 +1648,22 @@
         <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
       </div>
 
-      <input type="hidden" id="modal-prod-id" />
+      <input type="hidden" id="modal-orig-id" />
 
       <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-bold text-gray-700 mb-1">Product Name *</label>
-          <input type="text" id="modal-prod-name" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. Farm Fresh Alphonso Mango" />
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block font-bold text-gray-700 mb-1">Product Name *</label>
+            <input type="text" id="modal-prod-name" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. Farm Fresh Alphonso Mango" />
+          </div>
+          <div>
+            <label class="block font-bold text-gray-700 mb-1 flex items-center justify-between">
+              <span>Product ID / SKU</span>
+              <span class="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">🔒 Internal</span>
+            </label>
+            <input type="text" id="modal-prod-id" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono text-xs font-bold" placeholder="e.g. RF-001 or SKU" />
+            <p class="text-[9px] text-gray-400 mt-0.5">Hidden from customer</p>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -2519,6 +2564,317 @@
       alert(`Updated stock for ${cat}!`);
     }
 
+    // ================= EXCEL & CSV BULK INVENTORY ENGINE =================
+    function downloadLiveCatalogExcel(preferredFormat = 'csv') {
+      if (!productsList || productsList.length === 0) {
+        alert("Your store catalog is currently empty. Add at least one item before exporting.");
+        return;
+      }
+
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      // Helper to escape CSV strings RFC 4180
+      const esc = (val) => {
+        if (val === null || val === undefined) return '""';
+        const str = String(val).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      // If XLSX library is loaded and preferredFormat is xlsx, create genuine Excel .xlsx
+      if (preferredFormat === 'xlsx' && typeof XLSX !== 'undefined') {
+        try {
+          const exportRows = productsList.map(p => ({
+            "Product ID (Internal / SKU)": p.id,
+            "Product Name": p.name,
+            "Category ID": p.category,
+            "Category Name": p.categoryLabel || p.category,
+            "Pack / Unit": p.unit,
+            "MRP Price (₹)": p.mrp || p.price,
+            "Selling Rate (₹)": p.price,
+            "In Stock (YES / NO)": p.inStock !== false ? "YES" : "NO",
+            "Image URL": p.image || "",
+            "_system_ref": p.id
+          }));
+
+          const worksheet = XLSX.utils.json_to_sheet(exportRows);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "Live Catalog");
+          XLSX.writeFile(workbook, `Rasoee_Fresh_Live_Inventory_${dateStr}.xlsx`);
+          showNotificationToast(`📥 Live Excel (.xlsx) downloaded with all ${productsList.length} items!`);
+          return;
+        } catch (e) {
+          console.warn("XLSX export fallback to CSV:", e);
+        }
+      }
+
+      // Ultra-Compatible Excel CSV with UTF-8 BOM (\uFEFF)
+      const headers = [
+        "Product ID (Internal / SKU)",
+        "Product Name",
+        "Category ID",
+        "Category Name",
+        "Pack / Unit",
+        "MRP Price (₹)",
+        "Selling Rate (₹)",
+        "In Stock (YES / NO)",
+        "Image URL",
+        "_system_ref"
+      ];
+
+      const csvLines = productsList.map(p => [
+        esc(p.id),
+        esc(p.name),
+        esc(p.category),
+        esc(p.categoryLabel || p.category),
+        esc(p.unit),
+        esc(p.mrp || p.price),
+        esc(p.price),
+        esc(p.inStock !== false ? "YES" : "NO"),
+        esc(p.image || ""),
+        esc(p.id)
+      ].join(","));
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...csvLines].join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `Rasoee_Fresh_Live_Inventory_${dateStr}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+
+      showNotificationToast(`📥 Live Excel template downloaded with all ${productsList.length} items currently listed!`);
+    }
+
+    // Helper: RFC 4180 compliant CSV Parser
+    function parseCsvToRows(text) {
+      const rows = [];
+      let currentRow = [];
+      let currentCell = '';
+      let insideQuotes = false;
+
+      // Remove BOM if present
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const nextChar = text[i + 1];
+
+        if (char === '"') {
+          if (insideQuotes && nextChar === '"') {
+            currentCell += '"';
+            i++; // skip next quote
+          } else {
+            insideQuotes = !insideQuotes;
+          }
+        } else if (char === ',' && !insideQuotes) {
+          currentRow.push(currentCell.trim());
+          currentCell = '';
+        } else if (char === '\n' && !insideQuotes) {
+          currentRow.push(currentCell.trim());
+          if (currentRow.some(c => c !== '')) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentCell = '';
+        } else {
+          currentCell += char;
+        }
+      }
+
+      if (currentCell !== '' || currentRow.length > 0) {
+        currentRow.push(currentCell.trim());
+        if (currentRow.some(c => c !== '')) {
+          rows.push(currentRow);
+        }
+      }
+
+      return rows;
+    }
+
+    // Bulk Upload Handler
+    async function handleBulkExcelUpload(event) {
+      const fileInput = event.target;
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      const fileName = file.name.toLowerCase();
+      const isXlsx = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+      try {
+        let csvText = '';
+
+        if (isXlsx && typeof XLSX !== 'undefined') {
+          const arrayBuffer = await file.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          csvText = XLSX.utils.sheet_to_csv(worksheet);
+        } else {
+          csvText = await file.text();
+        }
+
+        const rows = parseCsvToRows(csvText);
+        if (!rows || rows.length < 2) {
+          alert("The uploaded file contains no data rows. Please ensure you are uploading a valid inventory sheet.");
+          fileInput.value = '';
+          return;
+        }
+
+        const rawHeaders = rows[0].map(h => h.trim().toLowerCase().replace(/[\r\n]+/g, ' '));
+
+        // Locate columns dynamically
+        const findColIndex = (patterns) => {
+          return rawHeaders.findIndex(h => patterns.some(p => p.test(h)));
+        };
+
+        const idCol = findColIndex([/product\s*id/i, /sku/i, /item\s*id/i, /^id$/i, /code/i]);
+        const nameCol = findColIndex([/product\s*name/i, /item\s*name/i, /^name$/i, /title/i]);
+        const catCol = findColIndex([/category\s*id/i, /^category$/i, /category/i]);
+        const catLabelCol = findColIndex([/category\s*name/i, /aisle/i]);
+        const unitCol = findColIndex([/unit/i, /pack/i, /weight/i, /size/i]);
+        const mrpCol = findColIndex([/mrp/i, /maximum/i]);
+        const priceCol = findColIndex([/selling\s*rate/i, /selling\s*price/i, /rate/i, /^price$/i]);
+        const stockCol = findColIndex([/stock\s*status/i, /in\s*stock/i, /availability/i, /^stock$/i]);
+        const imageCol = findColIndex([/image/i, /photo/i, /pic/i]);
+        const systemRefCol = findColIndex([/_system_ref/i, /system\s*ref/i, /internal\s*key/i]);
+
+        if (priceCol === -1 && mrpCol === -1 && nameCol === -1 && idCol === -1) {
+          alert("Could not recognize product columns in the file. Please ensure the template has 'Product ID', 'Product Name', 'MRP', and 'Selling Rate' headers.");
+          fileInput.value = '';
+          return;
+        }
+
+        let updatedCount = 0;
+        let addedCount = 0;
+        const idMapChanges = [];
+
+        // Parse numbers helper: removes ₹, Rs., commas, whitespace
+        const parseNum = (str) => {
+          if (!str) return NaN;
+          const cleaned = String(str).replace(/[₹\s,rs\.]/gi, '');
+          const val = parseFloat(cleaned);
+          return isNaN(val) ? NaN : Math.round(val);
+        };
+
+        // Process data rows
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.length === 0 || row.every(c => !c || c.trim() === '')) continue;
+
+          const uploadedId = idCol !== -1 && row[idCol] ? row[idCol].trim() : '';
+          const name = nameCol !== -1 && row[nameCol] ? row[nameCol].trim() : '';
+          const cat = catCol !== -1 && row[catCol] ? row[catCol].trim() : '';
+          const catLabel = catLabelCol !== -1 && row[catLabelCol] ? row[catLabelCol].trim() : '';
+          const unit = unitCol !== -1 && row[unitCol] ? row[unitCol].trim() : '';
+          const mrpVal = mrpCol !== -1 ? parseNum(row[mrpCol]) : NaN;
+          const priceVal = priceCol !== -1 ? parseNum(row[priceCol]) : NaN;
+          const stockStr = stockCol !== -1 && row[stockCol] ? row[stockCol].trim().toLowerCase() : '';
+          const imageVal = imageCol !== -1 && row[imageCol] ? row[imageCol].trim() : '';
+          const systemRef = systemRefCol !== -1 && row[systemRefCol] ? row[systemRefCol].trim() : '';
+
+          // Find match
+          let matched = null;
+
+          // 1. By _system_ref
+          if (systemRef) {
+            matched = productsList.find(p => p.id === systemRef);
+          }
+
+          // 2. By uploadedId
+          if (!matched && uploadedId) {
+            matched = productsList.find(p => p.id === uploadedId);
+          }
+
+          // 3. By Product Name (case-insensitive normalized)
+          if (!matched && name) {
+            const cleanName = name.toLowerCase().replace(/\s+/g, ' ');
+            matched = productsList.find(p => p.name.toLowerCase().replace(/\s+/g, ' ') === cleanName);
+          }
+
+          if (matched) {
+            // Update matched product
+            if (uploadedId && uploadedId !== matched.id) {
+              // User defined a new specific ID for this product
+              const collision = productsList.find(p => p.id === uploadedId && p !== matched);
+              if (!collision) {
+                idMapChanges.push({ oldId: matched.id, newId: uploadedId, name: matched.name });
+                matched.id = uploadedId;
+              }
+            }
+
+            if (name) matched.name = name;
+            if (!isNaN(priceVal) && priceVal >= 0) matched.price = priceVal;
+            if (!isNaN(mrpVal) && mrpVal >= 0) matched.mrp = mrpVal;
+            if (unit) matched.unit = unit;
+            if (cat) matched.category = cat;
+            if (catLabel) matched.categoryLabel = catLabel;
+            if (imageVal && imageVal.startsWith('http')) matched.image = imageVal;
+
+            if (stockStr) {
+              matched.inStock = (stockStr === 'yes' || stockStr === 'in stock' || stockStr === 'true' || stockStr === '1');
+            }
+
+            updatedCount++;
+          } else if (name || uploadedId) {
+            // Add new product from Excel row
+            const newId = uploadedId || ('item-' + Date.now() + '-' + i);
+            const finalPrice = !isNaN(priceVal) && priceVal >= 0 ? priceVal : (!isNaN(mrpVal) ? mrpVal : 0);
+            const finalMrp = !isNaN(mrpVal) && mrpVal >= 0 ? mrpVal : finalPrice;
+            const finalCat = cat || 'fresh-vegetables';
+
+            const newProd = {
+              id: newId,
+              name: name || ('New Item ' + newId),
+              category: finalCat,
+              categoryLabel: catLabel || finalCat.replace(/-/g, ' '),
+              unit: unit || '1 unit',
+              price: finalPrice,
+              mrp: finalMrp,
+              image: (imageVal && imageVal.startsWith('http')) ? imageVal : 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400',
+              inStock: stockStr ? (stockStr === 'yes' || stockStr === 'in stock' || stockStr === 'true' || stockStr === '1') : true,
+              tag: 'Fresh',
+              deliveryTime: 'Fresh Delivery'
+            };
+
+            productsList.unshift(newProd);
+            addedCount++;
+          }
+        }
+
+        // Save across storage, indexedDB, and sync to Firebase RTDB live
+        saveProducts(productsList);
+        if (typeof syncToCloud === 'function') {
+          syncToCloud();
+        }
+
+        renderRateCard();
+        renderItemsTable();
+        updateKpis();
+
+        let summaryMsg = `🎉 Bulk Update Completed Successfully!\n\n` +
+          `• Updated Products: ${updatedCount}\n` +
+          `• Newly Added Products: ${addedCount}\n` +
+          `• Total Store Catalog: ${productsList.length} items\n\n` +
+          `All selling rates, MRPs, names & specific product IDs are now live and synced to Firebase Realtime Database!`;
+
+        if (idMapChanges.length > 0) {
+          summaryMsg += `\n\n(${idMapChanges.length} product IDs were customized/updated).`;
+        }
+
+        alert(summaryMsg);
+        showNotificationToast(`✅ Bulk update saved! ${updatedCount} updated, ${addedCount} added.`);
+
+      } catch (err) {
+        console.error("Bulk upload processing error:", err);
+        alert("An error occurred while processing the file: " + err.message);
+      } finally {
+        fileInput.value = '';
+      }
+    }
+
     // ================= ITEMS CATALOG LOGIC =================
     function renderItemsTable(query = '') {
       const tbody = document.getElementById('items-table-body');
@@ -2527,7 +2883,11 @@
       let filtered = productsList;
       if (query.trim() !== '') {
         const q = query.toLowerCase().trim();
-        filtered = filtered.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+        filtered = filtered.filter(p => 
+          p.name.toLowerCase().includes(q) || 
+          p.category.toLowerCase().includes(q) ||
+          (p.id && p.id.toLowerCase().includes(q))
+        );
       }
 
       tbody.innerHTML = filtered.map(p => `
@@ -2535,7 +2895,10 @@
           <td class="p-3">
             <img src="${p.image}" class="w-10 h-10 object-cover rounded-lg bg-gray-100" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'" />
           </td>
-          <td class="p-3 font-bold text-gray-900">${p.name}</td>
+          <td class="p-3">
+            <div class="font-bold text-gray-900">${escapeHtml(p.name)}</div>
+            <div class="text-[10px] text-gray-400 font-mono mt-0.5">ID: <span class="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-semibold">${p.id}</span></div>
+          </td>
           <td class="p-3 text-gray-500">${p.categoryLabel || p.category}</td>
           <td class="p-3 text-gray-700 font-semibold">${p.unit}</td>
           <td class="p-3 font-extrabold text-green-800">₹${p.price}</td>
@@ -2566,6 +2929,7 @@
         const p = productsList.find(item => item.id === id);
         if (!p) return;
         title.textContent = "Edit Product Details";
+        document.getElementById('modal-orig-id').value = p.id;
         document.getElementById('modal-prod-id').value = p.id;
         document.getElementById('modal-prod-name').value = p.name;
         document.getElementById('modal-prod-category').value = p.category;
@@ -2574,9 +2938,10 @@
         document.getElementById('modal-prod-mrp').value = p.mrp || p.price;
         document.getElementById('modal-prod-image').value = p.image || '';
         document.getElementById('modal-prod-tag').value = p.tag || '';
-        document.getElementById('modal-prod-eta').value = p.deliveryTime || '10 mins';
+        document.getElementById('modal-prod-eta').value = p.deliveryTime || 'Fresh Delivery';
       } else {
         title.textContent = "Add New Product";
+        document.getElementById('modal-orig-id').value = '';
         document.getElementById('modal-prod-id').value = '';
         document.getElementById('modal-prod-name').value = '';
         document.getElementById('modal-prod-unit').value = '';
@@ -2584,7 +2949,7 @@
         document.getElementById('modal-prod-mrp').value = '';
         document.getElementById('modal-prod-image').value = '';
         document.getElementById('modal-prod-tag').value = '';
-        document.getElementById('modal-prod-eta').value = '10 mins';
+        document.getElementById('modal-prod-eta').value = 'Fresh Delivery';
       }
       modal.classList.remove('hidden');
     }
@@ -2594,7 +2959,8 @@
     }
 
     function saveProductFromModal() {
-      const id = document.getElementById('modal-prod-id').value;
+      const origId = document.getElementById('modal-orig-id').value;
+      const customId = document.getElementById('modal-prod-id').value.trim();
       const name = document.getElementById('modal-prod-name').value.trim();
       const cat = document.getElementById('modal-prod-category').value;
       const unit = document.getElementById('modal-prod-unit').value.trim();
@@ -2602,16 +2968,24 @@
       const mrp = parseInt(document.getElementById('modal-prod-mrp').value, 10) || price;
       const image = document.getElementById('modal-prod-image').value.trim() || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
       const tag = document.getElementById('modal-prod-tag').value.trim();
-      const eta = document.getElementById('modal-prod-eta').value.trim() || '10 mins';
+      const eta = document.getElementById('modal-prod-eta').value.trim() || 'Fresh Delivery';
 
       if (!name || !unit || isNaN(price)) {
         alert("Please fill in Product Name, Unit and Selling Price");
         return;
       }
 
-      if (id) {
-        const p = productsList.find(item => item.id === id);
+      if (origId) {
+        const p = productsList.find(item => item.id === origId);
         if (p) {
+          if (customId && customId !== origId) {
+            const collision = productsList.find(item => item.id === customId && item !== p);
+            if (collision) {
+              alert(`Error: Product ID "${customId}" is already used by "${collision.name}". Please use a unique ID.`);
+              return;
+            }
+            p.id = customId;
+          }
           p.name = name;
           p.category = cat;
           p.categoryLabel = cat.replace(/-/g, ' ');
@@ -2623,8 +2997,14 @@
           p.deliveryTime = eta;
         }
       } else {
+        const newId = customId || ('item-' + Date.now());
+        const collision = productsList.find(item => item.id === newId);
+        if (collision) {
+          alert(`Error: Product ID "${newId}" already exists. Please choose a unique ID.`);
+          return;
+        }
         const newProduct = {
-          id: 'item-' + Date.now(),
+          id: newId,
           name,
           category: cat,
           categoryLabel: cat.replace(/-/g, ' '),
@@ -2640,10 +3020,14 @@
       }
 
       saveProducts(productsList);
+      if (typeof syncToCloud === 'function') {
+        syncToCloud();
+      }
       closeProductModal();
       renderItemsTable();
       renderRateCard();
       updateKpis();
+      showNotificationToast(`✅ Saved "${name}" successfully!`);
     }
 
     function deleteProduct(id) {
