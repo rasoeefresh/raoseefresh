@@ -537,10 +537,13 @@ async function syncFromCloud() {
       }
       if (Array.isArray(data.categories) && data.categories.length > 0) {
         localStorage.setItem("raosee_categories", JSON.stringify(data.categories));
+        localStorage.setItem("rasoee_categories", JSON.stringify(data.categories));
         hasChanges = true;
       }
       if (Array.isArray(data.banners) && data.banners.length > 0) {
         localStorage.setItem("raosee_banners", JSON.stringify(data.banners));
+        localStorage.setItem("rasoee_banners", JSON.stringify(data.banners));
+        localStorage.setItem("Rasoee_banners", JSON.stringify(data.banners));
         hasChanges = true;
       }
       if (hasChanges) {
@@ -751,7 +754,7 @@ function saveCategories(categories) {
 // Banners storage
 function getStoredBanners() {
   try {
-    const saved = (localStorage.getItem("rasoee_banners") || localStorage.getItem("raosee_banners"));
+    const saved = (localStorage.getItem("rasoee_banners") || localStorage.getItem("raosee_banners") || localStorage.getItem("Rasoee_banners"));
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -764,9 +767,12 @@ function getStoredBanners() {
 
 function saveBanners(banners) {
   try {
-    localStorage.setItem("rasoee_banners", JSON.stringify(banners)); localStorage.setItem("raosee_banners", JSON.stringify(banners));
+    localStorage.setItem("rasoee_banners", JSON.stringify(banners));
+    localStorage.setItem("raosee_banners", JSON.stringify(banners));
+    localStorage.setItem("Rasoee_banners", JSON.stringify(banners));
     if (typeof saveToIndexedDB === "function") {
       saveToIndexedDB("raosee_banners", banners);
+      saveToIndexedDB("rasoee_banners", banners);
     }
     if (typeof syncToCloud === "function") {
       syncToCloud();

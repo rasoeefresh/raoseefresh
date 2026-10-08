@@ -1597,7 +1597,7 @@ function setupCrossTabSync() {
         state.currentUser = u ? JSON.parse(u) : null;
         updateHeaderUserUI();
       } catch (err) {}
-    } else if (e.key === 'Rasoee_banners' || !e.key) {
+    } else if (e.key === 'Rasoee_banners' || e.key === 'rasoee_banners' || e.key === 'raosee_banners' || !e.key) {
       renderBanners();
     } else if (e.key === 'Rasoee_fresh_config') {
       try {

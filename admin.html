@@ -2768,7 +2768,16 @@
     function saveBanners(banners) {
       bannersList = banners;
       try {
+        localStorage.setItem("rasoee_banners", JSON.stringify(banners));
+        localStorage.setItem("raosee_banners", JSON.stringify(banners));
         localStorage.setItem("Rasoee_banners", JSON.stringify(banners));
+        if (typeof saveToIndexedDB === "function") {
+          saveToIndexedDB("raosee_banners", banners);
+          saveToIndexedDB("rasoee_banners", banners);
+        }
+        if (typeof syncToCloud === "function") {
+          syncToCloud();
+        }
         window.dispatchEvent(new Event("storage"));
       } catch (e) {
         console.warn("Could not save banners", e);
