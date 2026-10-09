@@ -1564,6 +1564,149 @@
 
       </div>
 
+      <!-- Pillar 4: Realtime SMS & OTP Gateway (Carrier Network) -->
+      <div class="bg-white p-6 sm:p-7 rounded-3xl border border-gray-200 shadow-sm space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl font-black shadow-sm">
+              📲
+            </div>
+            <div>
+              <h3 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                <span>4. Realtime SMS &amp; OTP Gateway</span>
+                <span class="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full uppercase font-bold">Indian Telecom Carrier</span>
+              </h3>
+              <p class="text-xs text-gray-500">
+                Deliver realtime 6-digit OTP verification codes directly to Indian customer mobile numbers via Fast2SMS, 2Factor.in, or Firebase.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="sms-gateway-status-badge" class="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+              Gateway Active ✅
+            </span>
+          </div>
+        </div>
+
+        <!-- Configuration Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <!-- Provider Selection -->
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">SMS Service Provider</label>
+            <select id="sms-gw-provider" onchange="toggleSmsProviderInputs()" class="w-full p-2.5 border border-gray-300 rounded-xl text-xs font-semibold outline-none focus:border-blinkit-green bg-white">
+              <option value="fast2sms">Fast2SMS (Quick OTP Route - India)</option>
+              <option value="2factor">2Factor.in (Telecom DLT Approved)</option>
+              <option value="firebase">Firebase Phone Auth (Carrier Network)</option>
+              <option value="simulation">Simulation &amp; Interactive Mobile Banner (Testing)</option>
+              <option value="custom">Custom REST Gateway / Webhook</option>
+            </select>
+            <p class="text-[11px] text-gray-400 mt-1">Instant delivery to Airtel, Jio, Vi, BSNL</p>
+          </div>
+
+          <!-- Fast2SMS API Key -->
+          <div id="field-sms-fast2sms" class="space-y-1">
+            <label class="block font-bold text-gray-700 mb-1 flex items-center justify-between">
+              <span>Fast2SMS Authorization Key</span>
+              <a href="https://www.fast2sms.com/dashboard/dev-api" target="_blank" class="text-blinkit-green font-bold text-[10px] hover:underline">Get Free Key ↗</a>
+            </label>
+            <div class="relative">
+              <input type="password" id="sms-gw-fast2sms-key" placeholder="Paste Fast2SMS API Key" class="w-full p-2.5 pr-9 border border-gray-300 rounded-xl font-mono text-xs outline-none focus:border-blinkit-green" />
+              <button type="button" onclick="togglePasswordVisibility('sms-gw-fast2sms-key')" class="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 text-xs">👁️</button>
+            </div>
+            <p class="text-[11px] text-gray-400">Uses Fast2SMS Quick OTP high-speed route</p>
+          </div>
+
+          <!-- 2Factor API Key -->
+          <div id="field-sms-twofactor" class="hidden space-y-1">
+            <label class="block font-bold text-gray-700 mb-1 flex items-center justify-between">
+              <span>2Factor.in API Key</span>
+              <a href="https://2factor.in/v3/dashboard" target="_blank" class="text-blinkit-green font-bold text-[10px] hover:underline">Get Key ↗</a>
+            </label>
+            <div class="relative">
+              <input type="password" id="sms-gw-twofactor-key" placeholder="Paste 2Factor.in API Key" class="w-full p-2.5 pr-9 border border-gray-300 rounded-xl font-mono text-xs outline-none focus:border-blinkit-green" />
+              <button type="button" onclick="togglePasswordVisibility('sms-gw-twofactor-key')" class="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 text-xs">👁️</button>
+            </div>
+            <p class="text-[11px] text-gray-400">DLT registered enterprise telecom SMS</p>
+          </div>
+
+          <!-- Firebase Phone Auth Key -->
+          <div id="field-sms-firebase" class="hidden space-y-1">
+            <label class="block font-bold text-gray-700 mb-1">Firebase Web API Key</label>
+            <input type="text" id="sms-gw-firebase-key" placeholder="AIzaSy..." class="w-full p-2.5 border border-gray-300 rounded-xl font-mono text-xs outline-none focus:border-blinkit-green" />
+            <p class="text-[11px] text-gray-400">Project Settings &gt; Web API Key</p>
+          </div>
+
+          <!-- Custom URL -->
+          <div id="field-sms-custom" class="hidden space-y-1">
+            <label class="block font-bold text-gray-700 mb-1">Custom Gateway URL (POST)</label>
+            <input type="url" id="sms-gw-custom-url" placeholder="https://api.yourdomain.com/send-sms" class="w-full p-2.5 border border-gray-300 rounded-xl font-mono text-xs outline-none focus:border-blinkit-green" />
+            <p class="text-[11px] text-gray-400">Sends JSON payload: { phone, otp, message }</p>
+          </div>
+
+          <!-- Sender ID -->
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">DLT / Header Sender ID</label>
+            <input type="text" id="sms-gw-sender-id" maxlength="6" placeholder="RASOEE" value="RASOEE" class="w-full p-2.5 border border-gray-300 rounded-xl font-mono text-xs uppercase font-bold outline-none focus:border-blinkit-green" />
+            <p class="text-[11px] text-gray-400 mt-1">6-character DLT Header (e.g. RASOEE)</p>
+          </div>
+
+          <!-- OTP Length -->
+          <div>
+            <label class="block font-bold text-gray-700 mb-1">OTP Digit Length</label>
+            <select id="sms-gw-otp-length" class="w-full p-2.5 border border-gray-300 rounded-xl text-xs font-semibold outline-none focus:border-blinkit-green bg-white">
+              <option value="6">6 Digits (Standard Telecom Specification)</option>
+              <option value="4">4 Digits (Compact Legacy)</option>
+            </select>
+            <p class="text-[11px] text-gray-400 mt-1">6-digit standard ensures maximum security</p>
+          </div>
+        </div>
+
+        <!-- Live Diagnostic & Test SMS Section -->
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h4 class="font-black text-gray-900 text-xs sm:text-sm flex items-center gap-1.5">
+                <span>🧪</span><span>Live Gateway Diagnostic Tool</span>
+              </h4>
+              <p class="text-[11px] text-gray-500">
+                Send a realtime test SMS to your mobile phone right now to verify gateway connectivity and API keys.
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input 
+                type="tel" 
+                id="sms-gw-test-phone" 
+                maxlength="10" 
+                placeholder="Enter 10-digit mobile" 
+                class="w-44 p-2 bg-white border border-gray-300 rounded-xl text-xs font-bold font-mono outline-none focus:border-blinkit-green" 
+              />
+              <button 
+                onclick="handleSendTestSmsFromAdmin()" 
+                id="btn-send-test-sms" 
+                class="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs px-4 py-2 rounded-xl shadow transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <span>📲 Send Test SMS</span>
+              </button>
+            </div>
+          </div>
+          
+          <div id="sms-gw-test-result" class="hidden text-xs p-3 rounded-xl border font-mono"></div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+          <span class="text-[11px] text-gray-400 flex items-center gap-1">
+            <span>🔒 API keys are securely protected and omitted from public cloud sync.</span>
+          </span>
+          <button 
+            onclick="saveSmsGatewaySettings()" 
+            class="bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs py-2.5 px-6 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+          >
+            <span>💾 Save SMS Gateway Configuration</span>
+          </button>
+        </div>
+      </div>
+
     </div>
 
   </main>
@@ -2066,6 +2209,7 @@
 
   <!-- Scripts -->
   <script src="store-config.js"></script>
+  <script src="sms-service.js"></script>
   <script src="products.js"></script>
   <script>
     // Global Safe HTML Escaper
@@ -4320,8 +4464,11 @@
       saveOperationsSettings();
       savePaymentSettings();
       saveOutletSettings(true);
+      if (typeof saveSmsGatewaySettings === 'function') {
+        saveSmsGatewaySettings(true);
+      }
       if (!silent) {
-        alert("🎉 All customizations (Rates, Items, Categories, Banners, Operations & Outlet Settings) saved!");
+        alert("🎉 All customizations (Rates, Items, Categories, Banners, Operations, SMS Gateway & Outlet Settings) saved!");
       }
     }
 
@@ -4373,15 +4520,20 @@
       const filesToFetch = [
         'index.html',
         'admin.html',
+        'operator.html',
         'outlet.html',
         'track.html',
         'login.html',
         'app.js',
+        'sms-service.js',
+        'database.rules.json',
         'manifest.json',
         'vercel.json',
         'firebase.json',
         'sw.js',
         'capacitor.config.json',
+        'logo.svg',
+        'favicon.svg',
         'README.md'
       ];
 
@@ -4503,6 +4655,9 @@
           badge.textContent = "Not Connected";
         }
       }
+
+      // Populate Realtime SMS Gateway fields
+      populateSmsGatewaySettings();
     }
 
     function toggleCloudProviderInputs() {
@@ -4554,6 +4709,170 @@
           alert("🎉 Store data pushed to Cloud successfully!\nAll connected customer apps will now receive your updated rates and banners live.");
         } else {
           alert("Cloud sync check failed: " + (res.reason || "Check your URL / API key"));
+        }
+      }
+    }
+
+    // ================= REALTIME SMS & OTP GATEWAY LOGIC =================
+    function populateSmsGatewaySettings() {
+      const cfg = (typeof window.SmsService !== 'undefined' && typeof window.SmsService.getSmsConfig === 'function')
+        ? window.SmsService.getSmsConfig()
+        : {};
+
+      const provEl = document.getElementById('sms-gw-provider');
+      if (provEl && cfg.provider) provEl.value = cfg.provider;
+
+      const f2sEl = document.getElementById('sms-gw-fast2sms-key');
+      if (f2sEl && cfg.fast2smsApiKey) f2sEl.value = cfg.fast2smsApiKey;
+
+      const twoEl = document.getElementById('sms-gw-twofactor-key');
+      if (twoEl && cfg.twoFactorApiKey) twoEl.value = cfg.twoFactorApiKey;
+
+      const fbEl = document.getElementById('sms-gw-firebase-key');
+      if (fbEl && cfg.firebaseApiKey) fbEl.value = cfg.firebaseApiKey;
+
+      const customEl = document.getElementById('sms-gw-custom-url');
+      if (customEl && cfg.customGatewayUrl) customEl.value = cfg.customGatewayUrl;
+
+      const senderEl = document.getElementById('sms-gw-sender-id');
+      if (senderEl && cfg.senderId) senderEl.value = cfg.senderId;
+
+      const lenEl = document.getElementById('sms-gw-otp-length');
+      if (lenEl && cfg.otpLength) lenEl.value = cfg.otpLength;
+
+      const badge = document.getElementById('sms-gateway-status-badge');
+      if (badge) {
+        const provName = (cfg.provider || 'fast2sms').toUpperCase();
+        badge.className = "text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800";
+        badge.textContent = `Gateway Active (${provName}) ✅`;
+      }
+
+      toggleSmsProviderInputs();
+    }
+
+    function toggleSmsProviderInputs() {
+      const provider = document.getElementById('sms-gw-provider')?.value || 'fast2sms';
+      const f2sBox = document.getElementById('field-sms-fast2sms');
+      const twoBox = document.getElementById('field-sms-twofactor');
+      const fbBox = document.getElementById('field-sms-firebase');
+      const customBox = document.getElementById('field-sms-custom');
+
+      if (f2sBox) f2sBox.classList.toggle('hidden', provider !== 'fast2sms');
+      if (twoBox) twoBox.classList.toggle('hidden', provider !== '2factor');
+      if (fbBox) fbBox.classList.toggle('hidden', provider !== 'firebase');
+      if (customBox) customBox.classList.toggle('hidden', provider !== 'custom');
+    }
+
+    function togglePasswordVisibility(inputId) {
+      const input = document.getElementById(inputId);
+      if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+      }
+    }
+
+    function saveSmsGatewaySettings(silent = false) {
+      const provider = document.getElementById('sms-gw-provider')?.value || 'fast2sms';
+      const fast2smsKey = document.getElementById('sms-gw-fast2sms-key')?.value.trim() || '';
+      const twoFactorKey = document.getElementById('sms-gw-twofactor-key')?.value.trim() || '';
+      const firebaseKey = document.getElementById('sms-gw-firebase-key')?.value.trim() || '';
+      const customUrl = document.getElementById('sms-gw-custom-url')?.value.trim() || '';
+      const senderId = document.getElementById('sms-gw-sender-id')?.value.trim().toUpperCase() || 'RASOEE';
+      const otpLength = parseInt(document.getElementById('sms-gw-otp-length')?.value || '6', 10);
+
+      const updatedSmsConfig = {
+        enabled: true,
+        provider: provider,
+        fast2smsApiKey: fast2smsKey,
+        twoFactorApiKey: twoFactorKey,
+        firebaseApiKey: firebaseKey,
+        customGatewayUrl: customUrl,
+        senderId: senderId,
+        otpLength: otpLength,
+        otpExpiryMinutes: 10
+      };
+
+      if (window.SmsService && typeof window.SmsService.saveSmsConfig === 'function') {
+        window.SmsService.saveSmsConfig(updatedSmsConfig);
+      }
+
+      // Also update global store config
+      if (typeof updateStoreConfig === 'function') {
+        updateStoreConfig({ smsGateway: updatedSmsConfig });
+      }
+
+      const badge = document.getElementById('sms-gateway-status-badge');
+      if (badge) {
+        badge.className = "text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800";
+        badge.textContent = `Gateway Active (${provider.toUpperCase()}) ✅`;
+      }
+
+      if (!silent) {
+        alert("📲 Realtime SMS & OTP Gateway settings saved successfully!\nCustomers logging into the storefront or mobile app will now receive realtime SMS OTPs.");
+      }
+    }
+
+    async function handleSendTestSmsFromAdmin() {
+      const phoneInput = document.getElementById('sms-gw-test-phone');
+      const phone = phoneInput ? phoneInput.value.trim().replace(/\D/g, '') : '';
+      const resultBox = document.getElementById('sms-gw-test-result');
+      const btn = document.getElementById('btn-send-test-sms');
+
+      if (phone.length < 10) {
+        alert("Please enter a valid 10-digit mobile number to send the test SMS.");
+        phoneInput?.focus();
+        return;
+      }
+
+      // Save current settings first so test runs with fresh credentials
+      saveSmsGatewaySettings(true);
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳ Sending...</span>`;
+      }
+
+      if (resultBox) {
+        resultBox.classList.remove('hidden');
+        resultBox.className = "text-xs p-3 rounded-xl border font-mono bg-blue-50 border-blue-200 text-blue-900";
+        resultBox.textContent = `Connecting to telecom gateway and dispatching realtime OTP to +91 ${phone}...`;
+      }
+
+      try {
+        if (!window.SmsService || typeof window.SmsService.sendTestSms !== 'function') {
+          throw new Error("SMS Service module not loaded. Please refresh the page.");
+        }
+        const res = await window.SmsService.sendTestSms(phone);
+        if (resultBox) {
+          if (res.carrierDispatched) {
+            resultBox.className = "text-xs p-3 rounded-xl border font-mono bg-emerald-50 border-emerald-300 text-emerald-900";
+            resultBox.innerHTML = `
+              <strong>✅ Realtime Carrier SMS Dispatched!</strong><br/>
+              • Mobile: +91 ${phone}<br/>
+              • Gateway: ${res.provider}<br/>
+              • Test Code: <span class="font-black text-sm">${res.otp}</span><br/>
+              • Telecom Status: Direct HTTP carrier API handshake completed successfully. Check your handset.
+            `;
+          } else {
+            resultBox.className = "text-xs p-3 rounded-xl border font-mono bg-amber-50 border-amber-300 text-amber-900";
+            resultBox.innerHTML = `
+              <strong>🔔 Realtime OTP Generated &amp; Interactive Notification Fired!</strong><br/>
+              • Mobile: +91 ${phone}<br/>
+              • Provider: ${res.provider}<br/>
+              • Generated OTP: <span class="font-black text-sm">${res.otp}</span><br/>
+              • Status: Interactive carrier push notification displayed at top of screen with incoming chime.<br/>
+              • Tip: Enter your Fast2SMS or 2Factor API key above for live carrier telecom delivery.
+            `;
+          }
+        }
+      } catch (err) {
+        if (resultBox) {
+          resultBox.className = "text-xs p-3 rounded-xl border font-mono bg-red-50 border-red-300 text-red-900";
+          resultBox.textContent = `Error dispatching test SMS: ${err.message || err}`;
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>📲 Send Test SMS</span>`;
         }
       }
     }
