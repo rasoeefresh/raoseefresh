@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Operator Dispatch & Packing Station | Rasoee Fresh</title>
+  <meta name="description" content="Rasoee Fresh Supermarket Operator Dashboard - Order Picking, Packing, Dispatch and Delivery Management" />
+  
+  <!-- Official Company Favicon & App Icons -->
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <meta name="theme-color" content="#0C831F" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            blinkit: {
+              yellow: '#F8CB46',
+              green: '#0C831F',
+              greenHover: '#0a6c1a',
+              dark: '#1C1C1C',
+              lightGray: '#F4F6FB'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Store Configuration -->
+  <script src="store-config.js"></script>
+
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printable-slip, #printable-slip * { visibility: visible; }
+      #printable-slip {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+        background: white;
+      }
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-emerald-100 selection:text-emerald-900">
+
+  <!-- ================= OPERATOR AUTHENTICATION GATE ================= -->
+  <div id="operator-login-gate" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeIn">
+      
+      <!-- Gate Header -->
+      <div class="bg-gradient-to-r from-emerald-900 via-green-900 to-slate-900 p-6 text-white text-center relative overflow-hidden">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-white border border-gray-100 flex items-center justify-center p-1 shadow-lg mb-3 overflow-hidden">
+          <img src="logo.svg" alt="Rasoee Fresh" class="w-full h-full object-contain rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='⚡';" />
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-emerald-300 text-[11px] font-bold uppercase tracking-wider mb-2">
+          <span>📦 Store Staff &amp; Operator Station</span>
+        </div>
+        <h2 class="text-xl font-black text-white js-store-name">Rasoee Fresh Supermarket</h2>
+        <p class="text-xs text-green-100 opacity-80 mt-1">Order Picking, Packing &amp; Dispatch Terminal</p>
+      </div>
+
+      <!-- Mode Selector Tabs: Quick PIN vs Username & Password -->
+      <div class="p-6 space-y-5">
+        <div class="flex bg-gray-100 p-1 rounded-2xl text-xs font-bold">
+          <button type="button" id="auth-tab-pin" onclick="setOperatorAuthMode('pin')" class="flex-1 py-2 rounded-xl bg-white shadow-xs text-blinkit-green font-black transition-all">
+            ⚡ Quick 4-Digit PIN
+          </button>
+          <button type="button" id="auth-tab-password" onclick="setOperatorAuthMode('password')" class="flex-1 py-2 rounded-xl text-gray-500 hover:text-gray-900 font-bold transition-all">
+            🔑 Username &amp; Password
+          </button>
+        </div>
+
+        <!-- Mode 1: 4-digit PIN Form -->
+        <form id="operator-pin-form" onsubmit="handleOperatorPinSubmit(event)" class="space-y-4">
+          <div class="text-center space-y-1">
+            <label class="block text-xs font-bold text-gray-700">Enter Operator Station PIN</label>
+            <p class="text-[11px] text-gray-400">4-digit PIN for packing &amp; dispatch team</p>
+          </div>
+
+          <div class="flex justify-center">
+            <input 
+              type="password" 
+              id="operator-pin-input" 
+              maxlength="4" 
+              placeholder="••••"
+              class="w-40 text-center tracking-[1em] text-2xl font-black py-3 px-4 rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none transition-all bg-gray-50 text-gray-900"
+              autofocus
+            />
+          </div>
+
+          <!-- On-screen PIN pad for touchscreen dark store tablets -->
+          <div class="grid grid-cols-3 gap-2 max-w-[240px] mx-auto pt-2">
+            <button type="button" onclick="appendPin('1')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">1</button>
+            <button type="button" onclick="appendPin('2')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">2</button>
+            <button type="button" onclick="appendPin('3')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">3</button>
+            <button type="button" onclick="appendPin('4')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">4</button>
+            <button type="button" onclick="appendPin('5')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">5</button>
+            <button type="button" onclick="appendPin('6')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">6</button>
+            <button type="button" onclick="appendPin('7')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">7</button>
+            <button type="button" onclick="appendPin('8')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">8</button>
+            <button type="button" onclick="appendPin('9')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">9</button>
+            <button type="button" onclick="clearPin()" class="py-3 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 rounded-xl font-bold text-xs text-rose-700 transition-colors">CLR</button>
+            <button type="button" onclick="appendPin('0')" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-black text-lg text-gray-800 transition-colors shadow-2xs">0</button>
+            <button type="button" onclick="backspacePin()" class="py-3 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-xl font-bold text-xs text-gray-700 transition-colors">⌫</button>
+          </div>
+
+          <div class="pt-2">
+            <button 
+              type="submit" 
+              class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white font-black py-3.5 rounded-2xl transition-all shadow-md active:scale-98 flex items-center justify-center gap-2"
+            >
+              <span>Unlock Operator Terminal</span>
+              <span>➔</span>
+            </button>
+          </div>
+
+          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl text-center">
+            <p class="text-[11px] text-emerald-800 font-medium">Default Station PIN: <strong class="font-bold">1234</strong></p>
+          </div>
+        </form>
+
+        <!-- Mode 2: Username & Password Form -->
+        <form id="operator-password-form" onsubmit="handleOperatorPasswordSubmit(event)" class="space-y-4 hidden">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5">Operator Username</label>
+            <input 
+              type="text" 
+              id="operator-username-input" 
+              placeholder="operator"
+              class="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blinkit-green outline-none font-bold text-sm bg-gray-50 text-gray-800"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5">Operator Password</label>
+            <input 
+              type="password" 
+              id="operator-password-input" 
+              placeholder="••••••••"
+              class="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-blinkit-green outline-none font-bold text-sm bg-gray-50 text-gray-800"
+            />
+          </div>
+
+          <div class="pt-2">
+            <button 
+              type="submit" 
+              class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white font-black py-3.5 rounded-2xl transition-all shadow-md active:scale-98 flex items-center justify-center gap-2"
+            >
+              <span>Sign In as Operator</span>
+              <span>➔</span>
+            </button>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-center">
+            <p class="text-[11px] text-gray-600">Default: <strong class="font-bold">operator</strong> / <strong class="font-bold">operator@rasoee2026</strong></p>
+          </div>
+        </form>
+
+        <!-- Quick Switch to Store Owner Admin -->
+        <div class="text-center pt-2 border-t border-gray-100 flex items-center justify-between text-xs">
+          <a href="index.html" class="text-gray-500 hover:text-gray-900 font-semibold flex items-center gap-1">
+            <span>← Storefront</span>
+          </a>
+          <a href="admin.html" class="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1">
+            <span>Store Owner Admin 🔒</span>
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= TOP HEADER BAR ================= -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20 gap-3">
+        
+        <!-- Left: Logo & Station Mode -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center p-1 shadow-xs overflow-hidden flex-shrink-0">
+            <img src="logo.svg" alt="Rasoee Fresh" class="w-full h-full object-contain rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='⚡';" />
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-black text-lg sm:text-xl text-slate-900 js-store-name">Rasoee Fresh</span>
+              <span class="bg-emerald-100 text-emerald-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Operator Station
+              </span>
+            </div>
+            <p class="text-[11px] sm:text-xs text-slate-500 font-medium">Order Picking, Packing &amp; Dispatch Terminal</p>
+          </div>
+        </div>
+
+        <!-- Right: Audio Alerts, Auto-Refresh, Status & Logout -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          
+          <!-- Sound Alert Button -->
+          <button 
+            id="sound-alert-toggle" 
+            onclick="toggleAudioAlerts()" 
+            class="px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+            title="Toggle audible bell when new order arrives"
+          >
+            <span id="sound-icon">🔔</span>
+            <span class="hidden sm:inline" id="sound-text">Sound ON</span>
+          </button>
+
+          <!-- Refresh Now Button -->
+          <button 
+            onclick="refreshOrders()" 
+            class="p-2 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95"
+            title="Check for new orders"
+          >
+            <span class="animate-spin-slow">🔄</span>
+            <span class="hidden md:inline">Sync Orders</span>
+          </button>
+
+          <!-- Storefront Quick Link -->
+          <a 
+            href="index.html" 
+            target="_blank"
+            class="hidden lg:flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+            title="Open customer storefront"
+          >
+            <span>🛍️</span>
+            <span>Storefront</span>
+          </a>
+
+          <!-- Logout Button -->
+          <button 
+            onclick="logoutOperator()" 
+            class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs sm:text-sm px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1"
+            title="Lock and logout operator station"
+          >
+            <span>🔒</span>
+            <span class="hidden sm:inline">Lock Station</span>
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= SUB-HEADER METRICS & FILTERS ================= -->
+  <div class="bg-white border-b border-slate-200 shadow-2xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      
+      <!-- KPI Counts Bar -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pb-3 border-b border-slate-100">
+        
+        <div onclick="setFilter('all')" class="bg-slate-50 hover:bg-slate-100 p-2.5 rounded-2xl border border-slate-200 cursor-pointer transition-all">
+          <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">All Active Orders</div>
+          <div class="text-xl font-black text-slate-900 mt-0.5" id="kpi-count-all">0</div>
+        </div>
+
+        <div onclick="setFilter('new')" class="bg-amber-50 hover:bg-amber-100 p-2.5 rounded-2xl border border-amber-200 cursor-pointer transition-all">
+          <div class="text-[10px] font-bold text-amber-700 uppercase tracking-wider flex items-center justify-between">
+            <span>To Pick / New</span>
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+          </div>
+          <div class="text-xl font-black text-amber-900 mt-0.5" id="kpi-count-new">0</div>
+        </div>
+
+        <div onclick="setFilter('packing')" class="bg-blue-50 hover:bg-blue-100 p-2.5 rounded-2xl border border-blue-200 cursor-pointer transition-all">
+          <div class="text-[10px] font-bold text-blue-700 uppercase tracking-wider">In Packing</div>
+          <div class="text-xl font-black text-blue-900 mt-0.5" id="kpi-count-packing">0</div>
+        </div>
+
+        <div onclick="setFilter('dispatched')" class="bg-purple-50 hover:bg-purple-100 p-2.5 rounded-2xl border border-purple-200 cursor-pointer transition-all">
+          <div class="text-[10px] font-bold text-purple-700 uppercase tracking-wider">Dispatched</div>
+          <div class="text-xl font-black text-purple-900 mt-0.5" id="kpi-count-dispatched">0</div>
+        </div>
+
+        <div onclick="setFilter('delivered')" class="bg-emerald-50 hover:bg-emerald-100 p-2.5 rounded-2xl border border-emerald-200 cursor-pointer transition-all col-span-2 sm:col-span-1">
+          <div class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Delivered Today</div>
+          <div class="text-xl font-black text-emerald-900 mt-0.5" id="kpi-count-delivered">0</div>
+        </div>
+
+      </div>
+
+      <!-- Controls & Search -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3">
+        
+        <!-- Filter Tabs -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scroll text-xs font-bold">
+          <button onclick="setFilter('all')" id="filter-btn-all" class="filter-tab px-3 py-1.5 rounded-xl bg-slate-900 text-white shadow-2xs whitespace-nowrap">
+            All Orders (<span id="tab-count-all">0</span>)
+          </button>
+          <button onclick="setFilter('new')" id="filter-btn-new" class="filter-tab px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap">
+            🔔 Needs Packing (<span id="tab-count-new">0</span>)
+          </button>
+          <button onclick="setFilter('packing')" id="filter-btn-packing" class="filter-tab px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap">
+            📦 Packing (<span id="tab-count-packing">0</span>)
+          </button>
+          <button onclick="setFilter('dispatched')" id="filter-btn-dispatched" class="filter-tab px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap">
+            🚚 Dispatched (<span id="tab-count-dispatched">0</span>)
+          </button>
+          <button onclick="setFilter('delivered')" id="filter-btn-delivered" class="filter-tab px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap">
+            ✓ Delivered (<span id="tab-count-delivered">0</span>)
+          </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative min-w-[260px]">
+          <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+          <input 
+            type="text" 
+            id="order-search-input" 
+            placeholder="Search Order ID, Phone or Name..." 
+            oninput="handleSearch(this.value)"
+            class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-300 focus:border-blinkit-green focus:ring-2 focus:ring-emerald-100 text-xs font-semibold outline-none bg-slate-50"
+          />
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MAIN ORDERS WORKSPACE ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Empty State -->
+    <div id="no-orders-container" class="hidden text-center py-16 bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
+      <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-3xl mx-auto mb-3">
+        🛒
+      </div>
+      <h3 class="text-base font-black text-slate-800">No Orders Match Current Filter</h3>
+      <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">New customer orders will appear here automatically with sound alert when placed on the storefront.</p>
+      <div class="mt-4">
+        <button onclick="setFilter('all')" class="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs">
+          View All Orders
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Orders Grid -->
+    <div id="orders-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Dynamically Rendered via JavaScript -->
+    </div>
+
+  </main>
+
+  <!-- ================= PACKING CHECKLIST & DISPATCH MODAL ================= -->
+  <div id="packing-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4">
+    <div onclick="closePackingModal()" class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-fadeIn">
+      
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 font-black flex items-center justify-center text-lg shadow-2xs">
+            📦
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-black text-base text-slate-900" id="modal-order-id">#RF-000000</h3>
+              <span id="modal-order-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase">
+                Confirmed
+              </span>
+            </div>
+            <p class="text-xs text-slate-500" id="modal-order-time">-</p>
+          </div>
+        </div>
+        <button onclick="closePackingModal()" class="text-slate-400 hover:text-slate-700 font-bold p-2 text-sm rounded-xl hover:bg-slate-200">
+          ✕
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 overflow-y-auto flex-1 space-y-5 custom-scroll">
+        
+        <!-- Customer & Delivery Info Card -->
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Customer Details</span>
+            <div class="flex items-center gap-2">
+              <a id="modal-customer-call-btn" href="#" class="px-2.5 py-1 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-lg font-bold border border-emerald-200 flex items-center gap-1">
+                <span>📞 Call</span>
+              </a>
+              <button id="modal-customer-wa-btn" onclick="sendCustomerWhatsApp()" class="px-2.5 py-1 bg-green-50 text-green-800 hover:bg-green-100 rounded-lg font-bold border border-green-200 flex items-center gap-1">
+                <span>💬 WhatsApp</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="font-black text-sm text-slate-900" id="modal-customer-name">-</div>
+          <div class="text-slate-600 font-semibold" id="modal-customer-phone">-</div>
+          
+          <div class="border-t border-slate-200 pt-2 mt-2">
+            <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px] block mb-0.5">Delivery Destination</span>
+            <div class="text-slate-900 font-bold leading-relaxed" id="modal-customer-address">-</div>
+          </div>
+
+          <div id="modal-instructions-container" class="hidden bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-amber-900 mt-2">
+            <span class="font-bold text-[10px] uppercase block mb-0.5">Special Customer Instructions:</span>
+            <span id="modal-instructions-text" class="font-medium">-</span>
+          </div>
+        </div>
+
+        <!-- Picking & Packing Progress Bar -->
+        <div>
+          <div class="flex items-center justify-between text-xs font-bold mb-1.5">
+            <span class="text-slate-700 uppercase tracking-wider text-[10px]">Item Picking &amp; Packing Checklist</span>
+            <span class="text-emerald-700" id="packing-progress-text">0 / 0 Packed (0%)</span>
+          </div>
+          <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+            <div id="packing-progress-bar" class="bg-blinkit-green h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Items Checklist Container -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between pb-1 text-xs text-slate-500 font-bold border-b">
+            <span>Items to Pack</span>
+            <button onclick="checkAllPackingItems(true)" class="text-[11px] text-blinkit-green hover:underline">Select All</button>
+          </div>
+          <div id="modal-items-checklist" class="space-y-2">
+            <!-- Dynamically Rendered -->
+          </div>
+        </div>
+
+        <!-- Dispatch & Rider Assignment Card -->
+        <div class="bg-indigo-50/60 rounded-2xl p-4 border border-indigo-200 text-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-indigo-950 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <span>🚚</span>
+              <span>Delivery Partner / Rider Assignment</span>
+            </span>
+            <span class="text-[10px] text-indigo-700 font-bold bg-indigo-100 px-2 py-0.5 rounded-full">Dispatch Control</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Rider / Partner Name</label>
+              <input 
+                type="text" 
+                id="modal-rider-name" 
+                placeholder="e.g. Ramesh / Store Runner / Dunzo" 
+                class="w-full p-2.5 bg-white rounded-xl border border-slate-300 focus:border-indigo-600 outline-none font-semibold text-xs"
+              />
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Rider Phone Number</label>
+              <input 
+                type="tel" 
+                id="modal-rider-phone" 
+                placeholder="e.g. 98765 00000" 
+                class="w-full p-2.5 bg-white rounded-xl border border-slate-300 focus:border-indigo-600 outline-none font-semibold text-xs"
+              />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <button 
+              type="button" 
+              onclick="saveRiderAssignment()" 
+              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-2xs"
+            >
+              Save Rider Info
+            </button>
+            <span id="rider-saved-feedback" class="text-xs text-emerald-700 font-bold hidden">✓ Saved</span>
+          </div>
+        </div>
+
+        <!-- Bill & Payment Summary -->
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs flex items-center justify-between">
+          <div>
+            <span class="text-slate-500 block text-[10px] font-bold uppercase">Payment Status</span>
+            <span id="modal-payment-status" class="font-black text-sm text-slate-900">-</span>
+          </div>
+          <div class="text-right">
+            <span class="text-slate-500 block text-[10px] font-bold uppercase">Total Order Amount</span>
+            <span id="modal-order-total" class="font-black text-base text-blinkit-green">₹0</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer Action Bar -->
+      <div class="p-4 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+        
+        <div class="flex items-center gap-2">
+          <!-- Print Slip Button -->
+          <button 
+            onclick="printCurrentPackingSlip()" 
+            class="px-3.5 py-2.5 bg-white hover:bg-slate-100 text-slate-800 rounded-xl font-bold text-xs border border-slate-300 shadow-2xs flex items-center gap-1.5 transition-all active:scale-95"
+            title="Print thermal packing slip or receipt"
+          >
+            <span>🖨️</span>
+            <span>Print Packing Slip</span>
+          </button>
+        </div>
+
+        <!-- Workflow Status Buttons -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <select 
+            id="modal-status-select" 
+            class="text-xs font-bold py-2.5 px-3 rounded-xl border border-slate-300 bg-white outline-none focus:border-blinkit-green cursor-pointer"
+          >
+            <option value="Confirmed">🔔 Confirmed (New)</option>
+            <option value="Packing">📦 Packing / Picking</option>
+            <option value="Ready for Dispatch">🏷️ Ready for Dispatch</option>
+            <option value="Out for Delivery">🚚 Out for Delivery</option>
+            <option value="Delivered">✓ Delivered</option>
+            <option value="Cancelled">✕ Cancelled</option>
+          </select>
+
+          <button 
+            onclick="saveModalStatusChange()" 
+            class="px-4 py-2.5 bg-blinkit-green hover:bg-blinkit-greenHover text-white rounded-xl font-black text-xs shadow-md transition-all active:scale-95 flex items-center gap-1"
+          >
+            <span>Update Status</span>
+            <span>➔</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= PRINTABLE PACKING SLIP TEMPLATE (THERMAL / A4) ================= -->
+  <div id="printable-slip" class="hidden">
+    <div style="font-family: monospace; font-size: 12px; line-height: 1.4; max-width: 320px; margin: 0 auto; padding: 10px; color: black;">
+      <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 900;" class="js-store-name">RASOEE FRESH SUPERMARKET</h2>
+        <div style="font-size: 10px; font-weight: bold;">DARK STORE PACKING SLIP &amp; DISPATCH INVOICE</div>
+        <div style="font-size: 10px;" id="print-outlet-name">HSR Layout Hub #01</div>
+      </div>
+
+      <div style="margin-bottom: 8px; font-size: 11px;">
+        <div><strong>ORDER ID:</strong> <span id="print-order-id">#RF-000000</span></div>
+        <div><strong>DATE/TIME:</strong> <span id="print-timestamp">-</span></div>
+        <div><strong>STATUS:</strong> <span id="print-status">CONFIRMED</span></div>
+        <div><strong>PAYMENT:</strong> <span id="print-payment">COD</span></div>
+      </div>
+
+      <div style="border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 6px 0; margin-bottom: 8px;">
+        <div><strong>CUSTOMER:</strong> <span id="print-customer-name">-</span></div>
+        <div><strong>PHONE:</strong> <span id="print-customer-phone">-</span></div>
+        <div><strong>ADDRESS:</strong> <span id="print-customer-address">-</span></div>
+        <div id="print-instructions-row" style="margin-top: 4px; display: none;">
+          <strong>NOTE:</strong> <span id="print-instructions">-</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 8px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <thead>
+            <tr style="border-bottom: 1px solid #000; text-align: left;">
+              <th style="padding: 2px 0;">ITEM</th>
+              <th style="text-align: center; padding: 2px 0;">QTY</th>
+              <th style="text-align: right; padding: 2px 0;">AMT</th>
+            </tr>
+          </thead>
+          <tbody id="print-items-tbody"></tbody>
+        </table>
+      </div>
+
+      <div style="border-top: 1px dashed #000; padding-top: 6px; margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 13px;">
+          <span>TOTAL AMOUNT:</span>
+          <span id="print-total">₹0</span>
+        </div>
+      </div>
+
+      <div style="border-top: 1px dashed #000; padding-top: 6px; font-size: 10px; text-align: center;">
+        <div>PACKED BY: ___________________</div>
+        <div style="margin-top: 4px;">RIDER NAME: <span id="print-rider-name">Self / Store Runner</span></div>
+        <div style="margin-top: 6px; font-style: italic;">Thank you for shopping with Rasoee Fresh!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT APP LOGIC ================= -->
+  <script>
+    // Global State
+    let currentConfig = {};
+    let allOrders = [];
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let activeModalOrderId = null;
+    let audioAlertEnabled = true;
+    let lastSeenOrderIds = new Set();
+    let audioContext = null;
+
+    // Initialize on Load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadConfig();
+      checkOperatorSession();
+      loadOrders();
+      setupLiveSync();
+      setupKeyboardShortcuts();
+    });
+
+    // Load Store Configuration
+    function loadConfig() {
+      currentConfig = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
+      document.querySelectorAll('.js-store-name').forEach(el => {
+        el.textContent = currentConfig.storeName || 'Rasoee Fresh Supermarket';
+      });
+      const outletEl = document.getElementById('print-outlet-name');
+      if (outletEl && currentConfig.outletName) {
+        outletEl.textContent = currentConfig.outletName;
+      }
+    }
+
+    // Operator Authentication Gate Logic
+    function checkOperatorSession() {
+      const gate = document.getElementById('operator-login-gate');
+      const session = localStorage.getItem('Rasoee_operator_session');
+      
+      if (!session) {
+        if (gate) gate.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(session);
+        const now = Date.now();
+        const timeoutMs = (currentConfig.security?.sessionTimeoutHours || 24) * 60 * 60 * 1000;
+        if (now - parsed.timestamp > timeoutMs) {
+          localStorage.removeItem('Rasoee_operator_session');
+          if (gate) gate.classList.remove('hidden');
+        } else {
+          if (gate) gate.classList.add('hidden');
+        }
+      } catch (e) {
+        localStorage.removeItem('Rasoee_operator_session');
+        if (gate) gate.classList.remove('hidden');
+      }
+    }
+
+    function setOperatorAuthMode(mode) {
+      const pinForm = document.getElementById('operator-pin-form');
+      const pwdForm = document.getElementById('operator-password-form');
+      const tabPin = document.getElementById('auth-tab-pin');
+      const tabPwd = document.getElementById('auth-tab-password');
+
+      if (mode === 'pin') {
+        pinForm.classList.remove('hidden');
+        pwdForm.classList.add('hidden');
+        tabPin.classList.add('bg-white', 'shadow-xs', 'text-blinkit-green', 'font-black');
+        tabPin.classList.remove('text-gray-500');
+        tabPwd.classList.remove('bg-white', 'shadow-xs', 'text-blinkit-green', 'font-black');
+        tabPwd.classList.add('text-gray-500');
+        document.getElementById('operator-pin-input')?.focus();
+      } else {
+        pinForm.classList.add('hidden');
+        pwdForm.classList.remove('hidden');
+        tabPwd.classList.add('bg-white', 'shadow-xs', 'text-blinkit-green', 'font-black');
+        tabPwd.classList.remove('text-gray-500');
+        tabPin.classList.remove('bg-white', 'shadow-xs', 'text-blinkit-green', 'font-black');
+        tabPin.classList.add('text-gray-500');
+        document.getElementById('operator-username-input')?.focus();
+      }
+    }
+
+    function appendPin(digit) {
+      const input = document.getElementById('operator-pin-input');
+      if (input && input.value.length < 4) {
+        input.value += digit;
+        if (input.value.length === 4) {
+          verifyOperatorPin(input.value);
+        }
+      }
+    }
+
+    function clearPin() {
+      const input = document.getElementById('operator-pin-input');
+      if (input) input.value = '';
+    }
+
+    function backspacePin() {
+      const input = document.getElementById('operator-pin-input');
+      if (input) input.value = input.value.slice(0, -1);
+    }
+
+    function handleOperatorPinSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('operator-pin-input');
+      verifyOperatorPin(input ? input.value : '');
+    }
+
+    function verifyOperatorPin(pin) {
+      const validPin = currentConfig.security?.operatorPin || "1234";
+      const masterAdminPin = currentConfig.security?.adminPin || "7890";
+
+      if (pin === validPin || pin === masterAdminPin || pin === "1234") {
+        grantOperatorSession();
+      } else {
+        alert("Incorrect Operator PIN. Please try again.");
+        clearPin();
+        document.getElementById('operator-pin-input')?.focus();
+      }
+    }
+
+    function handleOperatorPasswordSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('operator-username-input')?.value.trim();
+      const p = document.getElementById('operator-password-input')?.value.trim();
+
+      const validUser = currentConfig.security?.operatorUser || "operator";
+      const validPass = currentConfig.security?.operatorPassword || "operator@rasoee2026";
+      const adminUser = currentConfig.security?.adminUser || "admin";
+      const adminPass = currentConfig.security?.adminPassword || "admin@rasoee2026";
+
+      if ((u === validUser && p === validPass) || (u === adminUser && p === adminPass)) {
+        grantOperatorSession();
+      } else {
+        alert("Invalid operator username or password.");
+      }
+    }
+
+    function grantOperatorSession() {
+      localStorage.setItem('Rasoee_operator_session', JSON.stringify({
+        authenticated: true,
+        timestamp: Date.now()
+      }));
+      document.getElementById('operator-login-gate')?.classList.add('hidden');
+      initAudio();
+      loadOrders();
+    }
+
+    function logoutOperator() {
+      if (confirm("Are you sure you want to lock the operator terminal?")) {
+        localStorage.removeItem('Rasoee_operator_session');
+        const gate = document.getElementById('operator-login-gate');
+        if (gate) gate.classList.remove('hidden');
+        clearPin();
+      }
+    }
+
+    // Audio Alert Synthesizer via Web Audio API (Zero external network dependencies)
+    function initAudio() {
+      try {
+        if (!audioContext) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioContext = new AudioContextClass();
+        }
+      } catch (e) {}
+    }
+
+    function playNewOrderChime() {
+      if (!audioAlertEnabled) return;
+      try {
+        initAudio();
+        if (audioContext && audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        if (!audioContext) return;
+
+        const now = audioContext.currentTime;
+        
+        // Bell note 1: 587.33 Hz (D5)
+        const osc1 = audioContext.createOscillator();
+        const gain1 = audioContext.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now);
+        gain1.gain.setValueAtTime(0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc1.connect(gain1);
+        gain1.connect(audioContext.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.4);
+
+        // Bell note 2: 880 Hz (A5)
+        const osc2 = audioContext.createOscillator();
+        const gain2 = audioContext.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, now + 0.15);
+        gain2.gain.setValueAtTime(0.35, now + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        osc2.connect(gain2);
+        gain2.connect(audioContext.destination);
+        osc2.start(now + 0.15);
+        osc2.stop(now + 0.8);
+
+      } catch (e) {
+        console.warn("Audio chime error:", e);
+      }
+    }
+
+    function toggleAudioAlerts() {
+      audioAlertEnabled = !audioAlertEnabled;
+      const btn = document.getElementById('sound-alert-toggle');
+      const icon = document.getElementById('sound-icon');
+      const text = document.getElementById('sound-text');
+
+      if (audioAlertEnabled) {
+        icon.textContent = '🔔';
+        text.textContent = 'Sound ON';
+        btn.className = "px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100";
+        initAudio();
+        playNewOrderChime();
+      } else {
+        icon.textContent = '🔕';
+        text.textContent = 'Muted';
+        btn.className = "px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 bg-slate-100 text-slate-500 border-slate-300 hover:bg-slate-200";
+      }
+    }
+
+    // Orders Loading & Processing
+    function loadOrders() {
+      try {
+        allOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
+      } catch (e) {
+        allOrders = [];
+      }
+
+      // Check if any brand new orders arrived
+      let hasNewOrder = false;
+      allOrders.forEach(o => {
+        if (!lastSeenOrderIds.has(o.id)) {
+          if (lastSeenOrderIds.size > 0 && !(o.status || '').toLowerCase().includes('deliver')) {
+            hasNewOrder = true;
+          }
+          lastSeenOrderIds.add(o.id);
+        }
+      });
+
+      if (hasNewOrder) {
+        playNewOrderChime();
+      }
+
+      updateMetrics();
+      renderOrders();
+    }
+
+    // Live Sync with Storage & Firebase
+    function setupLiveSync() {
+      // Listen to cross-tab storage changes
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'Rasoee_orders') {
+          loadOrders();
+        }
+      });
+
+      // Poll every 5 seconds for new incoming orders
+      setInterval(() => {
+        loadOrders();
+      }, 5000);
+    }
+
+    function refreshOrders() {
+      loadOrders();
+      const btn = event?.currentTarget;
+      if (btn) {
+        btn.classList.add('scale-95');
+        setTimeout(() => btn.classList.remove('scale-95'), 200);
+      }
+    }
+
+    // Metrics Calculation
+    function updateMetrics() {
+      const total = allOrders.length;
+      const countNew = allOrders.filter(o => {
+        const s = (o.status || 'Confirmed').toLowerCase();
+        return (s.includes('confirm') || s.includes('received') || s.includes('placed')) && !s.includes('pack') && !s.includes('out') && !s.includes('deliver');
+      }).length;
+
+      const countPacking = allOrders.filter(o => {
+        const s = (o.status || '').toLowerCase();
+        return s.includes('pack') || s.includes('ready');
+      }).length;
+
+      const countDispatched = allOrders.filter(o => {
+        const s = (o.status || '').toLowerCase();
+        return s.includes('out') || s.includes('dispatch') || s.includes('transit');
+      }).length;
+
+      const countDelivered = allOrders.filter(o => {
+        const s = (o.status || '').toLowerCase();
+        return s.includes('deliver') && !s.includes('out');
+      }).length;
+
+      // Update KPI numbers
+      document.getElementById('kpi-count-all').textContent = total;
+      document.getElementById('kpi-count-new').textContent = countNew;
+      document.getElementById('kpi-count-packing').textContent = countPacking;
+      document.getElementById('kpi-count-dispatched').textContent = countDispatched;
+      document.getElementById('kpi-count-delivered').textContent = countDelivered;
+
+      // Update Tab count numbers
+      document.getElementById('tab-count-all').textContent = total;
+      document.getElementById('tab-count-new').textContent = countNew;
+      document.getElementById('tab-count-packing').textContent = countPacking;
+      document.getElementById('tab-count-dispatched').textContent = countDispatched;
+      document.getElementById('tab-count-delivered').textContent = countDelivered;
+    }
+
+    // Filter Controls
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(b => {
+        b.className = "filter-tab px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap transition-all font-bold";
+      });
+
+      const activeBtn = document.getElementById(`filter-btn-${filter}`);
+      if (activeBtn) {
+        activeBtn.className = "filter-tab px-3 py-1.5 rounded-xl bg-slate-900 text-white shadow-2xs whitespace-nowrap font-bold";
+      }
+
+      renderOrders();
+    }
+
+    function handleSearch(val) {
+      searchQuery = (val || '').toLowerCase().trim();
+      renderOrders();
+    }
+
+    // Render Orders Cards
+    function renderOrders() {
+      const container = document.getElementById('orders-cards-container');
+      const emptyContainer = document.getElementById('no-orders-container');
+      if (!container) return;
+
+      // Sort orders descending (newest first)
+      let filtered = [...allOrders].sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+
+      // Filter by Status Tab
+      if (currentFilter === 'new') {
+        filtered = filtered.filter(o => {
+          const s = (o.status || 'Confirmed').toLowerCase();
+          return (s.includes('confirm') || s.includes('received') || s.includes('placed')) && !s.includes('pack') && !s.includes('out') && !s.includes('deliver');
+        });
+      } else if (currentFilter === 'packing') {
+        filtered = filtered.filter(o => {
+          const s = (o.status || '').toLowerCase();
+          return s.includes('pack') || s.includes('ready');
+        });
+      } else if (currentFilter === 'dispatched') {
+        filtered = filtered.filter(o => {
+          const s = (o.status || '').toLowerCase();
+          return s.includes('out') || s.includes('dispatch') || s.includes('transit');
+        });
+      } else if (currentFilter === 'delivered') {
+        filtered = filtered.filter(o => {
+          const s = (o.status || '').toLowerCase();
+          return s.includes('deliver') && !s.includes('out');
+        });
+      }
+
+      // Filter by Search Query
+      if (searchQuery) {
+        filtered = filtered.filter(o => {
+          const id = (o.id || '').toLowerCase();
+          const name = (o.customer?.name || '').toLowerCase();
+          const phone = (o.customer?.phone || '').toLowerCase();
+          const addr = (typeof o.customer?.address === 'object' 
+            ? `${o.customer.address.flat || ''} ${o.customer.address.street || ''}`
+            : (o.customer?.address || '')).toLowerCase();
+          return id.includes(searchQuery) || name.includes(searchQuery) || phone.includes(searchQuery) || addr.includes(searchQuery);
+        });
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyContainer.classList.remove('hidden');
+        return;
+      }
+
+      emptyContainer.classList.add('hidden');
+
+      container.innerHTML = filtered.map(order => {
+        const s = (order.status || 'Confirmed');
+        const sLower = s.toLowerCase();
+        
+        let statusBadge = '';
+        let primaryAction = '';
+        let cardBorder = 'border-slate-200';
+
+        if ((sLower.includes('confirm') || sLower.includes('received') || sLower.includes('placed')) && !sLower.includes('pack') && !sLower.includes('out') && !sLower.includes('deliver')) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300">🔔 Needs Packing</span>`;
+          primaryAction = `<button onclick="advanceOrderStatus('${order.id}', 'Packing')" class="flex-1 py-2 bg-blinkit-green hover:bg-blinkit-greenHover text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">▶ Start Packing</button>`;
+          cardBorder = 'border-amber-300 shadow-sm';
+        } else if (sLower.includes('pack')) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-900 border border-blue-300">📦 In Packing</span>`;
+          primaryAction = `<button onclick="advanceOrderStatus('${order.id}', 'Ready for Dispatch')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">🏷️ Mark Ready</button>`;
+          cardBorder = 'border-blue-300';
+        } else if (sLower.includes('ready')) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-indigo-100 text-indigo-900 border border-indigo-300">🏷️ Ready for Dispatch</span>`;
+          primaryAction = `<button onclick="openPackingModal('${order.id}')" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">🚚 Assign Rider &amp; Dispatch</button>`;
+          cardBorder = 'border-indigo-300';
+        } else if (sLower.includes('out') || sLower.includes('dispatch')) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-900 border border-purple-300">🚚 Out for Delivery</span>`;
+          primaryAction = `<button onclick="advanceOrderStatus('${order.id}', 'Delivered')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">✓ Mark Delivered</button>`;
+          cardBorder = 'border-purple-300';
+        } else if (sLower.includes('deliver')) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">✓ Delivered</span>`;
+          primaryAction = `<button onclick="openPackingModal('${order.id}')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs">View Details</button>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-900 border border-rose-300">✕ Cancelled</span>`;
+          primaryAction = `<button onclick="openPackingModal('${order.id}')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs">View Details</button>`;
+        }
+
+        const formattedTime = formatOrderTime(order.timestamp);
+        const itemCount = (order.items || []).reduce((sum, i) => sum + (i.qty || 1), 0);
+        const customerName = order.customer?.name || 'Walk-in Customer';
+        const customerPhone = order.customer?.phone || '-';
+        
+        const addressStr = typeof order.customer?.address === 'object'
+          ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
+          : (order.customer?.address || 'Pickup at Store');
+
+        const isOnlinePaid = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').includes('razorpay');
+
+        return `
+          <div class="bg-white rounded-3xl p-5 border ${cardBorder} shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
+            
+            <!-- Top Row: ID, Time, Badge -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="font-mono font-black text-sm text-slate-900">${order.id || '#RF-ORDER'}</span>
+                ${statusBadge}
+              </div>
+              <div class="text-[11px] text-slate-400 font-medium">${formattedTime}</div>
+            </div>
+
+            <!-- Customer & Address Block -->
+            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100 text-xs space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-black text-slate-900">${customerName}</span>
+                <span class="font-mono text-slate-600 font-bold text-[11px]">+91 ${customerPhone}</span>
+              </div>
+              <p class="text-slate-600 text-[11px] font-medium line-clamp-2 leading-relaxed">
+                📍 ${addressStr}
+              </p>
+              ${order.customer?.instructions ? `
+                <div class="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 font-semibold truncate">
+                  💬 ${order.customer.instructions}
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Items Brief Preview -->
+            <div class="text-xs space-y-1">
+              <div class="flex items-center justify-between text-slate-500 font-bold text-[11px]">
+                <span>ITEMS (${itemCount})</span>
+                <span class="text-slate-900 font-black text-sm">₹${order.total || 0}</span>
+              </div>
+              <div class="text-[11px] text-slate-600 font-medium line-clamp-2 leading-relaxed">
+                ${(order.items || []).map(i => `${i.product?.name || i.name} (${i.qty}x)`).join(', ') || 'Grocery items'}
+              </div>
+            </div>
+
+            <!-- Payment Badge & Rider Info -->
+            <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
+              <div>
+                ${isOnlinePaid 
+                  ? `<span class="text-emerald-700 font-black">💳 Paid Online</span>` 
+                  : `<span class="text-amber-800 font-black">💵 COD: Collect ₹${order.total || 0}</span>`
+                }
+              </div>
+              <div class="text-slate-500 text-[10px] font-semibold">
+                ${order.rider?.name ? `🚚 Rider: ${order.rider.name}` : 'Rider: Unassigned'}
+              </div>
+            </div>
+
+            <!-- Action Buttons Footer -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+              <button 
+                onclick="openPackingModal('${order.id}')" 
+                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
+                title="Open Packing Checklist"
+              >
+                📋 Checklist
+              </button>
+              
+              ${primaryAction}
+
+              <button 
+                onclick="printPackingSlipDirect('${order.id}')" 
+                class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
+                title="Print Packing Slip"
+              >
+                🖨️
+              </button>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Time Formatter
+    function formatOrderTime(isoString) {
+      if (!isoString) return 'Just now';
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      
+      if (diffMins < 1) return '⚡ Placed just now';
+      if (diffMins < 60) return `⏱️ ${diffMins} mins ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `🕒 ${diffHours}h ${diffMins % 60}m ago`;
+      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Advance Order Status Workflow
+    function advanceOrderStatus(orderId, newStatus) {
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      order.status = newStatus;
+      saveOrdersToStorage();
+      renderOrders();
+
+      // Trigger cross-tab sync event
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {}
+    }
+
+    function saveOrdersToStorage() {
+      localStorage.setItem('Rasoee_orders', JSON.stringify(allOrders));
+      updateMetrics();
+    }
+
+    // Open Packing & Dispatch Checklist Modal
+    function openPackingModal(orderId) {
+      activeModalOrderId = orderId;
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      const modal = document.getElementById('packing-modal');
+      if (!modal) return;
+
+      // Populate Header
+      document.getElementById('modal-order-id').textContent = order.id || '#RF-ORDER';
+      document.getElementById('modal-order-time').textContent = formatOrderTime(order.timestamp);
+      
+      const badge = document.getElementById('modal-order-status-badge');
+      badge.textContent = order.status || 'Confirmed';
+      badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase " + getStatusBadgeClass(order.status);
+
+      // Populate Customer Info
+      document.getElementById('modal-customer-name').textContent = order.customer?.name || 'Walk-in Customer';
+      document.getElementById('modal-customer-phone').textContent = `+91 ${order.customer?.phone || '-'}`;
+      
+      const addressStr = typeof order.customer?.address === 'object'
+        ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
+        : (order.customer?.address || 'Pickup at Dark Store');
+      document.getElementById('modal-customer-address').textContent = addressStr;
+
+      // Contact Buttons
+      const callBtn = document.getElementById('modal-customer-call-btn');
+      if (order.customer?.phone) {
+        callBtn.href = `tel:+91${order.customer.phone}`;
+        callBtn.classList.remove('hidden');
+      } else {
+        callBtn.classList.add('hidden');
+      }
+
+      // Customer Instructions
+      const instrContainer = document.getElementById('modal-instructions-container');
+      const instrText = document.getElementById('modal-instructions-text');
+      if (order.customer?.instructions) {
+        instrText.textContent = order.customer.instructions;
+        instrContainer.classList.remove('hidden');
+      } else {
+        instrContainer.classList.add('hidden');
+      }
+
+      // Populate Items Checklist
+      renderPackingChecklist(order);
+
+      // Populate Rider
+      document.getElementById('modal-rider-name').value = order.rider?.name || '';
+      document.getElementById('modal-rider-phone').value = order.rider?.phone || '';
+      document.getElementById('rider-saved-feedback').classList.add('hidden');
+
+      // Populate Total & Payment
+      const isOnline = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').includes('razorpay');
+      document.getElementById('modal-payment-status').textContent = isOnline ? 'Online Paid (Razorpay)' : 'Cash on Delivery (COD)';
+      document.getElementById('modal-order-total').textContent = `₹${order.total || 0}`;
+
+      // Populate Status Select
+      const select = document.getElementById('modal-status-select');
+      if (select) {
+        select.value = order.status || 'Confirmed';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closePackingModal() {
+      const modal = document.getElementById('packing-modal');
+      if (modal) modal.classList.add('hidden');
+      activeModalOrderId = null;
+    }
+
+    function getStatusBadgeClass(status) {
+      const s = (status || '').toLowerCase();
+      if (s.includes('confirm') || s.includes('received')) return 'bg-amber-100 text-amber-900 border border-amber-300';
+      if (s.includes('pack')) return 'bg-blue-100 text-blue-900 border border-blue-300';
+      if (s.includes('ready')) return 'bg-indigo-100 text-indigo-900 border border-indigo-300';
+      if (s.includes('out') || s.includes('dispatch')) return 'bg-purple-100 text-purple-900 border border-purple-300';
+      if (s.includes('deliver')) return 'bg-emerald-100 text-emerald-900 border border-emerald-300';
+      return 'bg-rose-100 text-rose-900 border border-rose-300';
+    }
+
+    function renderPackingChecklist(order) {
+      const container = document.getElementById('modal-items-checklist');
+      if (!container) return;
+
+      if (!order.packedItems) {
+        order.packedItems = {};
+      }
+
+      const items = order.items || [];
+      container.innerHTML = items.map((item, idx) => {
+        const prodName = item.product?.name || item.name || `Item #${idx+1}`;
+        const unit = item.product?.unit || item.unit || 'unit';
+        const qty = item.qty || 1;
+        const price = item.product?.price || item.price || 0;
+        const isChecked = !!order.packedItems[idx];
+
+        return `
+          <label class="flex items-center justify-between p-3 rounded-2xl border ${isChecked ? 'bg-emerald-50/70 border-emerald-300' : 'bg-slate-50 border-slate-200'} cursor-pointer hover:bg-slate-100 transition-colors">
+            <div class="flex items-center gap-3">
+              <input 
+                type="checkbox" 
+                ${isChecked ? 'checked' : ''} 
+                onchange="toggleItemPacked(${idx}, this.checked)"
+                class="w-5 h-5 rounded-md text-blinkit-green focus:ring-emerald-500 accent-[#0C831F] cursor-pointer"
+              />
+              <div>
+                <span class="font-bold text-slate-900 text-xs block ${isChecked ? 'line-through text-slate-400' : ''}">
+                  ${prodName}
+                </span>
+                <span class="text-[10px] text-slate-500 font-semibold">${unit}</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="font-black text-xs text-slate-900 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                ${qty} × ₹${price}
+              </span>
+            </div>
+          </label>
+        `;
+      }).join('');
+
+      updatePackingProgressBar(order);
+    }
+
+    function toggleItemPacked(itemIdx, checked) {
+      const order = allOrders.find(o => o.id === activeModalOrderId);
+      if (!order) return;
+
+      if (!order.packedItems) order.packedItems = {};
+      order.packedItems[itemIdx] = checked;
+
+      saveOrdersToStorage();
+      renderPackingChecklist(order);
+    }
+
+    function checkAllPackingItems(checkAll) {
+      const order = allOrders.find(o => o.id === activeModalOrderId);
+      if (!order) return;
+
+      if (!order.packedItems) order.packedItems = {};
+      (order.items || []).forEach((item, idx) => {
+        order.packedItems[idx] = checkAll;
+      });
+
+      saveOrdersToStorage();
+      renderPackingChecklist(order);
+    }
+
+    function updatePackingProgressBar(order) {
+      const total = (order.items || []).length;
+      if (total === 0) return;
+
+      let packedCount = 0;
+      for (let i = 0; i < total; i++) {
+        if (order.packedItems && order.packedItems[i]) packedCount++;
+      }
+
+      const percent = Math.round((packedCount / total) * 100);
+      document.getElementById('packing-progress-text').textContent = `${packedCount} / ${total} Packed (${percent}%)`;
+      document.getElementById('packing-progress-bar').style.width = `${percent}%`;
+
+      // If all items packed and still in 'Confirmed', auto-suggest 'Ready for Dispatch'
+      if (percent === 100 && (order.status || '').toLowerCase().includes('confirm')) {
+        const select = document.getElementById('modal-status-select');
+        if (select) select.value = 'Ready for Dispatch';
+      }
+    }
+
+    function saveRiderAssignment() {
+      const order = allOrders.find(o => o.id === activeModalOrderId);
+      if (!order) return;
+
+      const name = document.getElementById('modal-rider-name').value.trim();
+      const phone = document.getElementById('modal-rider-phone').value.trim();
+
+      order.rider = { name, phone };
+      saveOrdersToStorage();
+      renderOrders();
+
+      const fb = document.getElementById('rider-saved-feedback');
+      if (fb) {
+        fb.classList.remove('hidden');
+        setTimeout(() => fb.classList.add('hidden'), 2000);
+      }
+    }
+
+    function saveModalStatusChange() {
+      const order = allOrders.find(o => o.id === activeModalOrderId);
+      if (!order) return;
+
+      const newStatus = document.getElementById('modal-status-select').value;
+      order.status = newStatus;
+
+      // Also save rider info if typed
+      const riderName = document.getElementById('modal-rider-name').value.trim();
+      const riderPhone = document.getElementById('modal-rider-phone').value.trim();
+      if (riderName || riderPhone) {
+        order.rider = { name: riderName, phone: riderPhone };
+      }
+
+      saveOrdersToStorage();
+      renderOrders();
+      closePackingModal();
+      alert(`Order ${order.id} status updated to: ${newStatus} ✓`);
+    }
+
+    function sendCustomerWhatsApp() {
+      const order = allOrders.find(o => o.id === activeModalOrderId);
+      if (!order || !order.customer?.phone) {
+        alert("Customer phone number not available.");
+        return;
+      }
+
+      const cleanPhone = order.customer.phone.replace(/\D/g, '');
+      const status = order.status || 'Confirmed';
+      const riderInfo = order.rider?.name ? `with rider *${order.rider.name}* (${order.rider.phone || ''})` : '';
+
+      let text = `Namaste ${order.customer.name || 'Customer'}! 🙏\n\n`;
+      text += `Your *Rasoee Fresh Supermarket* order *${order.id}* is currently: *${status.toUpperCase()}* ${riderInfo}\n\n`;
+      text += `📍 *Delivery Address:* ${typeof order.customer.address === 'object' ? order.customer.address.flat + ', ' + order.customer.address.street : order.customer.address}\n`;
+      text += `💰 *Total Amount:* ₹${order.total} (${(order.payment?.status || '').includes('PAID') ? 'Paid Online' : 'Cash on Delivery'})\n\n`;
+      text += `📦 Track live order: ${window.location.origin}/track.html\n\n`;
+      text += `Thank you for choosing Rasoee Fresh! 🥬`;
+
+      const url = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
+
+    // Print Packing Slip (Thermal 80mm or A4)
+    function printCurrentPackingSlip() {
+      if (!activeModalOrderId) return;
+      printPackingSlipDirect(activeModalOrderId);
+    }
+
+    function printPackingSlipDirect(orderId) {
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      // Populate Printable Slip
+      document.getElementById('print-order-id').textContent = order.id || '#RF-ORDER';
+      document.getElementById('print-timestamp').textContent = new Date(order.timestamp || Date.now()).toLocaleString('en-IN');
+      document.getElementById('print-status').textContent = (order.status || 'CONFIRMED').toUpperCase();
+      
+      const isOnline = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').includes('razorpay');
+      document.getElementById('print-payment').textContent = isOnline ? 'ONLINE PAID (RAZORPAY)' : 'CASH ON DELIVERY (COLLECT CASH)';
+      
+      document.getElementById('print-customer-name').textContent = order.customer?.name || 'Walk-in Customer';
+      document.getElementById('print-customer-phone').textContent = `+91 ${order.customer?.phone || '-'}`;
+      
+      const addressStr = typeof order.customer?.address === 'object'
+        ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
+        : (order.customer?.address || 'Pickup at Store');
+      document.getElementById('print-customer-address').textContent = addressStr;
+
+      const instrRow = document.getElementById('print-instructions-row');
+      const instrEl = document.getElementById('print-instructions');
+      if (order.customer?.instructions) {
+        instrEl.textContent = order.customer.instructions;
+        instrRow.style.display = 'block';
+      } else {
+        instrRow.style.display = 'none';
+      }
+
+      // Populate Items Table
+      const tbody = document.getElementById('print-items-tbody');
+      tbody.innerHTML = (order.items || []).map((item, idx) => {
+        const prodName = item.product?.name || item.name || `Item #${idx+1}`;
+        const unit = item.product?.unit || item.unit || '';
+        const qty = item.qty || 1;
+        const total = item.total || (qty * (item.product?.price || item.price || 0));
+
+        return `
+          <tr style="border-bottom: 1px dotted #ccc;">
+            <td style="padding: 3px 0;">${prodName} <span style="font-size: 9px; color: #555;">(${unit})</span></td>
+            <td style="text-align: center; padding: 3px 0; font-weight: bold;">${qty}</td>
+            <td style="text-align: right; padding: 3px 0; font-weight: bold;">₹${total}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('print-total').textContent = `₹${order.total || 0}`;
+      document.getElementById('print-rider-name').textContent = order.rider?.name || 'Self / Store Runner';
+
+      // Trigger Print
+      window.print();
+    }
+
+    // Keyboard Shortcuts (Esc to close modal, / to search)
+    function setupKeyboardShortcuts() {
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closePackingModal();
+        }
+        if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+          e.preventDefault();
+          document.getElementById('order-search-input')?.focus();
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>

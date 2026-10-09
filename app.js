@@ -995,6 +995,9 @@ function handleHeaderUserClick() {
 
 // In-App Customer Login Modal Controls
 let modalActivePhone = '';
+let modalOtpTimer = null;
+let modalGeneratedOtp = '1234';
+let currentSelectedAddressTag = 'Home';
 
 function openLoginModal() {
   const modal = document.getElementById('customer-login-modal');
@@ -1018,6 +1021,41 @@ function openLoginModal() {
 function closeLoginModal() {
   const modal = document.getElementById('customer-login-modal');
   if (modal) modal.classList.add('hidden');
+  if (modalOtpTimer) {
+    clearInterval(modalOtpTimer);
+    modalOtpTimer = null;
+  }
+}
+
+function backToModalPhoneStep() {
+  document.getElementById('modal-login-step-otp')?.classList.add('hidden');
+  document.getElementById('modal-login-step-profile')?.classList.add('hidden');
+  document.getElementById('modal-login-step-phone')?.classList.remove('hidden');
+  const phoneInput = document.getElementById('modal-login-phone');
+  if (phoneInput) phoneInput.focus();
+}
+
+function startModalOtpTimer(duration = 30) {
+  if (modalOtpTimer) clearInterval(modalOtpTimer);
+  let left = duration;
+  const countEl = document.getElementById('modal-otp-countdown');
+  const timerText = document.getElementById('modal-otp-timer-text');
+  const resendBtn = document.getElementById('modal-btn-resend-otp');
+
+  if (timerText) timerText.classList.remove('hidden');
+  if (resendBtn) resendBtn.classList.add('hidden');
+  if (countEl) countEl.textContent = left;
+
+  modalOtpTimer = setInterval(() => {
+    left--;
+    if (countEl) countEl.textContent = left;
+    if (left <= 0) {
+      clearInterval(modalOtpTimer);
+      modalOtpTimer = null;
+      if (timerText) timerText.classList.add('hidden');
+      if (resendBtn) resendBtn.classList.remove('hidden');
+    }
+  }, 1000);
 }
 
 function handleModalSendOtp() {
@@ -1029,8 +1067,13 @@ function handleModalSendOtp() {
     return;
   }
   modalActivePhone = phone;
+  modalGeneratedOtp = '1234';
+
   const disp = document.getElementById('modal-otp-phone-display');
   if (disp) disp.textContent = `+91 ${phone}`;
+
+  const hint = document.getElementById('modal-otp-code-hint');
+  if (hint) hint.textContent = modalGeneratedOtp;
 
   document.getElementById('modal-login-step-phone')?.classList.add('hidden');
   document.getElementById('modal-login-step-otp')?.classList.remove('hidden');
@@ -1039,6 +1082,27 @@ function handleModalSendOtp() {
   const otpInputs = document.querySelectorAll('.modal-otp-digit');
   otpInputs.forEach(i => i.value = '');
   if (otpInputs[0]) otpInputs[0].focus();
+
+  startModalOtpTimer(30);
+}
+
+function handleModalResendOtp() {
+  modalGeneratedOtp = '1234';
+  const hint = document.getElementById('modal-otp-code-hint');
+  if (hint) hint.textContent = modalGeneratedOtp;
+
+  startModalOtpTimer(30);
+  alert(`✓ New verification code sent to +91 ${modalActivePhone}: ${modalGeneratedOtp}`);
+  autoFillModalOtp();
+}
+
+function autoFillModalOtp() {
+  const otpInputs = document.querySelectorAll('.modal-otp-digit');
+  const digits = (modalGeneratedOtp || '1234').split('');
+  otpInputs.forEach((inp, idx) => {
+    inp.value = digits[idx] || '';
+  });
+  if (otpInputs[3]) otpInputs[3].focus();
 }
 
 function handleModalVerifyOtp() {
@@ -1047,7 +1111,7 @@ function handleModalVerifyOtp() {
   otpInputs.forEach(i => code += i.value);
 
   if (code.length < 4) {
-    alert("Please enter 4-digit code.");
+    alert("Please enter the 4-digit verification code.");
     return;
   }
 
@@ -1068,6 +1132,8 @@ function handleModalVerifyOtp() {
     // New customer: ask for Name & Delivery Flat
     document.getElementById('modal-login-step-otp')?.classList.add('hidden');
     document.getElementById('modal-login-step-profile')?.classList.remove('hidden');
+    const nameInp = document.getElementById('modal-profile-name');
+    if (nameInp) nameInp.focus();
   }
 }
 
@@ -1075,6 +1141,8 @@ function handleModalSaveProfile() {
   const name = document.getElementById('modal-profile-name')?.value.trim();
   const flat = document.getElementById('modal-profile-flat')?.value.trim();
   const street = document.getElementById('modal-profile-street')?.value.trim() || 'HSR Layout';
+  const landmark = document.getElementById('modal-profile-landmark')?.value.trim() || '';
+  const tag = document.getElementById('modal-profile-tag')?.value || 'Home';
 
   if (!name || !flat) {
     alert("Please enter your name and flat/house number.");
@@ -1085,8 +1153,18 @@ function handleModalSaveProfile() {
     id: 'usr_' + Date.now().toString().slice(-6),
     name: name,
     phone: modalActivePhone,
-    address: { flat, street, city: 'Bangalore' },
-    savedAddresses: [{ type: 'Home', flat, street }],
+    email: '',
+    address: {
+      flat: flat,
+      building: '',
+      street: street,
+      landmark: landmark,
+      city: 'Bangalore - 560102',
+      tag: tag
+    },
+    savedAddresses: [
+      { type: tag, flat: flat, building: '', street: street, landmark: landmark, city: 'Bangalore - 560102', isDefault: true }
+    ],
     createdAt: new Date().toISOString(),
     orderCount: 0
   };
@@ -1110,8 +1188,9 @@ function quickModalLogin(name, phone, flat) {
     id: 'usr_' + phone.slice(-4),
     name: name,
     phone: phone,
-    address: { flat: flat, street: 'Bangalore', city: 'Bangalore' },
-    savedAddresses: [{ type: 'Home', flat: flat, street: 'Bangalore' }],
+    email: `${name.toLowerCase().replace(/\s+/g, '')}@example.com`,
+    address: { flat: flat, building: '', street: 'Bangalore', landmark: '', city: 'Bangalore - 560102', tag: 'Home' },
+    savedAddresses: [{ type: 'Home', flat: flat, building: '', street: 'Bangalore', landmark: '', city: 'Bangalore - 560102', isDefault: true }],
     createdAt: new Date().toISOString(),
     orderCount: 2
   };
@@ -1141,19 +1220,29 @@ function setCustomerSession(user) {
     state.deliveryAddress.phone = user.phone || '';
     state.deliveryAddress.flat = user.address.flat || '';
     state.deliveryAddress.street = user.address.street || '';
+    state.deliveryAddress.landmark = user.address.landmark || '';
+    state.deliveryAddress.city = user.address.city || 'Bangalore - 560102';
     localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
 
     const nameInp = document.getElementById('addr-name');
     const phoneInp = document.getElementById('addr-phone');
     const flatInp = document.getElementById('addr-flat');
     const streetInp = document.getElementById('addr-street');
+    const lmarkInp = document.getElementById('addr-landmark');
     if (nameInp) nameInp.value = user.name || '';
     if (phoneInp) phoneInp.value = user.phone || '';
     if (flatInp) flatInp.value = user.address.flat || '';
     if (streetInp) streetInp.value = user.address.street || '';
+    if (lmarkInp) lmarkInp.value = user.address.landmark || '';
   }
 
   updateHeaderUserUI();
+  populateCustomerSettingsForm();
+
+  // Push to cloud sync
+  if (typeof syncToCloud === 'function') {
+    syncToCloud();
+  }
 }
 
 function logoutCustomer() {
@@ -1165,14 +1254,14 @@ function logoutCustomer() {
   }
 }
 
-// Account & Orders Drawer Controls
+// ================= MY ACCOUNT & CUSTOMER SETTINGS DRAWER =================
 function openAccountDrawer() {
   const drawer = document.getElementById('account-drawer');
   const overlay = document.getElementById('account-drawer-overlay');
   const panel = document.getElementById('account-drawer-panel');
   if (!drawer || !overlay || !panel) return;
 
-  // Fill user details
+  // Fill user details in header
   const nameEl = document.getElementById('account-user-name');
   const phoneEl = document.getElementById('account-user-phone');
   const addrEl = document.getElementById('account-user-address');
@@ -1183,9 +1272,30 @@ function openAccountDrawer() {
     if (addrEl && state.currentUser.address) {
       addrEl.textContent = `${state.currentUser.address.flat || ''}, ${state.currentUser.address.street || ''}`;
     }
+  } else if (state.deliveryAddress) {
+    if (nameEl) nameEl.textContent = state.deliveryAddress.name || 'Customer Account';
+    if (phoneEl) phoneEl.textContent = state.deliveryAddress.phone ? `+91 ${state.deliveryAddress.phone}` : '+91 98765 43210';
+    if (addrEl && state.deliveryAddress.flat) {
+      addrEl.textContent = `${state.deliveryAddress.flat}, ${state.deliveryAddress.street || ''}`;
+    }
   }
 
+  // Update order count badge
+  let allOrders = [];
+  try {
+    allOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
+  } catch (e) {
+    allOrders = [];
+  }
+  const userPhone = state.currentUser?.phone || state.deliveryAddress?.phone;
+  const userOrders = userPhone 
+    ? allOrders.filter(o => !o.customer?.phone || o.customer.phone === userPhone || o.customer.phone.includes(userPhone))
+    : allOrders;
+  const badgeEl = document.getElementById('account-tab-order-badge');
+  if (badgeEl) badgeEl.textContent = userOrders.length;
+
   renderAccountOrders();
+  populateCustomerSettingsForm();
 
   drawer.classList.remove('hidden');
   void drawer.offsetWidth;
@@ -1204,6 +1314,366 @@ function closeAccountDrawer() {
   setTimeout(() => {
     drawer.classList.add('hidden');
   }, 300);
+}
+
+function openCustomerProfileSettingsDrawer() {
+  toggleCartDrawer(false);
+  openAccountDrawer();
+  setAccountDrawerTab('settings');
+}
+
+function setAccountDrawerTab(tab) {
+  const ordersView = document.getElementById('account-view-orders');
+  const settingsView = document.getElementById('account-view-settings');
+  const ordersBtn = document.getElementById('account-tab-btn-orders');
+  const settingsBtn = document.getElementById('account-tab-btn-settings');
+
+  if (tab === 'settings') {
+    if (ordersView) ordersView.classList.add('hidden');
+    if (settingsView) settingsView.classList.remove('hidden');
+
+    if (ordersBtn) {
+      ordersBtn.className = "py-2.5 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-900 transition-all flex items-center gap-1.5 font-bold";
+    }
+    if (settingsBtn) {
+      settingsBtn.className = "py-2.5 px-3 border-b-2 border-blinkit-green text-blinkit-green font-black transition-all flex items-center gap-1.5";
+    }
+
+    populateCustomerSettingsForm();
+  } else {
+    if (ordersView) ordersView.classList.remove('hidden');
+    if (settingsView) settingsView.classList.add('hidden');
+
+    if (ordersBtn) {
+      ordersBtn.className = "py-2.5 px-3 border-b-2 border-blinkit-green text-blinkit-green font-black transition-all flex items-center gap-1.5";
+    }
+    if (settingsBtn) {
+      settingsBtn.className = "py-2.5 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-900 transition-all flex items-center gap-1.5 font-bold";
+    }
+
+    renderAccountOrders();
+  }
+}
+
+function setCustomerAddressTag(tag) {
+  currentSelectedAddressTag = tag || 'Home';
+  const tags = ['Home', 'Work', 'Other'];
+  tags.forEach(t => {
+    const btn = document.getElementById(`tag-btn-${t}`);
+    if (btn) {
+      if (t === currentSelectedAddressTag) {
+        btn.className = "px-2 py-0.5 rounded-lg text-[10px] font-bold bg-green-100 text-green-800 border border-green-300 shadow-2xs";
+      } else {
+        btn.className = "px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200";
+      }
+    }
+  });
+}
+
+function populateCustomerSettingsForm() {
+  const user = state.currentUser || {};
+  const addr = user.address || state.deliveryAddress || {};
+
+  const nameInput = document.getElementById('cust-setting-name');
+  const phoneInput = document.getElementById('cust-setting-phone');
+  const emailInput = document.getElementById('cust-setting-email');
+  const flatInput = document.getElementById('cust-setting-flat');
+  const bldgInput = document.getElementById('cust-setting-building');
+  const streetInput = document.getElementById('cust-setting-street');
+  const lmarkInput = document.getElementById('cust-setting-landmark');
+  const cityInput = document.getElementById('cust-setting-city');
+  const instSelect = document.getElementById('cust-setting-instruction');
+
+  if (nameInput) nameInput.value = user.name || state.deliveryAddress?.name || '';
+  if (phoneInput) {
+    const rawPhone = user.phone || state.deliveryAddress?.phone || '';
+    phoneInput.value = rawPhone ? (rawPhone.startsWith('+91') ? rawPhone : `+91 ${rawPhone}`) : '+91 98765 43210';
+  }
+  if (emailInput) emailInput.value = user.email || '';
+  if (flatInput) flatInput.value = addr.flat || '';
+  if (bldgInput) bldgInput.value = addr.building || '';
+  if (streetInput) streetInput.value = addr.street || '';
+  if (lmarkInput) lmarkInput.value = addr.landmark || '';
+  if (cityInput) cityInput.value = addr.city || 'Bangalore - 560102';
+  if (instSelect && user.instruction) instSelect.value = user.instruction;
+
+  setCustomerAddressTag(addr.tag || 'Home');
+  renderSavedAddressesList();
+}
+
+function renderSavedAddressesList() {
+  const container = document.getElementById('cust-saved-addresses-list');
+  if (!container) return;
+
+  const user = state.currentUser;
+  let saved = (user && Array.isArray(user.savedAddresses) && user.savedAddresses.length > 0)
+    ? user.savedAddresses
+    : [];
+
+  if (saved.length === 0 && user && user.address && (user.address.flat || user.address.street)) {
+    saved = [{
+      type: user.address.tag || 'Home',
+      flat: user.address.flat || '',
+      building: user.address.building || '',
+      street: user.address.street || '',
+      landmark: user.address.landmark || '',
+      city: user.address.city || 'Bangalore - 560102',
+      isDefault: true
+    }];
+    user.savedAddresses = saved;
+  }
+
+  if (saved.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-3 text-gray-400 text-[11px] bg-gray-50 rounded-xl border border-dashed border-gray-200">
+        No additional addresses saved yet. Click "➕ Add Another" to save Work or Family addresses.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = saved.map((item, index) => {
+    const isPrimary = item.isDefault || index === 0;
+    const tagEmoji = item.type === 'Work' ? '🏢' : (item.type === 'Other' ? '📍' : '🏠');
+    const fullText = [item.flat, item.building, item.street, item.landmark].filter(Boolean).join(', ');
+
+    return `
+      <div class="p-2.5 rounded-xl border ${isPrimary ? 'bg-green-50/60 border-green-200' : 'bg-gray-50 border-gray-200'} flex items-center justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs">${tagEmoji}</span>
+            <span class="font-bold text-gray-900 text-xs">${item.type || 'Address'}</span>
+            ${isPrimary ? '<span class="bg-green-100 text-green-800 text-[9px] font-black px-1.5 py-0.2 rounded-full">Primary</span>' : ''}
+          </div>
+          <p class="text-[11px] text-gray-600 truncate mt-0.5" title="${escapeHtml(fullText)}">${escapeHtml(fullText)}</p>
+        </div>
+        <div class="flex items-center gap-1">
+          ${!isPrimary ? `
+            <button type="button" onclick="setPrimarySavedAddress(${index})" class="px-2 py-1 bg-white hover:bg-green-50 text-blinkit-green border border-green-200 rounded-lg text-[10px] font-bold">
+              Use
+            </button>
+          ` : ''}
+          ${saved.length > 1 ? `
+            <button type="button" onclick="deleteSavedAddress(${index})" class="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 text-xs" title="Remove address">
+              🗑️
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function setPrimarySavedAddress(index) {
+  if (!state.currentUser || !state.currentUser.savedAddresses) return;
+  const list = state.currentUser.savedAddresses;
+  if (!list[index]) return;
+
+  list.forEach((item, i) => item.isDefault = (i === index));
+  const chosen = list[index];
+
+  const flatInput = document.getElementById('cust-setting-flat');
+  const bldgInput = document.getElementById('cust-setting-building');
+  const streetInput = document.getElementById('cust-setting-street');
+  const lmarkInput = document.getElementById('cust-setting-landmark');
+  const cityInput = document.getElementById('cust-setting-city');
+
+  if (flatInput) flatInput.value = chosen.flat || '';
+  if (bldgInput) bldgInput.value = chosen.building || '';
+  if (streetInput) streetInput.value = chosen.street || '';
+  if (lmarkInput) lmarkInput.value = chosen.landmark || '';
+  if (cityInput) cityInput.value = chosen.city || 'Bangalore - 560102';
+
+  setCustomerAddressTag(chosen.type || 'Home');
+  saveCustomerProfileSettings();
+}
+
+function deleteSavedAddress(index) {
+  if (!state.currentUser || !state.currentUser.savedAddresses) return;
+  if (confirm("Remove this saved address?")) {
+    state.currentUser.savedAddresses.splice(index, 1);
+    saveCustomerProfileSettings();
+  }
+}
+
+function addNewAddressSlot() {
+  const flat = prompt("Enter Flat / House / Floor number:");
+  if (!flat) return;
+  const street = prompt("Enter Street / Building / Locality:", "HSR Layout, Bangalore");
+  if (!street) return;
+  const typePrompt = prompt("Address Tag (Home, Work, or Other):", "Work");
+  const type = (typePrompt && ['Home', 'Work', 'Other'].includes(typePrompt.trim())) ? typePrompt.trim() : 'Other';
+
+  if (!state.currentUser) {
+    alert("Please log in to save multiple addresses.");
+    openLoginModal();
+    return;
+  }
+
+  if (!Array.isArray(state.currentUser.savedAddresses)) {
+    state.currentUser.savedAddresses = [];
+  }
+
+  state.currentUser.savedAddresses.push({
+    type: type,
+    flat: flat.trim(),
+    building: '',
+    street: street.trim(),
+    landmark: '',
+    city: 'Bangalore - 560102',
+    isDefault: false
+  });
+
+  saveCustomerProfileSettings();
+  renderSavedAddressesList();
+}
+
+function saveCustomerProfileSettings() {
+  const nameInput = document.getElementById('cust-setting-name');
+  const emailInput = document.getElementById('cust-setting-email');
+  const flatInput = document.getElementById('cust-setting-flat');
+  const bldgInput = document.getElementById('cust-setting-building');
+  const streetInput = document.getElementById('cust-setting-street');
+  const lmarkInput = document.getElementById('cust-setting-landmark');
+  const cityInput = document.getElementById('cust-setting-city');
+  const instSelect = document.getElementById('cust-setting-instruction');
+
+  const name = nameInput ? nameInput.value.trim() : '';
+  const email = emailInput ? emailInput.value.trim() : '';
+  const flat = flatInput ? flatInput.value.trim() : '';
+  const building = bldgInput ? bldgInput.value.trim() : '';
+  const street = streetInput ? streetInput.value.trim() : '';
+  const landmark = lmarkInput ? lmarkInput.value.trim() : '';
+  const city = cityInput ? cityInput.value.trim() : 'Bangalore - 560102';
+  const instruction = instSelect ? instSelect.value : 'Leave at door & ring bell';
+  const tag = currentSelectedAddressTag || 'Home';
+
+  if (!name) {
+    alert("Please enter customer name.");
+    nameInput?.focus();
+    return;
+  }
+  if (!flat || !street) {
+    alert("Please enter flat/house and street for delivery.");
+    if (!flat) flatInput?.focus();
+    else streetInput?.focus();
+    return;
+  }
+
+  // Ensure current user session exists
+  if (!state.currentUser) {
+    state.currentUser = {
+      id: 'usr_' + Date.now().toString().slice(-6),
+      name: name,
+      phone: state.deliveryAddress.phone || '9876543210',
+      email: email,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  state.currentUser.name = name;
+  state.currentUser.email = email;
+  state.currentUser.instruction = instruction;
+  state.currentUser.address = {
+    flat: flat,
+    building: building,
+    street: street,
+    landmark: landmark,
+    city: city,
+    tag: tag
+  };
+
+  // Maintain saved addresses list
+  if (!Array.isArray(state.currentUser.savedAddresses)) {
+    state.currentUser.savedAddresses = [];
+  }
+  let primaryFound = false;
+  state.currentUser.savedAddresses.forEach(a => {
+    if (a.isDefault) {
+      a.flat = flat;
+      a.building = building;
+      a.street = street;
+      a.landmark = landmark;
+      a.city = city;
+      a.type = tag;
+      primaryFound = true;
+    }
+  });
+  if (!primaryFound) {
+    state.currentUser.savedAddresses.unshift({
+      type: tag,
+      flat: flat,
+      building: building,
+      street: street,
+      landmark: landmark,
+      city: city,
+      isDefault: true
+    });
+  }
+
+  // Save to localStorage
+  localStorage.setItem('Rasoee_current_user', JSON.stringify(state.currentUser));
+
+  // Update in Rasoee_users database
+  let users = [];
+  try {
+    users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
+  } catch (e) {
+    users = [];
+  }
+  const uIdx = users.findIndex(u => u.phone === state.currentUser.phone);
+  if (uIdx >= 0) {
+    users[uIdx] = { ...users[uIdx], ...state.currentUser };
+  } else {
+    users.push(state.currentUser);
+  }
+  localStorage.setItem('Rasoee_users', JSON.stringify(users));
+
+  // Sync to checkout delivery address
+  state.deliveryAddress.name = name;
+  state.deliveryAddress.phone = state.currentUser.phone;
+  state.deliveryAddress.flat = flat;
+  state.deliveryAddress.street = street;
+  state.deliveryAddress.landmark = landmark;
+  state.deliveryAddress.city = city;
+  localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
+
+  // Sync to cart checkout inputs
+  const nameInp = document.getElementById('addr-name');
+  const phoneInp = document.getElementById('addr-phone');
+  const flatInp = document.getElementById('addr-flat');
+  const streetInp = document.getElementById('addr-street');
+  const lmarkInp = document.getElementById('addr-landmark');
+  if (nameInp) nameInp.value = name;
+  if (phoneInp) phoneInp.value = state.currentUser.phone;
+  if (flatInp) flatInp.value = flat;
+  if (streetInp) streetInp.value = street;
+  if (lmarkInp) lmarkInp.value = landmark;
+
+  // Update UI headers
+  updateHeaderUserUI();
+
+  const drawerName = document.getElementById('account-user-name');
+  const drawerPhone = document.getElementById('account-user-phone');
+  const drawerAddr = document.getElementById('account-user-address');
+  if (drawerName) drawerName.textContent = name;
+  if (drawerPhone) drawerPhone.textContent = `+91 ${state.currentUser.phone}`;
+  if (drawerAddr) drawerAddr.textContent = `${flat}, ${street}`;
+
+  // Sync to Cloud
+  if (typeof syncToCloud === 'function') {
+    syncToCloud();
+  }
+
+  // Render updated list
+  renderSavedAddressesList();
+
+  // Show success toast
+  const successMsg = document.getElementById('settings-save-success-msg');
+  if (successMsg) {
+    successMsg.classList.remove('hidden');
+    setTimeout(() => successMsg.classList.add('hidden'), 3500);
+  }
 }
 
 function renderAccountOrders() {
@@ -1693,17 +2163,38 @@ function setupEventListeners() {
     }
   });
 
-  // Modal OTP inputs auto-advance
+  // Modal OTP inputs auto-advance, backspace navigation, paste handling, and Enter submit
   const otpInputs = document.querySelectorAll('.modal-otp-digit');
   otpInputs.forEach((input, index) => {
     input.addEventListener('input', (e) => {
-      if (e.target.value.length === 1 && index < otpInputs.length - 1) {
+      const val = e.target.value.replace(/\D/g, '');
+      e.target.value = val ? val.slice(-1) : '';
+      if (e.target.value && index < otpInputs.length - 1) {
         otpInputs[index + 1].focus();
       }
     });
+
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Backspace' && !e.target.value && index > 0) {
         otpInputs[index - 1].focus();
+      } else if (e.key === 'Enter') {
+        handleModalVerifyOtp();
+      }
+    });
+
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      if (text) {
+        for (let i = 0; i < otpInputs.length; i++) {
+          otpInputs[i].value = text[i] || '';
+        }
+        if (text.length >= 4) {
+          otpInputs[3].focus();
+          setTimeout(handleModalVerifyOtp, 150);
+        } else if (otpInputs[text.length]) {
+          otpInputs[text.length].focus();
+        }
       }
     });
   });

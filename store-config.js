@@ -120,11 +120,14 @@ const DEFAULT_CONFIG = {
     directPhotoListOrder: true,
   },
 
-  // Security & Manager Access Gate
+  // Security & Access Gate (Admin & Store Operator)
   security: {
     adminUser: "admin",
     adminPassword: "admin@rasoee2026",
     adminPin: "7890",
+    operatorUser: "operator",
+    operatorPassword: "operator@rasoee2026",
+    operatorPin: "1234",
     sessionTimeoutHours: 24,
     requireLogin: true
   },
@@ -228,6 +231,17 @@ function updateAdminSecurityCredentials(newUsername, newPassword, newPin) {
     adminUser: newUsername ? String(newUsername).trim() : currentSec.adminUser,
     adminPassword: newPassword ? String(newPassword).trim() : currentSec.adminPassword,
     adminPin: newPin ? String(newPin).trim() : currentSec.adminPin
+  };
+  return updateStoreConfig({ security: updatedSec });
+}
+
+function updateOperatorSecurityCredentials(newUsername, newPassword, newPin) {
+  const currentSec = getAdminSecurityConfig();
+  const updatedSec = {
+    ...currentSec,
+    operatorUser: newUsername ? String(newUsername).trim() : (currentSec.operatorUser || 'operator'),
+    operatorPassword: newPassword ? String(newPassword).trim() : (currentSec.operatorPassword || 'operator@rasoee2026'),
+    operatorPin: newPin ? String(newPin).trim() : (currentSec.operatorPin || '1234')
   };
   return updateStoreConfig({ security: updatedSec });
 }
@@ -446,6 +460,8 @@ async function syncToCloud() {
   if (safeConfig.security) {
     delete safeConfig.security.adminPassword;
     delete safeConfig.security.adminPin;
+    delete safeConfig.security.operatorPassword;
+    delete safeConfig.security.operatorPin;
   }
 
   const payload = {

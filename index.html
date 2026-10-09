@@ -260,6 +260,9 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
+          <a href="operator.html" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1" title="Store staff picking &amp; dispatch terminal">
+            <span>📦 Operator Station</span>
+          </a>
           <a href="admin.html" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1">
             <span>🏢 Outlet & Store Settings</span>
           </a>
@@ -439,7 +442,12 @@
                 <span>📍</span>
                 <span>Delivery Address & Contact</span>
               </h5>
-              <span class="text-[10px] text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded">Auto-Saved</span>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded">Auto-Saved</span>
+                <button type="button" onclick="openCustomerProfileSettingsDrawer()" class="text-[10px] text-blinkit-green font-bold hover:underline flex items-center gap-0.5" title="Open storefront settings to manage addresses">
+                  <span>⚙️ Settings</span>
+                </button>
+              </div>
             </div>
 
             <div class="grid grid-cols-2 gap-2">
@@ -944,57 +952,82 @@
         </div>
 
         <!-- STEP 2: OTP INPUT -->
-        <div id="modal-login-step-otp" class="space-y-3 hidden">
+        <div id="modal-login-step-otp" class="space-y-3.5 hidden">
           <div class="text-center">
             <h5 class="text-xs font-black text-gray-900">Enter Verification Code</h5>
-            <p class="text-[11px] text-gray-500">Sent to <strong id="modal-otp-phone-display">+91 9876543210</strong></p>
+            <p class="text-[11px] text-gray-500">
+              OTP sent to <strong id="modal-otp-phone-display">+91 9876543210</strong>
+              <button onclick="backToModalPhoneStep()" class="text-blinkit-green font-bold ml-1 hover:underline text-[11px]">Edit</button>
+            </p>
           </div>
 
-          <div class="flex justify-center gap-2 my-2">
-            <input type="text" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-lg font-black rounded-xl border border-gray-300 focus:border-blinkit-green outline-none bg-gray-50" />
-            <input type="text" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-lg font-black rounded-xl border border-gray-300 focus:border-blinkit-green outline-none bg-gray-50" />
-            <input type="text" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-lg font-black rounded-xl border border-gray-300 focus:border-blinkit-green outline-none bg-gray-50" />
-            <input type="text" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-lg font-black rounded-xl border border-gray-300 focus:border-blinkit-green outline-none bg-gray-50" />
+          <div class="flex justify-center gap-2.5 my-2">
+            <input type="text" maxlength="1" class="modal-otp-digit w-11 h-13 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <input type="text" maxlength="1" class="modal-otp-digit w-11 h-13 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <input type="text" maxlength="1" class="modal-otp-digit w-11 h-13 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <input type="text" maxlength="1" class="modal-otp-digit w-11 h-13 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
           </div>
 
-          <div class="bg-amber-50 text-amber-900 text-[11px] p-2 rounded-xl flex items-center justify-between">
-            <span>💡 Demo code is <strong>1234</strong></span>
-            <button onclick="document.querySelectorAll('.modal-otp-digit').forEach((el,i)=>el.value=['1','2','3','4'][i])" class="text-[10px] font-bold underline">Auto-fill</button>
+          <div class="bg-amber-50 border border-amber-200 text-amber-900 text-[11px] p-2.5 rounded-xl flex items-center justify-between">
+            <span>💡 Verification code: <strong id="modal-otp-code-hint">1234</strong></span>
+            <button onclick="autoFillModalOtp()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold px-2 py-0.5 rounded text-[10px]">Auto-fill</button>
           </div>
 
           <button 
             onclick="handleModalVerifyOtp()"
-            class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-2.5 rounded-xl font-black text-xs shadow transition-all active:scale-95"
+            class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-3 rounded-2xl font-black text-xs shadow-md transition-all active:scale-95"
           >
             Verify &amp; Sign In
           </button>
+
+          <div class="text-center pt-1">
+            <span id="modal-otp-timer-text" class="text-[11px] text-gray-500 font-semibold">Resend OTP in <strong id="modal-otp-countdown" class="text-blinkit-green">30</strong>s</span>
+            <button id="modal-btn-resend-otp" onclick="handleModalResendOtp()" class="text-[11px] text-blinkit-green font-bold hover:underline hidden">
+              Didn't receive code? Resend OTP
+            </button>
+          </div>
         </div>
 
         <!-- STEP 3: NEW USER PROFILE -->
-        <div id="modal-login-step-profile" class="space-y-2.5 text-xs hidden">
+        <div id="modal-login-step-profile" class="space-y-3 text-xs hidden">
           <div class="text-center pb-1">
-            <h5 class="font-black text-gray-900">Almost Done! 🎉</h5>
-            <p class="text-[11px] text-gray-500">Enter your name &amp; address for grocery delivery</p>
+            <h5 class="font-black text-gray-900">Welcome to Rasoee Fresh! 🎉</h5>
+            <p class="text-[11px] text-gray-500">Provide delivery address for doorstep grocery dispatch</p>
           </div>
 
           <div>
-            <label class="block font-bold text-gray-700 mb-0.5">Your Full Name *</label>
-            <input type="text" id="modal-profile-name" placeholder="e.g. Vikram Rao" class="w-full p-2 border rounded-xl outline-none focus:border-blinkit-green font-semibold" />
+            <label class="block font-bold text-gray-700 mb-1">Your Full Name *</label>
+            <input type="text" id="modal-profile-name" placeholder="e.g. Vikram Rao" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-semibold" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Flat / House No *</label>
+              <input type="text" id="modal-profile-flat" placeholder="e.g. Flat 302" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-medium" />
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Tag</label>
+              <select id="modal-profile-tag" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-bold bg-white">
+                <option value="Home">🏠 Home</option>
+                <option value="Work">🏢 Work</option>
+                <option value="Other">📍 Other</option>
+              </select>
+            </div>
           </div>
 
           <div>
-            <label class="block font-bold text-gray-700 mb-0.5">Flat / House No. *</label>
-            <input type="text" id="modal-profile-flat" placeholder="e.g. Flat 302, Green Glen" class="w-full p-2 border rounded-xl outline-none focus:border-blinkit-green" />
+            <label class="block font-bold text-gray-700 mb-1">Street / Building / Area *</label>
+            <input type="text" id="modal-profile-street" placeholder="e.g. Green Glen Layout, HSR Sector 2" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-medium" />
           </div>
 
           <div>
-            <label class="block font-bold text-gray-700 mb-0.5">Street / Locality</label>
-            <input type="text" id="modal-profile-street" placeholder="e.g. Sector 2, HSR Layout" class="w-full p-2 border rounded-xl outline-none focus:border-blinkit-green" />
+            <label class="block font-bold text-gray-700 mb-1">Landmark (Optional)</label>
+            <input type="text" id="modal-profile-landmark" placeholder="e.g. Near BDA Complex" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-medium" />
           </div>
 
           <button 
             onclick="handleModalSaveProfile()"
-            class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-2.5 rounded-xl font-black text-xs shadow transition-all active:scale-95"
+            class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-3 rounded-2xl font-black text-xs shadow-md transition-all active:scale-95"
           >
             Save &amp; Start Shopping ➔
           </button>
@@ -1005,7 +1038,7 @@
     </div>
   </div>
 
-  <!-- ================= "MY ACCOUNT & ORDERS" SLIDE DRAWER ================= -->
+  <!-- ================= "MY ACCOUNT & CUSTOMER SETTINGS" SLIDE DRAWER ================= -->
   <div id="account-drawer" class="fixed inset-0 z-50 hidden">
     <div id="account-drawer-overlay" onclick="closeAccountDrawer()" class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
     <div id="account-drawer-panel" class="absolute right-0 top-0 bottom-0 max-w-md w-full bg-white shadow-2xl flex flex-col transition-transform duration-300 translate-x-full">
@@ -1019,42 +1052,223 @@
           <div>
             <div class="flex items-center gap-1.5">
               <h4 class="font-black text-sm text-gray-900" id="account-user-name">Customer Account</h4>
-              <span class="bg-green-100 text-green-800 text-[9px] font-black px-1.5 py-0.5 rounded-full">VIP Club</span>
+              <span class="bg-green-100 text-green-800 text-[9px] font-black px-1.5 py-0.5 rounded-full">Active Customer</span>
             </div>
-            <div class="text-xs text-gray-500" id="account-user-phone">+91 98765 43210</div>
+            <div class="text-xs text-gray-500 font-semibold" id="account-user-phone">+91 98765 43210</div>
           </div>
         </div>
-        <button onclick="closeAccountDrawer()" class="text-gray-400 hover:text-gray-700 p-2 font-bold text-sm">✕</button>
+        <button onclick="closeAccountDrawer()" class="text-gray-400 hover:text-gray-700 p-2 font-bold text-sm rounded-xl hover:bg-gray-200">✕</button>
       </div>
 
-      <!-- Drawer Content -->
-      <div class="p-5 overflow-y-auto flex-1 space-y-5">
+      <!-- Navigation Tabs: My Orders vs Customer Details & Storefront Settings -->
+      <div class="flex border-b border-gray-200 bg-gray-50 px-4 pt-1 text-xs font-bold">
+        <button 
+          id="account-tab-btn-orders" 
+          onclick="setAccountDrawerTab('orders')" 
+          class="py-2.5 px-3 border-b-2 border-blinkit-green text-blinkit-green font-black transition-all flex items-center gap-1.5"
+        >
+          <span>🧾 My Orders</span>
+          <span id="account-tab-order-badge" class="bg-green-100 text-green-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+        </button>
+        <button 
+          id="account-tab-btn-settings" 
+          onclick="setAccountDrawerTab('settings')" 
+          class="py-2.5 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-900 transition-all flex items-center gap-1.5"
+        >
+          <span>⚙️ Customer Settings</span>
+        </button>
+      </div>
+
+      <!-- Drawer Body (Scrollable) -->
+      <div class="p-5 overflow-y-auto flex-1 space-y-5 custom-scroll">
         
-        <!-- Saved Delivery Address Card -->
-        <div class="bg-green-50/60 rounded-2xl p-3.5 border border-green-200 text-xs">
-          <div class="flex items-center justify-between text-gray-500 font-bold mb-1">
-            <span>📍 PRIMARY DELIVERY ADDRESS</span>
-            <span class="text-blinkit-green text-[10px]">Active Delivery Zone</span>
+        <!-- ================= VIEW 1: ORDERS HISTORY ================= -->
+        <div id="account-view-orders" class="space-y-4">
+          <!-- Primary Delivery Address Quick Card -->
+          <div class="bg-green-50/70 rounded-2xl p-3.5 border border-green-200 text-xs">
+            <div class="flex items-center justify-between text-gray-500 font-bold mb-1">
+              <span class="text-[10px] uppercase">📍 Current Delivery Address</span>
+              <button onclick="setAccountDrawerTab('settings')" class="text-blinkit-green text-[10px] font-bold hover:underline">
+                ✏️ Edit Settings
+              </button>
+            </div>
+            <div class="font-black text-gray-900" id="account-user-address">HSR Layout, Sector 2, Bangalore</div>
           </div>
-          <div class="font-bold text-gray-900" id="account-user-address">HSR Layout, Sector 2, Bangalore</div>
+
+          <!-- Orders Section -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-black text-sm text-gray-900 flex items-center gap-2">
+                <span>🧾</span>
+                <span>Past Orders &amp; Receipts</span>
+              </h4>
+              <a href="track.html" class="text-xs text-blinkit-green font-bold hover:underline">
+                Live Map ➔
+              </a>
+            </div>
+
+            <!-- Orders List Container -->
+            <div id="account-orders-container" class="space-y-3">
+              <!-- Rendered via JavaScript -->
+            </div>
+          </div>
         </div>
 
-        <!-- Orders Section Header -->
-        <div>
-          <div class="flex items-center justify-between mb-3">
-            <h4 class="font-black text-sm text-gray-900 flex items-center gap-2">
-              <span>🧾</span>
-              <span>Past Orders &amp; Receipts</span>
-            </h4>
-            <a href="track.html" class="text-xs text-blinkit-green font-bold hover:underline">
-              Live Map ➔
-            </a>
+        <!-- ================= VIEW 2: STOREFRONT SETTINGS FOR CUSTOMER DETAILS ================= -->
+        <div id="account-view-settings" class="space-y-4 hidden">
+          
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Storefront Customer Profile</span>
+            <p class="text-[11px] text-slate-600">Your profile details are auto-filled at checkout and used for order dispatch.</p>
           </div>
 
-          <!-- Orders List Container -->
-          <div id="account-orders-container" class="space-y-3">
-            <!-- Rendered via JavaScript -->
+          <!-- Personal Information Card -->
+          <div class="space-y-3 text-xs bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs">
+            <h5 class="font-black text-sm text-gray-900 flex items-center gap-1.5 pb-2 border-b">
+              <span>👤</span>
+              <span>Personal Details</span>
+            </h5>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Customer Name *</label>
+              <input 
+                type="text" 
+                id="cust-setting-name" 
+                placeholder="e.g. Rahul Sharma" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-semibold text-sm outline-none"
+              />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Mobile Number (Verified)</label>
+                <div class="flex items-center">
+                  <input 
+                    type="tel" 
+                    id="cust-setting-phone" 
+                    class="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 font-bold text-xs outline-none cursor-not-allowed" 
+                    readonly 
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Email Address (Optional)</label>
+                <input 
+                  type="email" 
+                  id="cust-setting-email" 
+                  placeholder="e.g. rahul@example.com" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium text-xs outline-none"
+                />
+              </div>
+            </div>
           </div>
+
+          <!-- Primary Delivery Address Form -->
+          <div class="space-y-3 text-xs bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs">
+            <div class="flex items-center justify-between pb-2 border-b">
+              <h5 class="font-black text-sm text-gray-900 flex items-center gap-1.5">
+                <span>📍</span>
+                <span>Delivery Address</span>
+              </h5>
+              <div class="flex items-center gap-1" id="cust-tag-pills">
+                <button type="button" onclick="setCustomerAddressTag('Home')" id="tag-btn-Home" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-green-100 text-green-800 border border-green-300">🏠 Home</button>
+                <button type="button" onclick="setCustomerAddressTag('Work')" id="tag-btn-Work" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">🏢 Work</button>
+                <button type="button" onclick="setCustomerAddressTag('Other')" id="tag-btn-Other" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">📍 Other</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Flat / House / Floor *</label>
+                <input 
+                  type="text" 
+                  id="cust-setting-flat" 
+                  placeholder="e.g. Flat 301, Tower B" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-semibold outline-none"
+                />
+              </div>
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Building / Society</label>
+                <input 
+                  type="text" 
+                  id="cust-setting-building" 
+                  placeholder="e.g. Sunshine Apartments" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Street / Locality / Sector *</label>
+              <input 
+                type="text" 
+                id="cust-setting-street" 
+                placeholder="e.g. 19th Main Road, HSR Sector 2" 
+                class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-semibold outline-none"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">Landmark (Optional)</label>
+                <input 
+                  type="text" 
+                  id="cust-setting-landmark" 
+                  placeholder="e.g. Near BDA Complex" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium outline-none"
+                />
+              </div>
+              <div>
+                <label class="block font-bold text-gray-700 mb-1">City &amp; Pincode</label>
+                <input 
+                  type="text" 
+                  id="cust-setting-city" 
+                  placeholder="e.g. Bangalore - 560102" 
+                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-gray-700 mb-1">Default Delivery Instruction</label>
+              <select id="cust-setting-instruction" class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium bg-white outline-none">
+                <option value="Leave at door & ring bell">🔔 Leave at door &amp; ring bell</option>
+                <option value="Handover directly to me">🤝 Handover directly to me</option>
+                <option value="Please call before reaching">📞 Please call before reaching</option>
+                <option value="Leave with society security guard">🛡️ Leave with society security guard</option>
+                <option value="Do not ring bell (baby sleeping)">🤫 Do not ring bell (baby sleeping)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Multiple Saved Addresses Section -->
+          <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3 text-xs">
+            <div class="flex items-center justify-between pb-1 border-b">
+              <span class="font-black text-gray-900">Saved Addresses Portfolio</span>
+              <button type="button" onclick="addNewAddressSlot()" class="text-blinkit-green font-bold text-[11px] hover:underline flex items-center gap-1">
+                <span>➕ Add Another</span>
+              </button>
+            </div>
+
+            <div id="cust-saved-addresses-list" class="space-y-2">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="pt-2">
+            <button 
+              type="button" 
+              onclick="saveCustomerProfileSettings()" 
+              class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-3.5 rounded-2xl font-black text-xs shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5"
+            >
+              <span>💾 Save Profile &amp; Address Settings</span>
+            </button>
+            <div id="settings-save-success-msg" class="hidden text-center text-xs font-bold text-emerald-700 mt-2">
+              ✓ Customer settings saved successfully!
+            </div>
+          </div>
+
         </div>
 
       </div>

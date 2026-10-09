@@ -17,7 +17,7 @@
       ".write": true,
 
       // Prevents malicious tampering, wipeouts, and ensures no passwords/PINs are stored
-      ".validate": "newData.hasChildren(['updatedAt', 'products', 'config']) && !newData.child('config/security/adminPassword').exists() && !newData.child('config/security/adminPin').exists()",
+      ".validate": "newData.hasChildren(['updatedAt', 'products', 'config']) && !newData.child('config/security/adminPassword').exists() && !newData.child('config/security/adminPin').exists() && !newData.child('config/security/operatorPassword').exists() && !newData.child('config/security/operatorPin').exists()",
 
       // Prevent reading or writing sensitive security subnode under config
       "config": {

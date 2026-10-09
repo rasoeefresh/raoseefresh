@@ -200,6 +200,11 @@
             <span class="text-xs">↗</span>
           </a>
 
+          <a href="operator.html" target="_blank" class="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 sm:px-3.5 py-2 rounded-xl transition-all" title="Open Operator Dispatch & Packing Station">
+            <span>📦 Operator Station</span>
+            <span class="text-xs">↗</span>
+          </a>
+
           <button onclick="saveAllMasterChanges()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-black text-xs sm:text-sm px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-1.5" title="Save changes locally in browser">
             <span>💾 Save All</span>
           </button>
@@ -2008,6 +2013,33 @@
           <span class="text-[10px] text-gray-400 mt-0.5 block">4 digits (0-9) for quick mobile &amp; desktop unlock</span>
         </div>
 
+        <!-- Store Operator & Staff Access Section -->
+        <div class="border-t border-gray-200 pt-3 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-black text-indigo-950 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <span>📦</span>
+              <span>Operator &amp; Packing Station Access</span>
+            </span>
+            <span class="text-[10px] text-indigo-700 font-bold bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">Packing Staff</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-gray-700 mb-0.5">Operator User</label>
+              <input type="text" id="sec-operator-user" class="w-full p-2 rounded-xl border border-gray-300 font-bold outline-none focus:border-indigo-600" placeholder="operator" />
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-0.5">Operator PIN (4-digit)</label>
+              <input type="text" maxlength="4" id="sec-operator-pin" class="w-full p-2 rounded-xl border border-gray-300 text-center font-mono font-black text-base outline-none focus:border-indigo-600" placeholder="1234" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-gray-700 mb-0.5">Operator Password</label>
+            <input type="password" id="sec-operator-pass" class="w-full p-2 rounded-xl border border-gray-300 outline-none focus:border-indigo-600 font-mono" placeholder="operator@rasoee2026" />
+          </div>
+        </div>
+
         <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900">
           <p class="font-bold flex items-center gap-1">
             <span>🛡️</span>
@@ -2222,10 +2254,16 @@
       const userEl = document.getElementById('sec-user-input');
       const passEl = document.getElementById('sec-pass-input');
       const pinEl = document.getElementById('sec-pin-input');
+      const opUserEl = document.getElementById('sec-operator-user');
+      const opPassEl = document.getElementById('sec-operator-pass');
+      const opPinEl = document.getElementById('sec-operator-pin');
 
       if (userEl) userEl.value = sec.adminUser || 'admin';
       if (passEl) passEl.value = sec.adminPassword || 'admin@Rasoee2026';
       if (pinEl) pinEl.value = sec.adminPin || '7890';
+      if (opUserEl) opUserEl.value = sec.operatorUser || 'operator';
+      if (opPassEl) opPassEl.value = sec.operatorPassword || 'operator@rasoee2026';
+      if (opPinEl) opPinEl.value = sec.operatorPin || '1234';
 
       const modal = document.getElementById('security-modal');
       if (modal) {
@@ -2247,17 +2285,25 @@
       const newU = document.getElementById('sec-user-input')?.value.trim();
       const newP = document.getElementById('sec-pass-input')?.value.trim();
       const newPin = document.getElementById('sec-pin-input')?.value.trim();
+      
+      const newOpU = document.getElementById('sec-operator-user')?.value.trim() || 'operator';
+      const newOpP = document.getElementById('sec-operator-pass')?.value.trim() || 'operator@rasoee2026';
+      const newOpPin = document.getElementById('sec-operator-pin')?.value.trim() || '1234';
 
       if (!newU || !newP || !newPin || newPin.length !== 4) {
-        alert("Please provide a valid Username, Password, and a 4-digit numeric PIN.");
+        alert("Please provide a valid Username, Password, and a 4-digit numeric PIN for the Store Owner.");
         return;
       }
 
       if (typeof updateAdminSecurityCredentials === 'function') {
         updateAdminSecurityCredentials(newU, newP, newPin);
-        closeSecurityModal();
-        alert("🎉 Admin credentials updated successfully!\nYour new Password and Quick PIN are now active across this browser and synced to Firebase.");
       }
+      if (typeof updateOperatorSecurityCredentials === 'function') {
+        updateOperatorSecurityCredentials(newOpU, newOpP, newOpPin);
+      }
+
+      closeSecurityModal();
+      alert("🎉 Admin & Operator credentials updated successfully!\nYour new passwords and PINs are active and synced to Firebase.");
     }
 
     function showNotificationToast(msg) {

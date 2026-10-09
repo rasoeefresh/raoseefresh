@@ -183,8 +183,9 @@
               Verify &amp; Continue
             </button>
 
-            <div class="text-center">
-              <button onclick="handleResendOtp()" id="btn-resend-otp" class="text-xs font-semibold text-gray-500 hover:text-blinkit-green">
+            <div class="text-center pt-1">
+              <span id="login-otp-timer-text" class="text-xs text-gray-500 font-semibold">Resend OTP in <strong id="login-otp-countdown" class="text-blinkit-green">30</strong>s</span>
+              <button onclick="handleResendOtp()" id="btn-resend-otp" class="text-xs font-semibold text-gray-500 hover:text-blinkit-green hidden">
                 Didn't receive code? <span class="font-bold text-blinkit-green">Resend OTP</span>
               </button>
             </div>
@@ -272,6 +273,30 @@
   <script>
     let activePhone = '';
     let generatedOtp = '1234';
+    let loginOtpTimer = null;
+
+    function startLoginOtpTimer(duration = 30) {
+      if (loginOtpTimer) clearInterval(loginOtpTimer);
+      let left = duration;
+      const countEl = document.getElementById('login-otp-countdown');
+      const timerText = document.getElementById('login-otp-timer-text');
+      const resendBtn = document.getElementById('btn-resend-otp');
+
+      if (timerText) timerText.classList.remove('hidden');
+      if (resendBtn) resendBtn.classList.add('hidden');
+      if (countEl) countEl.textContent = left;
+
+      loginOtpTimer = setInterval(() => {
+        left--;
+        if (countEl) countEl.textContent = left;
+        if (left <= 0) {
+          clearInterval(loginOtpTimer);
+          loginOtpTimer = null;
+          if (timerText) timerText.classList.add('hidden');
+          if (resendBtn) resendBtn.classList.remove('hidden');
+        }
+      }, 1000);
+    }
 
     // Auto-focus OTP digit boxes & store branding
     document.addEventListener('DOMContentLoaded', () => {
@@ -286,13 +311,34 @@
       const otpInputs = document.querySelectorAll('.otp-digit');
       otpInputs.forEach((input, index) => {
         input.addEventListener('input', (e) => {
-          if (e.target.value.length === 1 && index < otpInputs.length - 1) {
+          const val = e.target.value.replace(/\D/g, '');
+          e.target.value = val ? val.slice(-1) : '';
+          if (e.target.value && index < otpInputs.length - 1) {
             otpInputs[index + 1].focus();
           }
         });
+
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Backspace' && !e.target.value && index > 0) {
             otpInputs[index - 1].focus();
+          } else if (e.key === 'Enter') {
+            handleVerifyOtp();
+          }
+        });
+
+        input.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+          if (text) {
+            for (let i = 0; i < otpInputs.length; i++) {
+              otpInputs[i].value = text[i] || '';
+            }
+            if (text.length >= 4) {
+              otpInputs[3].focus();
+              setTimeout(handleVerifyOtp, 150);
+            } else if (otpInputs[text.length]) {
+              otpInputs[text.length].focus();
+            }
           }
         });
       });
@@ -348,14 +394,21 @@
       document.getElementById('login-step-phone').classList.add('hidden');
       document.getElementById('login-step-otp').classList.remove('hidden');
 
-      // Focus first OTP box
-      const firstOtp = document.querySelector('.otp-digit');
-      if (firstOtp) firstOtp.focus();
+      // Clear & focus first OTP box
+      const otpInputs = document.querySelectorAll('.otp-digit');
+      otpInputs.forEach(i => i.value = '');
+      if (otpInputs[0]) otpInputs[0].focus();
+
+      startLoginOtpTimer(30);
     }
 
     function backToPhoneStep() {
       document.getElementById('login-step-otp').classList.add('hidden');
       document.getElementById('login-step-phone').classList.remove('hidden');
+      if (loginOtpTimer) {
+        clearInterval(loginOtpTimer);
+        loginOtpTimer = null;
+      }
     }
 
     function fillDemoOtp() {
@@ -367,7 +420,8 @@
     }
 
     function handleResendOtp() {
-      alert("New OTP sent: 1234");
+      startLoginOtpTimer(30);
+      alert("New verification code sent to +91 " + activePhone + ": 1234");
       fillDemoOtp();
     }
 
@@ -498,6 +552,9 @@
           instructions: 'Ring doorbell and leave at door'
         };
         localStorage.setItem('Rasoee_address', JSON.stringify(addr));
+      }
+      if (typeof syncToCloud === 'function') {
+        syncToCloud();
       }
     }
 
