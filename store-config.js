@@ -660,6 +660,14 @@ function getStoredProducts() {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        parsed.forEach(p => {
+          if (p.id === 'prod-1' && p.image && p.image.includes('photo-1513558161293')) {
+            p.image = 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&auto=format&fit=crop&q=80';
+          }
+          if (p.id === 'prod-2' && p.image && p.image.includes('photo-1589985270826')) {
+            p.image = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&auto=format&fit=crop&q=80';
+          }
+        });
         return parsed;
       }
     }

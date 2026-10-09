@@ -480,6 +480,16 @@ function updateCartUI() {
     }
   }
 
+  // Adjust floating WhatsApp container to prevent overlapping mobile cart bar
+  const waContainer = document.getElementById('floating-whatsapp-container');
+  if (waContainer) {
+    if (summary.itemCount > 0 && window.innerWidth < 768) {
+      waContainer.style.bottom = '8.5rem';
+    } else {
+      waContainer.style.bottom = '';
+    }
+  }
+
   // Header Cart Button Badge
   const headerBadges = document.querySelectorAll('.js-header-cart-count');
   headerBadges.forEach(badge => {
@@ -2190,8 +2200,9 @@ function saveRecentOrder(order) {
 
 // Search & Placeholder rotation
 function setupSearchPlaceholderRotation() {
-  const searchInput = document.getElementById('search-input');
-  if (!searchInput) return;
+  const mobInput = document.getElementById('search-input');
+  const deskInput = document.getElementById('search-input-desktop');
+  if (!mobInput && !deskInput) return;
 
   const placeholders = [
     'Search "farm fresh tomatoes"...',
@@ -2204,21 +2215,51 @@ function setupSearchPlaceholderRotation() {
 
   let idx = 0;
   setInterval(() => {
-    if (document.activeElement !== searchInput && searchInput.value === '') {
-      idx = (idx + 1) % placeholders.length;
-      searchInput.setAttribute('placeholder', placeholders[idx]);
+    idx = (idx + 1) % placeholders.length;
+    const placeholder = placeholders[idx];
+    if (mobInput && document.activeElement !== mobInput && mobInput.value === '') {
+      mobInput.setAttribute('placeholder', placeholder);
+    }
+    if (deskInput && document.activeElement !== deskInput && deskInput.value === '') {
+      deskInput.setAttribute('placeholder', placeholder);
     }
   }, 3000);
 }
 
+// Search synchronization & clearing
+function handleSearchSync(val) {
+  state.searchQuery = (val || '').trimStart();
+  const mob = document.getElementById('search-input');
+  const desk = document.getElementById('search-input-desktop');
+  const mobClear = document.getElementById('search-clear-btn');
+  const deskClear = document.getElementById('search-clear-desktop-btn');
+
+  if (mob && mob.value !== state.searchQuery) mob.value = state.searchQuery;
+  if (desk && desk.value !== state.searchQuery) desk.value = state.searchQuery;
+
+  if (mobClear) mobClear.classList.toggle('hidden', !state.searchQuery);
+  if (deskClear) deskClear.classList.toggle('hidden', !state.searchQuery);
+
+  renderProducts();
+}
+
+function clearSearchInput() {
+  handleSearchSync('');
+  const mob = document.getElementById('search-input');
+  const desk = document.getElementById('search-input-desktop');
+  if (mob) mob.value = '';
+  if (desk) desk.value = '';
+}
+
 // Event Listeners
 function setupEventListeners() {
-  const searchInput = document.getElementById('search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      state.searchQuery = e.target.value;
-      renderProducts();
-    });
+  const mobInput = document.getElementById('search-input');
+  if (mobInput) {
+    mobInput.addEventListener('input', (e) => handleSearchSync(e.target.value));
+  }
+  const deskInput = document.getElementById('search-input-desktop');
+  if (deskInput) {
+    deskInput.addEventListener('input', (e) => handleSearchSync(e.target.value));
   }
 
   const inputs = ['addr-name', 'addr-phone', 'addr-flat', 'addr-street', 'addr-landmark', 'addr-notes'];

@@ -79,27 +79,48 @@
   <!-- ================= TOP HEADER ================= -->
   <header class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm transition-all duration-200">
     <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-6">
+      
+      <!-- Top Row: Logo, Store Info & Actions -->
+      <div class="flex items-center justify-between h-14 sm:h-20 gap-2 sm:gap-6">
         
-        <!-- Logo -->
-        <div class="flex items-center gap-3 sm:gap-6 min-w-0">
-          <a href="#" class="flex items-center gap-2 flex-shrink-0 group">
-            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white border border-gray-100 flex items-center justify-center p-0.5 shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden">
+        <!-- Logo & Store Branding (Full width on mobile, no collision) -->
+        <div class="flex items-center gap-2 sm:gap-3.5 min-w-0 flex-1">
+          <a href="#" class="flex items-center gap-2 sm:gap-2.5 min-w-0 group">
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white border border-gray-100 flex items-center justify-center p-0.5 shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden flex-shrink-0">
               <img src="logo.svg" alt="Rasoee Fresh Logo" class="w-full h-full object-contain rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='🛒';" />
             </div>
-            <div>
+            <div class="min-w-0">
               <div class="flex items-center gap-1.5">
-                <span class="font-black text-lg sm:text-2xl tracking-tight text-blinkit-green js-store-name">Rasoee Fresh</span>
+                <span class="font-black text-base sm:text-2xl tracking-tight text-blinkit-green js-store-name truncate">Rasoee Fresh</span>
               </div>
-              <span class="block text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 js-outlet-name">Supermarket</span>
+              <span class="block text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 js-outlet-name truncate">Supermarket</span>
             </div>
           </a>
         </div>
 
-        <!-- Header Actions: WhatsApp Support, Track Order, Login, Settings & Cart -->
-        <div class="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+        <!-- Desktop Search Bar (Hidden on Mobile, Visible on Tablet/Desktop) -->
+        <div class="hidden md:flex flex-1 max-w-md mx-4">
+          <div class="relative w-full flex items-center">
+            <span class="absolute left-3.5 text-gray-400 text-sm">🔍</span>
+            <input 
+              type="text" 
+              id="search-input-desktop" 
+              placeholder='Search "farm fresh tomatoes, milk, atta..."' 
+              class="w-full pl-9 pr-9 py-2 bg-gray-100 focus:bg-white border border-transparent focus:border-blinkit-green focus:ring-2 focus:ring-green-100 rounded-xl text-xs sm:text-sm font-semibold outline-none transition-all shadow-inner"
+              oninput="handleSearchSync(this.value)"
+            />
+            <button 
+              id="search-clear-desktop-btn" 
+              onclick="clearSearchInput()" 
+              class="absolute right-3 text-gray-400 hover:text-gray-700 hidden text-xs font-bold"
+            >✕</button>
+          </div>
+        </div>
+
+        <!-- Header Actions: Settings & Cart (Login is in bottom nav on mobile) -->
+        <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           
-          <!-- Live Tracking Header Link -->
+          <!-- Live Tracking Header Link (Desktop Only) -->
           <a 
             href="track.html" 
             class="hidden md:flex items-center gap-1.5 bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-blinkit-green border border-gray-200 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95"
@@ -109,31 +130,31 @@
             <span>Track Order</span>
           </a>
 
-          <!-- Customer Login / Account Button -->
+          <!-- Customer Login / Account Button (Desktop Only: hidden on mobile to avoid overcrowding; mobile has bottom nav tab) -->
           <button 
             id="header-user-btn"
             onclick="handleHeaderUserClick()" 
-            class="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95"
+            class="hidden sm:flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95"
             title="Customer Login & Past Orders"
           >
             <span id="header-user-avatar">👤</span>
             <span id="header-user-name">Login</span>
           </button>
 
-          <!-- Quick WhatsApp Support Header Button -->
+          <!-- Quick WhatsApp Support Header Button (Desktop Only) -->
           <button 
             onclick="openWhatsAppSupportModal()" 
             class="hidden sm:flex items-center gap-1.5 bg-green-50 hover:bg-green-100 text-[#075E54] border border-green-200 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95"
             title="Chat on WhatsApp"
           >
             <svg class="w-4 h-4 fill-[#25D366]" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
-            <span class="hidden md:inline">WhatsApp</span> Support
+            <span class="hidden md:inline">WhatsApp</span>
           </button>
 
           <!-- Store Settings / Admin Modal -->
           <button 
             onclick="openStoreSettingsModal()" 
-            class="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors" 
+            class="p-1.5 sm:p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors" 
             title="Store Settings & Payment Gateway Setup"
           >
             ⚙️
@@ -142,11 +163,11 @@
           <!-- Cart Button -->
           <button 
             onclick="toggleCartDrawer(true)"
-            class="bg-blinkit-green hover:bg-blinkit-greenHover text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all active:scale-95"
+            class="bg-blinkit-green hover:bg-blinkit-greenHover text-white px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all active:scale-95"
           >
-            <span class="text-base">🛒</span>
-            <span class="js-header-cart-total">My Cart</span>
-            <span class="bg-white text-blinkit-green text-xs font-black px-1.5 py-0.5 rounded-full js-header-cart-count" style="display: none;">
+            <span class="text-sm sm:text-base">🛒</span>
+            <span class="js-header-cart-total text-xs sm:text-sm">My Cart</span>
+            <span class="bg-white text-blinkit-green text-[11px] sm:text-xs font-black px-1.5 py-0.2 rounded-full js-header-cart-count" style="display: none;">
               0
             </span>
           </button>
@@ -154,11 +175,30 @@
         </div>
       </div>
 
+      <!-- Mobile Full-Width Search Bar (Blinkit Style, Below Header on Mobile) -->
+      <div class="pb-2.5 pt-0.5 md:hidden">
+        <div class="relative flex items-center">
+          <span class="absolute left-3 text-gray-400 text-xs">🔍</span>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder='Search "farm fresh tomatoes, milk, atta..."' 
+            class="w-full pl-8 pr-8 py-2 bg-gray-100 focus:bg-white border border-transparent focus:border-blinkit-green focus:ring-2 focus:ring-green-100 rounded-xl text-xs font-semibold outline-none transition-all shadow-inner"
+            oninput="handleSearchSync(this.value)"
+          />
+          <button 
+            id="search-clear-btn" 
+            onclick="clearSearchInput()" 
+            class="absolute right-2.5 text-gray-400 hover:text-gray-700 hidden text-xs font-bold"
+          >✕</button>
+        </div>
+      </div>
+
     </div>
   </header>
 
   <!-- ================= MAIN CONTENT ================= -->
-  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-6">
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6 pb-36 sm:pb-16 space-y-5 sm:space-y-6">
 
     <!-- Install Android / iOS App Smart Banner -->
     <div id="pwa-install-banner" class="bg-gradient-to-r from-green-950 via-[#0C831F] to-emerald-900 text-white rounded-2xl p-3 sm:p-4 flex items-center justify-between shadow-md">
@@ -327,9 +367,9 @@
   <aside 
     id="mobile-cart-bar" 
     aria-label="Shopping Cart Summary"
-    class="fixed bottom-3 left-3 right-3 z-30 transform translate-y-full opacity-0 pointer-events-none transition-all duration-300 md:hidden"
+    class="fixed bottom-16 sm:bottom-20 left-3 right-3 z-40 transform translate-y-full opacity-0 pointer-events-none transition-all duration-300 md:hidden"
   >
-    <div class="bg-blinkit-green text-white p-3 rounded-2xl shadow-xl flex items-center justify-between border border-green-400">
+    <div class="bg-blinkit-green text-white p-3 rounded-2xl shadow-2xl flex items-center justify-between border border-green-400">
       <div class="flex items-center gap-2">
         <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg">🛒</div>
         <div>
@@ -350,11 +390,11 @@
   </aside>
 
   <!-- ================= FLOATING WHATSAPP SUPPORT BUTTON ================= -->
-  <div class="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-30">
+  <div id="floating-whatsapp-container" class="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-30 transition-all duration-300">
     <button 
       onclick="openWhatsAppSupportModal()"
       class="group relative flex items-center gap-2.5 bg-[#25D366] hover:bg-[#20ba59] text-white pl-3.5 pr-4 py-3 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95"
-      title="WhatsApp Customer Care & Instant Orders"
+      title="WhatsApp Customer Care &amp; Instant Orders"
     >
       <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full"></span>
       <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
