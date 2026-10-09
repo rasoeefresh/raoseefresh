@@ -8,7 +8,6 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
@@ -304,8 +303,8 @@
             <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Online Payments</span>
             <span class="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold text-base">💳</span>
           </div>
-          <div class="text-lg sm:text-xl font-black text-purple-900 truncate">Razorpay & UPI</div>
-          <span class="text-xs text-purple-700 font-semibold mt-1">0% Fee Direct UPI Active</span>
+          <div class="text-lg sm:text-xl font-black text-purple-900 truncate">Instant Direct UPI</div>
+          <span class="text-xs text-purple-700 font-semibold mt-1">0% Fee Merchant UPI Active</span>
         </div>
       </div>
 
@@ -704,19 +703,13 @@
         <div class="border-b pb-4">
           <h2 class="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
             <span>💳</span>
-            <span>Online Payment Gateway & WhatsApp Business</span>
+            <span>Direct UPI Payments & WhatsApp Business</span>
           </h2>
-          <p class="text-xs text-gray-500">Connect your Razorpay Key ID, Merchant UPI ID and Business WhatsApp phone</p>
+          <p class="text-xs text-gray-500">Configure your Store Merchant UPI ID (0% Fees) and Business WhatsApp phone</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           
-          <div>
-            <label class="block font-bold text-gray-700 mb-1">Razorpay Key ID (Test or Live)</label>
-            <input type="text" id="pay-rzp-key" class="w-full p-2.5 rounded-xl border border-gray-300 font-mono text-xs focus:border-blinkit-green outline-none" placeholder="rzp_test_..." />
-            <p class="text-[11px] text-gray-400 mt-1">Get this from your Razorpay Dashboard > Settings > API Keys</p>
-          </div>
-
           <div>
             <label class="block font-bold text-gray-700 mb-1">Merchant UPI ID (0% MDR / Fee)</label>
             <input type="text" id="pay-upi-id" class="w-full p-2.5 rounded-xl border border-gray-300 font-mono text-xs focus:border-blinkit-green outline-none" placeholder="e.g. Rasoeefresh@okaxis" />
@@ -732,15 +725,13 @@
           <div>
             <label class="block font-bold text-gray-700 mb-1">Customer Support Phone (Display)</label>
             <input type="text" id="pay-support-phone" class="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="+91 98765 43210" />
+            <p class="text-[11px] text-gray-400 mt-1">Phone number shown on storefront and invoices</p>
           </div>
 
         </div>
 
         <div class="flex items-center justify-between pt-4 border-t">
           <div class="flex items-center gap-2">
-            <button onclick="testRazorpayWindow()" class="bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-xl text-xs font-bold">
-              🧪 Test Razorpay Window
-            </button>
             <button onclick="testWhatsAppMessage()" class="bg-green-50 text-green-800 hover:bg-green-100 border border-green-200 px-4 py-2 rounded-xl text-xs font-bold">
               💬 Test WhatsApp Number
             </button>
@@ -2530,7 +2521,6 @@
       if (annToggle) annToggle.checked = currentConfig.showAnnouncementBar !== false;
 
       // Populate Payment Fields
-      document.getElementById('pay-rzp-key').value = currentConfig.payment?.razorpayKeyId || 'rzp_test_1DP5mmOlF5G5ag';
       document.getElementById('pay-upi-id').value = currentConfig.payment?.upiId || 'Rasoeefresh@upi';
       document.getElementById('pay-wa-number').value = currentConfig.whatsappNumber || '919876543210';
       document.getElementById('pay-support-phone').value = currentConfig.supportPhone || '+91 98765 43210';
@@ -3551,7 +3541,6 @@
 
     // ================= PAYMENT SETTINGS =================
     function savePaymentSettings() {
-      const rzpKey = document.getElementById('pay-rzp-key').value.trim() || 'rzp_test_1DP5mmOlF5G5ag';
       const upiId = document.getElementById('pay-upi-id').value.trim() || 'Rasoeefresh@upi';
       const waNumber = document.getElementById('pay-wa-number').value.trim().replace(/\D/g, '');
       const supportPhone = document.getElementById('pay-support-phone').value.trim();
@@ -3560,34 +3549,11 @@
         whatsappNumber: waNumber,
         supportPhone: supportPhone || ('+' + waNumber),
         payment: {
-          razorpayKeyId: rzpKey,
           upiId: upiId
         }
       });
 
-      alert("Payment gateway credentials and WhatsApp contact saved!");
-    }
-
-    function testRazorpayWindow() {
-      const keyId = document.getElementById('pay-rzp-key').value.trim() || 'rzp_test_1DP5mmOlF5G5ag';
-      if (typeof Razorpay === 'undefined') {
-        alert("Razorpay SDK not loaded.");
-        return;
-      }
-      const rzp = new Razorpay({
-        key: keyId,
-        amount: 100, // ₹1 test
-        currency: "INR",
-        name: currentConfig.storeName || "Rasoee Fresh Supermarket",
-        description: "Payment Gateway Connection Test",
-        image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=120",
-        prefill: { name: "Store Admin", contact: "9876543210" },
-        theme: { color: "#0C831F" },
-        handler: function(resp) {
-          alert("Payment gateway test verified! Payment ID: " + resp.razorpay_payment_id);
-        }
-      });
-      rzp.open();
+      alert("Merchant UPI and WhatsApp contact saved successfully!");
     }
 
     function testWhatsAppMessage() {

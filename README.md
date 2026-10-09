@@ -6,7 +6,7 @@ A modern, fast, Blinkit-style quick commerce platform built specifically for **R
 3. **🤖 Native Android App** (Android Studio / Kotlin / Gradle project ready for Google Play Store APK/AAB)
 4. **🍎 Native iOS App** (Xcode / Swift / WebKit project ready for Apple App Store / TestFlight)
 5. **📲 PWA Instant Install App** (1-Tap install on Android & iOS without waiting for App Store approval)
-6. **💳 Online Payment Gateways** (Razorpay Cards/UPI/Netbanking + Instant 0% MDR Direct UPI QR + Cash on Delivery)
+6. **💳 Online Payment Gateways** (Instant 0% MDR Direct UPI QR via Google Pay, PhonePe, Paytm, BHIM + Cash / UPI on Delivery)
 7. **💬 WhatsApp Supermarket Checkout & Customer Care**
 8. **📊 Store Operations & Daily Rates Control Center** ([admin.html](file:///C:/Users/Admin/.gemini/antigravity/scratch/Rasoee-fresh-supermarket/admin.html)) with Customer Directory & Order Status management
 
@@ -67,7 +67,7 @@ A modern, fast, Blinkit-style quick commerce platform built specifically for **R
 ### Features:
 - **Dedicated Tracker ([track.html](file:///C:/Users/Admin/.gemini/antigravity/scratch/Rasoee-fresh-supermarket/track.html)) & In-App Modal**: Accessible via `track.html?orderId=RF-XXXXXX` or from the storefront.
 - **5-Stage Visual Delivery Stepper**:
-  1. `Order Placed & Confirmed` (with Razorpay / UPI / COD status)
+  1. `Order Placed & Confirmed` (with Direct UPI / COD status)
   2. `Packing at Rasoee Dark Store` (Cold chain packing & hand-sorted produce)
   3. `Delivery Partner Assigned` (Partner arrived at dispatch bay)
   4. `Out for Delivery` (Rider speeding on electric scooter)
@@ -95,11 +95,10 @@ A modern, fast, Blinkit-style quick commerce platform built specifically for **R
 
 ---
 
-## 💳 4. Payment Gateways Supported
+## 💳 4. Payment Methods Supported
 
-1. **Razorpay Online Gateway**: Cards, UPI (Google Pay, PhonePe, Paytm), NetBanking, and Wallets.
-2. **Instant Direct UPI QR (0% MDR / Fee)**: Dynamic QR code with bank reference/UTR tracking.
-3. **Cash / UPI on Delivery (COD)**: Payment collected at customer doorstep.
+1. **Instant Direct UPI QR (0% MDR / Fee)**: Dynamic QR code with bank reference/UTR tracking, 1-tap intent launch for Google Pay, PhonePe, Paytm, BHIM.
+2. **Cash / UPI on Delivery (COD)**: Payment collected at customer doorstep in cash or by scanning the delivery partner's QR code.
 
 ---
 

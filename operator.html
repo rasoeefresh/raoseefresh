@@ -1027,7 +1027,7 @@
           ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
           : (order.customer?.address || 'Pickup at Store');
 
-        const isOnlinePaid = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').includes('razorpay');
+        const isOnlinePaid = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').toLowerCase().includes('upi');
 
         return `
           <div class="bg-white rounded-3xl p-5 border ${cardBorder} shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
@@ -1196,8 +1196,8 @@
       document.getElementById('rider-saved-feedback').classList.add('hidden');
 
       // Populate Total & Payment
-      const isOnline = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').includes('razorpay');
-      document.getElementById('modal-payment-status').textContent = isOnline ? 'Online Paid (Razorpay)' : 'Cash on Delivery (COD)';
+      const isOnline = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').toLowerCase().includes('upi');
+      document.getElementById('modal-payment-status').textContent = isOnline ? 'Online Paid (Direct UPI QR)' : 'Cash on Delivery (COD)';
       document.getElementById('modal-order-total').textContent = `₹${order.total || 0}`;
 
       // Populate Status Select
@@ -1388,8 +1388,8 @@
       document.getElementById('print-timestamp').textContent = new Date(order.timestamp || Date.now()).toLocaleString('en-IN');
       document.getElementById('print-status').textContent = (order.status || 'CONFIRMED').toUpperCase();
       
-      const isOnline = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').includes('razorpay');
-      document.getElementById('print-payment').textContent = isOnline ? 'ONLINE PAID (RAZORPAY)' : 'CASH ON DELIVERY (COLLECT CASH)';
+      const isOnline = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').toLowerCase().includes('upi');
+      document.getElementById('print-payment').textContent = isOnline ? 'ONLINE PAID (DIRECT UPI QR)' : 'CASH ON DELIVERY (COLLECT CASH)';
       
       document.getElementById('print-customer-name').textContent = order.customer?.name || 'Walk-in Customer';
       document.getElementById('print-customer-phone').textContent = `+91 ${order.customer?.phone || '-'}`;

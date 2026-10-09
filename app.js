@@ -1,7 +1,7 @@
 /**
  * Rasoee Fresh Supermarket - Core Application Logic
- * Integrates Blinkit-style quick commerce with Razorpay Online Payment Gateway,
- * Instant Direct UPI (0% Fee), and WhatsApp order dispatch.
+ * Integrates Blinkit-style quick commerce with Instant Direct UPI (0% Fee, GPay/PhonePe/Paytm QR),
+ * Cash on Delivery, and WhatsApp order dispatch.
  */
 
 // Global State
@@ -12,7 +12,7 @@ const state = {
   activeCategory: 'all',
   searchQuery: '',
   tipAmount: 0,
-  selectedPaymentMethod: 'razorpay', // 'razorpay', 'upi_qr', 'cod'
+  selectedPaymentMethod: 'upi_qr', // 'upi_qr', 'cod'
   currentUser: null,
   deliveryAddress: {
     name: '',
@@ -510,7 +510,7 @@ function selectPaymentMethod(method) {
   state.selectedPaymentMethod = method;
   
   // Highlight chosen payment card
-  const methods = ['razorpay', 'upi_qr', 'cod'];
+  const methods = ['upi_qr', 'cod'];
   methods.forEach(m => {
     const el = document.getElementById(`pay-opt-${m}`);
     const radio = document.getElementById(`radio-${m}`);
@@ -539,13 +539,8 @@ function updateCheckoutButtonText() {
 
   if (!btn || !btnLabel) return;
 
-  if (state.selectedPaymentMethod === 'razorpay') {
+  if (state.selectedPaymentMethod === 'upi_qr') {
     btn.className = "w-full bg-[#0C831F] hover:bg-emerald-800 text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all";
-    if (btnIcon) btnIcon.innerHTML = `💳`;
-    btnLabel.textContent = `Pay ₹${summary.grandTotal} via Razorpay`;
-    if (btnSub) btnSub.textContent = `Cards, UPI, NetBanking, Wallets`;
-  } else if (state.selectedPaymentMethod === 'upi_qr') {
-    btn.className = "w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all";
     if (btnIcon) btnIcon.innerHTML = `📲`;
     btnLabel.textContent = `Pay ₹${summary.grandTotal} via Direct UPI`;
     if (btnSub) btnSub.textContent = `Scan QR / Google Pay / PhonePe / Paytm (0% Fee)`;
@@ -735,7 +730,7 @@ function extractAddressForm() {
   return state.deliveryAddress;
 }
 
-// Unified Checkout Handler: Routes to Razorpay / UPI QR / COD
+// Unified Checkout Handler: Routes to Direct UPI QR / Cash on Delivery (COD)
 function handleUnifiedCheckout() {
   const summary = getCartSummary();
   if (summary.itemCount === 0) {
@@ -748,9 +743,7 @@ function handleUnifiedCheckout() {
 
   const orderId = `RF-${Date.now().toString().slice(-6)}`;
 
-  if (state.selectedPaymentMethod === 'razorpay') {
-    initiateRazorpayPayment(orderId, summary, customer);
-  } else if (state.selectedPaymentMethod === 'upi_qr') {
+  if (state.selectedPaymentMethod === 'upi_qr') {
     initiateDirectUpiPayment(orderId, summary, customer);
   } else {
     // Cash / UPI on Delivery
@@ -762,69 +755,7 @@ function handleUnifiedCheckout() {
   }
 }
 
-// 1. Razorpay Payment Gateway Integration
-function initiateRazorpayPayment(orderId, summary, customer) {
-  const keyId = state.config.payment?.razorpayKeyId || 'rzp_test_1DP5mmOlF5G5ag';
-  const amountInPaise = Math.round(summary.grandTotal * 100);
-
-  // Check if Razorpay SDK is loaded
-  if (typeof Razorpay === 'undefined') {
-    console.warn("Razorpay script not yet loaded or blocked. Offering fallback verification.");
-    const proceedTest = confirm(`Razorpay SDK connection is initializing. Would you like to simulate a successful payment of ₹${summary.grandTotal} for Order #${orderId}?`);
-    if (proceedTest) {
-      const mockPayId = 'pay_sim_' + Math.random().toString(36).substring(2, 10).toUpperCase();
-      processOrderCompletion(orderId, summary, customer, {
-        method: 'Razorpay Online Gateway (UPI / Cards / NetBanking)',
-        status: 'PAID ONLINE (Verified)',
-        paymentId: mockPayId
-      });
-    }
-    return;
-  }
-
-  const options = {
-    key: keyId,
-    amount: amountInPaise,
-    currency: "INR",
-    name: state.config.storeName || "Rasoee Fresh Supermarket",
-    description: `Grocery Delivery (Order #${orderId})`,
-    image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=120&auto=format&fit=crop&q=80",
-    prefill: {
-      name: customer.name,
-      contact: customer.phone.replace(/\D/g, '').slice(-10),
-      email: state.config.email || "customer@Rasoeefresh.com"
-    },
-    theme: {
-      color: "#0C831F"
-    },
-    modal: {
-      ondismiss: function() {
-        console.log("Customer closed payment modal without completing payment.");
-      }
-    },
-    handler: function(response) {
-      console.log("Razorpay Payment Success:", response);
-      processOrderCompletion(orderId, summary, customer, {
-        method: 'Razorpay Online Gateway (Cards / UPI / NetBanking)',
-        status: 'PAID ONLINE (Verified ✅)',
-        paymentId: response.razorpay_payment_id
-      });
-    }
-  };
-
-  try {
-    const rzp = new Razorpay(options);
-    rzp.on('payment.failed', function(response) {
-      alert("Payment failed: " + (response.error.description || "Transaction cancelled"));
-    });
-    rzp.open();
-  } catch (err) {
-    console.error("Error opening Razorpay checkout:", err);
-    alert("Could not open Razorpay window. Please try UPI or Cash on Delivery.");
-  }
-}
-
-// 2. Direct Instant UPI (0% Fee) QR & App Intent
+// 1. Direct Instant UPI (0% Fee) QR & App Intent
 function initiateDirectUpiPayment(orderId, summary, customer) {
   const upiId = state.config.payment?.upiId || 'Rasoeefresh@upi';
   const upiName = encodeURIComponent(state.config.storeName || 'Rasoee Fresh Supermarket');

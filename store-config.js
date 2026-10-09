@@ -103,14 +103,11 @@ const DEFAULT_CONFIG = {
   
   // Payment Gateway Configuration
   payment: {
-    enableRazorpay: true,
-    razorpayKeyId: "rzp_test_1DP5mmOlF5G5ag", // Demo test key
-    merchantName: "Rasoee Fresh Supermarket",
     enableDirectUpi: true,
     upiId: "RasoeeFresh@upi",
     upiName: "Rasoee Fresh Supermarket",
     enableCod: true,
-    defaultMethod: "razorpay"
+    defaultMethod: "upi_qr"
   },
 
   features: {
@@ -160,6 +157,13 @@ function getStoreConfig() {
     const saved = (localStorage.getItem("rasoee_fresh_config") || localStorage.getItem("raosee_fresh_config"));
     if (saved) {
       const parsed = JSON.parse(saved);
+      if (parsed.payment) {
+        delete parsed.payment.enableRazorpay;
+        delete parsed.payment.razorpayKeyId;
+        if (parsed.payment.defaultMethod === 'razorpay') {
+          parsed.payment.defaultMethod = 'upi_qr';
+        }
+      }
       return { 
         ...DEFAULT_CONFIG, 
         ...parsed,
@@ -1003,9 +1007,9 @@ function initDemoDataIfEmpty() {
           ],
           total: 234,
           payment: {
-            method: 'Razorpay Online (UPI / NetBanking)',
+            method: 'Direct UPI QR (GPay / PhonePe / Paytm)',
             status: 'PAID ONLINE (Verified ✅)',
-            paymentId: 'pay_rzp_8492019482'
+            paymentId: 'UPI-8492019482'
           },
           status: 'Out for Delivery',
           rider: { name: 'Ramesh Kumar', phone: '9876543210', vehicle: 'Hero Electric (KA-01-EQ-4021)', rating: 4.9 }
