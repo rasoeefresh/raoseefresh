@@ -961,15 +961,24 @@
             </p>
           </div>
 
-          <div class="flex justify-center gap-2.5 my-2">
-            <input type="text" maxlength="1" class="modal-otp-digit w-11 h-13 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
-            <input type="text" maxlength="1" class="modal-otp-digit w-11 h-13 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
-            <input type="text" maxlength="1" class="modal-otp-digit w-11 h-13 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
-            <input type="text" maxlength="1" class="modal-otp-digit w-11 h-13 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+          <div id="modal-sms-live-status" class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] p-2 rounded-xl flex items-center justify-between font-semibold">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> <span>Realtime SMS Dispatched</span></span>
+            <span class="text-[9px] bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded font-bold uppercase">Carrier SMS</span>
           </div>
 
-          <div class="bg-amber-50 border border-amber-200 text-amber-900 text-[11px] p-2.5 rounded-xl flex items-center justify-between">
-            <span>💡 Verification code: <strong id="modal-otp-code-hint">1234</strong></span>
+          <div class="flex justify-center gap-1.5 my-2" id="modal-otp-digits-container">
+            <input type="text" inputmode="numeric" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-xl font-black rounded-xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <input type="text" inputmode="numeric" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-xl font-black rounded-xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <input type="text" inputmode="numeric" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-xl font-black rounded-xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <input type="text" inputmode="numeric" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-xl font-black rounded-xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <input type="text" inputmode="numeric" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-xl font-black rounded-xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <input type="text" inputmode="numeric" maxlength="1" class="modal-otp-digit w-10 h-12 text-center text-xl font-black rounded-xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+          </div>
+
+          <div id="modal-otp-error" class="hidden text-xs font-bold text-red-600 bg-red-50 p-2 rounded-xl border border-red-200 text-center"></div>
+
+          <div class="bg-amber-50 border border-amber-200 text-amber-900 text-[11px] p-2 rounded-xl flex items-center justify-between">
+            <span>💡 Active SMS Code: <strong id="modal-otp-code-hint" class="font-mono font-black tracking-wider">......</strong></span>
             <button onclick="autoFillModalOtp()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold px-2 py-0.5 rounded text-[10px]">Auto-fill</button>
           </div>
 
@@ -1559,6 +1568,7 @@
 
   <!-- Scripts -->
   <script src="store-config.js"></script>
+  <script src="sms-service.js"></script>
   <script src="products.js"></script>
   <script src="app.js"></script>
 

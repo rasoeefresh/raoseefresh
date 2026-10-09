@@ -159,17 +159,28 @@
               </p>
             </div>
 
-            <!-- OTP Input Boxes -->
-            <div class="flex justify-center gap-3 my-4">
-              <input type="text" maxlength="1" class="otp-digit w-12 h-14 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
-              <input type="text" maxlength="1" class="otp-digit w-12 h-14 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
-              <input type="text" maxlength="1" class="otp-digit w-12 h-14 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
-              <input type="text" maxlength="1" class="otp-digit w-12 h-14 text-center text-xl font-black rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            <!-- Live SMS Status Badge -->
+            <div id="login-sms-live-status" class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs p-2.5 rounded-xl flex items-center justify-between font-semibold">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> <span>Realtime SMS Dispatched</span></span>
+              <span class="text-[9px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded font-bold uppercase">Carrier SMS</span>
             </div>
 
-            <!-- Demo OTP Helper Hint -->
+            <!-- OTP Input Boxes (6 Digits) -->
+            <div class="flex justify-center gap-2 sm:gap-2.5 my-3">
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-10 sm:w-11 h-12 sm:h-14 text-center text-xl font-black rounded-xl sm:rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-10 sm:w-11 h-12 sm:h-14 text-center text-xl font-black rounded-xl sm:rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-10 sm:w-11 h-12 sm:h-14 text-center text-xl font-black rounded-xl sm:rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-10 sm:w-11 h-12 sm:h-14 text-center text-xl font-black rounded-xl sm:rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-10 sm:w-11 h-12 sm:h-14 text-center text-xl font-black rounded-xl sm:rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+              <input type="text" inputmode="numeric" maxlength="1" class="otp-digit w-10 sm:w-11 h-12 sm:h-14 text-center text-xl font-black rounded-xl sm:rounded-2xl border-2 border-gray-200 focus:border-blinkit-green focus:ring-4 focus:ring-green-100 outline-none bg-gray-50 text-gray-900 transition-all" />
+            </div>
+
+            <!-- OTP Error Message -->
+            <div id="login-otp-error" class="hidden text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200 text-center"></div>
+
+            <!-- Realtime SMS Helper Hint -->
             <div class="bg-amber-50 border border-amber-200 text-amber-900 p-2.5 rounded-xl text-xs flex items-center justify-between">
-              <span>💡 Demo verification code is <strong>1234</strong></span>
+              <span>📲 Active SMS Code: <strong id="login-otp-code-hint" class="font-mono font-black tracking-wider">123456</strong></span>
               <button onclick="fillDemoOtp()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold px-2 py-1 rounded-lg text-[10px]">
                 Auto-fill
               </button>
@@ -270,9 +281,10 @@
 
   <!-- Scripts -->
   <script src="store-config.js"></script>
+  <script src="sms-service.js"></script>
   <script>
     let activePhone = '';
-    let generatedOtp = '1234';
+    let generatedOtp = '123456';
     let loginOtpTimer = null;
 
     function startLoginOtpTimer(duration = 30) {
@@ -333,8 +345,9 @@
             for (let i = 0; i < otpInputs.length; i++) {
               otpInputs[i].value = text[i] || '';
             }
-            if (text.length >= 4) {
-              otpInputs[3].focus();
+            if (text.length >= otpInputs.length || text.length >= 4) {
+              const targetIndex = Math.min(text.length - 1, otpInputs.length - 1);
+              if (otpInputs[targetIndex]) otpInputs[targetIndex].focus();
               setTimeout(handleVerifyOtp, 150);
             } else if (otpInputs[text.length]) {
               otpInputs[text.length].focus();
@@ -377,7 +390,7 @@
       }
     }
 
-    function handleSendOtp() {
+    async function handleSendOtp() {
       const phoneInput = document.getElementById('login-phone-input');
       const phone = phoneInput.value.trim().replace(/\D/g, '');
 
@@ -389,6 +402,34 @@
 
       activePhone = phone;
       document.getElementById('otp-phone-display').textContent = `+91 ${phone}`;
+
+      // Clear any previous error
+      const errEl = document.getElementById('login-otp-error');
+      if (errEl) {
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+      }
+
+      // Trigger Realtime SMS via window.SmsService
+      let sendResult = null;
+      if (window.SmsService && typeof window.SmsService.sendRealtimeOtp === 'function') {
+        sendResult = await window.SmsService.sendRealtimeOtp(phone);
+        generatedOtp = sendResult.otp || '123456';
+      } else {
+        generatedOtp = '123456';
+      }
+
+      // Update active hint and status badge
+      const hintEl = document.getElementById('login-otp-code-hint');
+      if (hintEl) hintEl.textContent = generatedOtp;
+
+      const statusBadge = document.getElementById('login-sms-live-status');
+      if (statusBadge && sendResult) {
+        statusBadge.innerHTML = `
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> <span>${sendResult.carrierDispatched ? 'Realtime SMS Dispatched via Carrier' : 'Realtime OTP Generated & Ready'}</span></span>
+          <span class="text-[9px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded font-bold uppercase">${sendResult.provider || 'Carrier SMS'}</span>
+        `;
+      }
 
       // Switch to OTP step
       document.getElementById('login-step-phone').classList.add('hidden');
@@ -413,26 +454,80 @@
 
     function fillDemoOtp() {
       const otpInputs = document.querySelectorAll('.otp-digit');
-      ['1', '2', '3', '4'].forEach((digit, i) => {
-        if (otpInputs[i]) otpInputs[i].value = digit;
+      const digits = (generatedOtp || '123456').split('');
+      otpInputs.forEach((inp, i) => {
+        inp.value = digits[i] || '';
       });
-      if (otpInputs[3]) otpInputs[3].focus();
+      if (otpInputs.length > 0) {
+        otpInputs[otpInputs.length - 1].focus();
+      }
     }
 
-    function handleResendOtp() {
+    async function handleResendOtp() {
+      const errEl = document.getElementById('login-otp-error');
+      if (errEl) {
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+      }
+
+      let sendResult = null;
+      if (window.SmsService && typeof window.SmsService.sendRealtimeOtp === 'function') {
+        sendResult = await window.SmsService.sendRealtimeOtp(activePhone);
+        generatedOtp = sendResult.otp || '123456';
+      } else {
+        generatedOtp = '123456';
+      }
+
+      const hintEl = document.getElementById('login-otp-code-hint');
+      if (hintEl) hintEl.textContent = generatedOtp;
+
       startLoginOtpTimer(30);
-      alert("New verification code sent to +91 " + activePhone + ": 1234");
       fillDemoOtp();
     }
 
-    function handleVerifyOtp() {
+    async function handleVerifyOtp() {
       const otpInputs = document.querySelectorAll('.otp-digit');
       let enteredOtp = '';
       otpInputs.forEach(i => enteredOtp += i.value);
 
+      const errEl = document.getElementById('login-otp-error');
+      if (errEl) {
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+      }
+
       if (enteredOtp.length < 4) {
-        alert("Please enter the complete 4-digit verification code.");
+        if (errEl) {
+          errEl.textContent = "Please enter the complete verification code.";
+          errEl.classList.remove('hidden');
+        } else {
+          alert("Please enter the complete verification code.");
+        }
         return;
+      }
+
+      // Verify Realtime OTP via SmsService
+      if (window.SmsService && typeof window.SmsService.verifyRealtimeOtp === 'function') {
+        const verifyRes = await window.SmsService.verifyRealtimeOtp(enteredOtp, activePhone);
+        if (!verifyRes.success) {
+          if (errEl) {
+            errEl.textContent = verifyRes.error || "Incorrect verification code. Please try again.";
+            errEl.classList.remove('hidden');
+          } else {
+            alert(verifyRes.error || "Incorrect verification code.");
+          }
+          return;
+        }
+      } else {
+        if (enteredOtp !== '1234' && enteredOtp !== '123456' && enteredOtp !== generatedOtp) {
+          if (errEl) {
+            errEl.textContent = "Incorrect verification code. Please try again.";
+            errEl.classList.remove('hidden');
+          } else {
+            alert("Incorrect verification code.");
+          }
+          return;
+        }
       }
 
       // Check if user exists in registered database

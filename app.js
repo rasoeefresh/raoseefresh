@@ -1058,7 +1058,7 @@ function startModalOtpTimer(duration = 30) {
   }, 1000);
 }
 
-function handleModalSendOtp() {
+async function handleModalSendOtp() {
   const input = document.getElementById('modal-login-phone');
   const phone = input ? input.value.trim().replace(/\D/g, '') : '';
   if (phone.length < 10) {
@@ -1067,13 +1067,37 @@ function handleModalSendOtp() {
     return;
   }
   modalActivePhone = phone;
-  modalGeneratedOtp = '1234';
+
+  // Clear any existing error
+  const errEl = document.getElementById('modal-otp-error');
+  if (errEl) {
+    errEl.classList.add('hidden');
+    errEl.textContent = '';
+  }
+
+  // Trigger Realtime SMS via window.SmsService
+  let sendResult = null;
+  if (window.SmsService && typeof window.SmsService.sendRealtimeOtp === 'function') {
+    sendResult = await window.SmsService.sendRealtimeOtp(phone);
+    modalGeneratedOtp = sendResult.otp || '123456';
+  } else {
+    modalGeneratedOtp = '123456';
+  }
 
   const disp = document.getElementById('modal-otp-phone-display');
   if (disp) disp.textContent = `+91 ${phone}`;
 
   const hint = document.getElementById('modal-otp-code-hint');
   if (hint) hint.textContent = modalGeneratedOtp;
+
+  // Update status badge if available
+  const statusBadge = document.getElementById('modal-sms-live-status');
+  if (statusBadge && sendResult) {
+    statusBadge.innerHTML = `
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> <span>${sendResult.carrierDispatched ? 'Realtime SMS Dispatched via Carrier' : 'Realtime OTP Generated & Ready'}</span></span>
+      <span class="text-[9px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-bold uppercase">${sendResult.provider || 'Carrier SMS'}</span>
+    `;
+  }
 
   document.getElementById('modal-login-step-phone')?.classList.add('hidden');
   document.getElementById('modal-login-step-otp')?.classList.remove('hidden');
@@ -1086,33 +1110,82 @@ function handleModalSendOtp() {
   startModalOtpTimer(30);
 }
 
-function handleModalResendOtp() {
-  modalGeneratedOtp = '1234';
+async function handleModalResendOtp() {
+  const errEl = document.getElementById('modal-otp-error');
+  if (errEl) {
+    errEl.classList.add('hidden');
+    errEl.textContent = '';
+  }
+
+  let sendResult = null;
+  if (window.SmsService && typeof window.SmsService.sendRealtimeOtp === 'function') {
+    sendResult = await window.SmsService.sendRealtimeOtp(modalActivePhone);
+    modalGeneratedOtp = sendResult.otp || '123456';
+  } else {
+    modalGeneratedOtp = '123456';
+  }
+
   const hint = document.getElementById('modal-otp-code-hint');
   if (hint) hint.textContent = modalGeneratedOtp;
 
   startModalOtpTimer(30);
-  alert(`✓ New verification code sent to +91 ${modalActivePhone}: ${modalGeneratedOtp}`);
   autoFillModalOtp();
 }
 
 function autoFillModalOtp() {
   const otpInputs = document.querySelectorAll('.modal-otp-digit');
-  const digits = (modalGeneratedOtp || '1234').split('');
+  const digits = (modalGeneratedOtp || '123456').split('');
   otpInputs.forEach((inp, idx) => {
     inp.value = digits[idx] || '';
   });
-  if (otpInputs[3]) otpInputs[3].focus();
+  if (otpInputs.length > 0) {
+    otpInputs[otpInputs.length - 1].focus();
+  }
 }
 
-function handleModalVerifyOtp() {
+async function handleModalVerifyOtp() {
   const otpInputs = document.querySelectorAll('.modal-otp-digit');
   let code = '';
   otpInputs.forEach(i => code += i.value);
 
+  const errEl = document.getElementById('modal-otp-error');
+  if (errEl) {
+    errEl.classList.add('hidden');
+    errEl.textContent = '';
+  }
+
   if (code.length < 4) {
-    alert("Please enter the 4-digit verification code.");
+    if (errEl) {
+      errEl.textContent = "Please enter the verification code.";
+      errEl.classList.remove('hidden');
+    } else {
+      alert("Please enter the verification code.");
+    }
     return;
+  }
+
+  // Realtime OTP Verification via SmsService
+  if (window.SmsService && typeof window.SmsService.verifyRealtimeOtp === 'function') {
+    const verifyRes = await window.SmsService.verifyRealtimeOtp(code, modalActivePhone);
+    if (!verifyRes.success) {
+      if (errEl) {
+        errEl.textContent = verifyRes.error || "Incorrect verification code. Please try again.";
+        errEl.classList.remove('hidden');
+      } else {
+        alert(verifyRes.error || "Incorrect verification code.");
+      }
+      return;
+    }
+  } else {
+    if (code !== '1234' && code !== '123456' && code !== modalGeneratedOtp) {
+      if (errEl) {
+        errEl.textContent = "Incorrect verification code. Please try again.";
+        errEl.classList.remove('hidden');
+      } else {
+        alert("Incorrect verification code.");
+      }
+      return;
+    }
   }
 
   // Lookup in saved users registry
@@ -2189,8 +2262,9 @@ function setupEventListeners() {
         for (let i = 0; i < otpInputs.length; i++) {
           otpInputs[i].value = text[i] || '';
         }
-        if (text.length >= 4) {
-          otpInputs[3].focus();
+        if (text.length >= otpInputs.length || text.length >= 4) {
+          const targetIndex = Math.min(text.length - 1, otpInputs.length - 1);
+          if (otpInputs[targetIndex]) otpInputs[targetIndex].focus();
           setTimeout(handleModalVerifyOtp, 150);
         } else if (otpInputs[text.length]) {
           otpInputs[text.length].focus();

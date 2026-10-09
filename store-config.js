@@ -138,6 +138,19 @@ const DEFAULT_CONFIG = {
     type: "firebase",
     firebaseUrl: "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/",
     authToken: ""
+  },
+
+  // Realtime OTP SMS Gateway Configuration
+  smsGateway: {
+    enabled: true,
+    provider: "fast2sms", // "fast2sms" | "2factor" | "firebase" | "custom" | "simulation"
+    fast2smsApiKey: "",   // Fast2SMS.com Authorization Key
+    twoFactorApiKey: "",  // 2Factor.in API Key
+    firebaseApiKey: "",   // Firebase Web API Key
+    senderId: "RASOEE",   // 6-character DLT Sender ID
+    customGatewayUrl: "", // Custom REST endpoint
+    otpLength: 6,         // Standard 6 digits for Indian carrier SMS
+    otpExpiryMinutes: 10
   }
 };
 
@@ -153,7 +166,8 @@ function getStoreConfig() {
         payment: { ...DEFAULT_CONFIG.payment, ...(parsed.payment || {}) },
         outletAddress: { ...DEFAULT_CONFIG.outletAddress, ...(parsed.outletAddress || {}) },
         cloudSync: { ...DEFAULT_CONFIG.cloudSync, ...(parsed.cloudSync || {}) },
-        security: { ...DEFAULT_CONFIG.security, ...(parsed.security || {}) }
+        security: { ...DEFAULT_CONFIG.security, ...(parsed.security || {}) },
+        smsGateway: { ...DEFAULT_CONFIG.smsGateway, ...(parsed.smsGateway || {}) }
       };
     }
   } catch (e) {
@@ -171,7 +185,8 @@ function updateStoreConfig(newConfig) {
       payment: { ...current.payment, ...(newConfig.payment || {}) },
       outletAddress: { ...current.outletAddress, ...(newConfig.outletAddress || {}) },
       cloudSync: { ...current.cloudSync, ...(newConfig.cloudSync || {}) },
-      security: { ...current.security, ...(newConfig.security || {}) }
+      security: { ...current.security, ...(newConfig.security || {}) },
+      smsGateway: { ...current.smsGateway, ...(newConfig.smsGateway || {}) }
     };
     try {
       localStorage.setItem("rasoee_fresh_config", JSON.stringify(merged)); localStorage.setItem("raosee_fresh_config", JSON.stringify(merged));
@@ -463,6 +478,11 @@ async function syncToCloud() {
     delete safeConfig.security.operatorPassword;
     delete safeConfig.security.operatorPin;
   }
+  if (safeConfig.smsGateway) {
+    delete safeConfig.smsGateway.fast2smsApiKey;
+    delete safeConfig.smsGateway.twoFactorApiKey;
+    delete safeConfig.smsGateway.customGatewayUrl;
+  }
 
   const payload = {
     updatedAt: new Date().toISOString(),
@@ -700,7 +720,8 @@ function getStoreConfig() {
         payment: { ...DEFAULT_CONFIG.payment, ...(parsed.payment || {}) },
         outletAddress: { ...DEFAULT_CONFIG.outletAddress, ...(parsed.outletAddress || {}) },
         cloudSync: { ...DEFAULT_CONFIG.cloudSync, ...(parsed.cloudSync || {}) },
-        security: { ...DEFAULT_CONFIG.security, ...(parsed.security || {}) }
+        security: { ...DEFAULT_CONFIG.security, ...(parsed.security || {}) },
+        smsGateway: { ...DEFAULT_CONFIG.smsGateway, ...(parsed.smsGateway || {}) }
       };
     }
   } catch (e) {
@@ -718,7 +739,8 @@ function updateStoreConfig(newConfig) {
       payment: { ...current.payment, ...(newConfig.payment || {}) },
       outletAddress: { ...current.outletAddress, ...(newConfig.outletAddress || {}) },
       cloudSync: { ...current.cloudSync, ...(newConfig.cloudSync || {}) },
-      security: { ...current.security, ...(newConfig.security || {}) }
+      security: { ...current.security, ...(newConfig.security || {}) },
+      smsGateway: { ...current.smsGateway, ...(newConfig.smsGateway || {}) }
     };
     try {
       localStorage.setItem("rasoee_fresh_config", JSON.stringify(merged)); localStorage.setItem("raosee_fresh_config", JSON.stringify(merged));

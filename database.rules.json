@@ -17,13 +17,17 @@
       ".write": true,
 
       // Prevents malicious tampering, wipeouts, and ensures no passwords/PINs are stored
-      ".validate": "newData.hasChildren(['updatedAt', 'products', 'config']) && !newData.child('config/security/adminPassword').exists() && !newData.child('config/security/adminPin').exists() && !newData.child('config/security/operatorPassword').exists() && !newData.child('config/security/operatorPin').exists()",
+      ".validate": "newData.hasChildren(['updatedAt', 'products', 'config']) && !newData.child('config/security/adminPassword').exists() && !newData.child('config/security/adminPin').exists() && !newData.child('config/security/operatorPassword').exists() && !newData.child('config/security/operatorPin').exists() && !newData.child('config/smsGateway/fast2smsApiKey').exists() && !newData.child('config/smsGateway/twoFactorApiKey').exists()",
 
-      // Prevent reading or writing sensitive security subnode under config
+      // Prevent reading or writing sensitive security & SMS credentials under config
       "config": {
         "security": {
           ".read": false,
           ".write": false
+        },
+        "smsGateway": {
+          "fast2smsApiKey": { ".read": false, ".write": false },
+          "twoFactorApiKey": { ".read": false, ".write": false }
         }
       }
     },
