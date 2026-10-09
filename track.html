@@ -384,9 +384,9 @@
       const headerLogo = document.getElementById('track-header-logo');
       if (headerLogo) {
         if (cfg.logoUrl) {
-          headerLogo.innerHTML = `<img src="${cfg.logoUrl}" alt="${escapeHtml(cfg.storeName || 'Logo')}" class="w-full h-full object-contain rounded-2xl" onerror="this.onerror=null; this.parentElement.innerHTML='${cfg.logoEmoji || '⚡'}';" />`;
+          headerLogo.innerHTML = `<img src="${cfg.logoUrl}" alt="${escapeHtml(cfg.storeName || 'Logo')}" class="w-full h-full object-contain rounded-2xl" onerror="this.onerror=null; this.parentElement.innerHTML='${cfg.logoEmoji || '🛒'}';" />`;
         } else {
-          headerLogo.innerHTML = cfg.logoEmoji || '⚡';
+          headerLogo.innerHTML = cfg.logoEmoji || '🛒';
         }
       }
 

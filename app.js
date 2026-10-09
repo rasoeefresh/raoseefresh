@@ -139,9 +139,9 @@ function applyBranding() {
   const logoEls = document.querySelectorAll('.js-store-logo');
   logoEls.forEach(el => {
     if (cfg.logoUrl) {
-      el.innerHTML = `<img src="${cfg.logoUrl}" alt="${escapeHtml(cfg.storeName || 'Logo')}" class="w-full h-full object-contain rounded-2xl" onerror="this.onerror=null; this.parentElement.innerHTML='${cfg.logoEmoji || '⚡'}';" />`;
+      el.innerHTML = `<img src="${cfg.logoUrl}" alt="${escapeHtml(cfg.storeName || 'Logo')}" class="w-full h-full object-contain rounded-2xl" onerror="this.onerror=null; this.parentElement.innerHTML='${cfg.logoEmoji || '🛒'}';" />`;
     } else {
-      el.innerHTML = cfg.logoEmoji || '⚡';
+      el.innerHTML = cfg.logoEmoji || '🛒';
     }
   });
 

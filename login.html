@@ -74,8 +74,8 @@
         <!-- Header Banner -->
         <div class="bg-gradient-to-r from-green-900 via-emerald-800 to-green-950 text-white p-6 relative overflow-hidden text-center">
           <div class="absolute -right-6 -bottom-6 text-7xl opacity-10 select-none">🛒</div>
-          <div class="w-16 h-16 rounded-2xl bg-blinkit-yellow text-blinkit-dark font-black text-3xl mx-auto flex items-center justify-center shadow-lg mb-3 js-store-logo overflow-hidden">
-            ⚡
+          <div class="w-16 h-16 rounded-2xl bg-white border border-white/20 flex items-center justify-center p-1.5 shadow-lg mb-3 mx-auto js-store-logo overflow-hidden">
+            <img src="logo.svg" alt="Rasoee Fresh" class="w-full h-full object-contain rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='🛒';" />
           </div>
           <h1 class="text-xl sm:text-2xl font-black tracking-tight js-store-tagline">Farm Fresh Groceries Delivered to Your Doorstep</h1>
           <p class="text-xs text-green-200 mt-1">Log in for fresh grocery delivery &amp; live tracking</p>
@@ -361,9 +361,9 @@
       const logoEls = document.querySelectorAll('.js-store-logo');
       logoEls.forEach(el => {
         if (cfg.logoUrl) {
-          el.innerHTML = `<img src="${cfg.logoUrl}" alt="${cfg.storeName || 'Logo'}" class="w-full h-full object-contain rounded-2xl" onerror="this.onerror=null; this.parentElement.innerHTML='${cfg.logoEmoji || '⚡'}';" />`;
+          el.innerHTML = `<img src="${cfg.logoUrl}" alt="${cfg.storeName || 'Logo'}" class="w-full h-full object-contain rounded-2xl" onerror="this.onerror=null; this.parentElement.innerHTML='${cfg.logoEmoji || '🛒'}';" />`;
         } else {
-          el.innerHTML = cfg.logoEmoji || '⚡';
+          el.innerHTML = cfg.logoEmoji || '🛒';
         }
       });
     }

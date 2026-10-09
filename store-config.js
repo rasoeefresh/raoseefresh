@@ -62,7 +62,7 @@ const DEFAULT_CONFIG = {
   outletName: "Main Dark Store - HSR Layout Hub #01",
   outletCode: "RF-BLR-01",
   logoUrl: "logo.svg", // URL or Base64 uploaded logo image
-  logoEmoji: "⚡",
+  logoEmoji: "🛒",
   tagline: "Farm Fresh Groceries Delivered to Your Doorstep",
 
   // Outlet Address Structure
