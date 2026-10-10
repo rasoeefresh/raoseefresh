@@ -103,7 +103,7 @@ const DEFAULT_CONFIG = {
   
   // Payment Gateway Configuration
   payment: {
-    enableDirectUpi: true,
+    enableDirectUpi: false,
     upiId: "RasoeeFresh@upi",
     upiName: "Rasoee Fresh Supermarket",
     enableCod: true,
@@ -160,9 +160,8 @@ function getStoreConfig() {
       if (parsed.payment) {
         delete parsed.payment.enableRazorpay;
         delete parsed.payment.razorpayKeyId;
-        if (!parsed.payment.defaultMethod || parsed.payment.defaultMethod === 'razorpay') {
-          parsed.payment.defaultMethod = 'cod';
-        }
+        parsed.payment.enableDirectUpi = false;
+        parsed.payment.defaultMethod = 'cod';
       }
       return { 
         ...DEFAULT_CONFIG, 
@@ -531,6 +530,49 @@ async function syncToCloud() {
   return { success: false, reason: "Network or configuration error" };
 }
 
+// Direct Cloud Products Sync for Instant Cross-Device Product Catalog Updates
+async function syncProductsToCloud(products) {
+  try {
+    const list = products || (typeof getStoredProducts === 'function' ? getStoredProducts() : []);
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json";
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list)
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("Direct products cloud sync error:", err);
+    return false;
+  }
+}
+
+async function fetchProductsFromCloud() {
+  try {
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json";
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        data.forEach(p => {
+          if (p.image && typeof normalizeImageUrl === 'function') {
+            p.image = normalizeImageUrl(p.image);
+          }
+          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
+            p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+          }
+        });
+        localStorage.setItem("rasoee_fresh_products", JSON.stringify(data));
+        localStorage.setItem("raosee_fresh_products", JSON.stringify(data));
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn("Direct products cloud fetch error:", err);
+  }
+  return null;
+}
+
 async function syncFromCloud() {
   const syncCfg = getCloudSyncConfig();
   if (!syncCfg || !syncCfg.enabled) return false;
@@ -572,7 +614,17 @@ async function syncFromCloud() {
         hasChanges = true;
       }
       if (Array.isArray(data.products) && data.products.length > 0) {
+        data.products.forEach(p => {
+          if (p.image && typeof normalizeImageUrl === 'function') {
+            p.image = normalizeImageUrl(p.image);
+          }
+          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
+            p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+          }
+        });
+        localStorage.setItem("rasoee_fresh_products", JSON.stringify(data.products));
         localStorage.setItem("raosee_fresh_products", JSON.stringify(data.products));
+        localStorage.setItem("Rasoee_products", JSON.stringify(data.products));
         hasChanges = true;
       }
       if (Array.isArray(data.categories) && data.categories.length > 0) {
@@ -671,6 +723,9 @@ function getStoredProducts() {
           if (p.id === 'prod-2' && p.image && p.image.includes('photo-1589985270826')) {
             p.image = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&auto=format&fit=crop&q=80';
           }
+          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
+            p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+          }
         });
         return parsed;
       }
@@ -691,6 +746,9 @@ function saveProducts(products) {
     }
     if (typeof syncToCloud === "function") {
       syncToCloud();
+    }
+    if (typeof syncProductsToCloud === "function") {
+      syncProductsToCloud(products);
     }
   } catch (e) {
     console.warn("Could not save products", e);

@@ -881,7 +881,7 @@ const DEFAULT_PRODUCTS = [
         "price":  20,
         "mrp":  20,
         "unit":  "1 bunch",
-        "image":  "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&auto=format&fit=crop&q=80",
+        "image":  "https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800",
         "inStock":  true,
         "tag":  "",
         "rating":  4.9,
@@ -3117,7 +3117,7 @@ function getStoredProducts() {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Auto-heal known outdated images for lassi and buttermilk in existing localStorage
+        // Auto-heal known outdated images in existing localStorage
         let modified = false;
         parsed.forEach(p => {
           if (p.id === 'prod-1' && p.image && p.image.includes('photo-1513558161293')) {
@@ -3127,6 +3127,17 @@ function getStoredProducts() {
           if (p.id === 'prod-2' && p.image && p.image.includes('photo-1589985270826')) {
             p.image = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&auto=format&fit=crop&q=80';
             modified = true;
+          }
+          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
+            p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+            modified = true;
+          }
+          if (p.image && typeof normalizeImageUrl === 'function' && (p.image.includes('drive.google.com') || p.image.includes('drive.usercontent.google.com'))) {
+            const norm = normalizeImageUrl(p.image);
+            if (norm !== p.image) {
+              p.image = norm;
+              modified = true;
+            }
           }
         });
         if (modified) {
@@ -3157,6 +3168,9 @@ function saveProducts(products) {
   }
   if (typeof syncToCloud === "function") {
     syncToCloud();
+  }
+  if (typeof syncProductsToCloud === "function") {
+    syncProductsToCloud(products);
   }
   if (typeof window !== "undefined") {
     try { window.dispatchEvent(new Event("storage")); } catch (e) {}

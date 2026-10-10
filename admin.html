@@ -2487,6 +2487,16 @@
       productsList = typeof getStoredProducts === 'function' ? getStoredProducts() : [];
       categoriesList = typeof getStoredCategories === 'function' ? getStoredCategories() : [];
       bannersList = typeof getStoredBanners === 'function' ? getStoredBanners() : [];
+      if (typeof fetchProductsFromCloud === 'function') {
+        fetchProductsFromCloud().then(cloudProds => {
+          if (cloudProds && cloudProds.length > 0) {
+            productsList = cloudProds;
+            renderItemsTable();
+            renderRateCard();
+            updateKpis();
+          }
+        }).catch(e => {});
+      }
       try {
         ordersList = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
       } catch (e) {

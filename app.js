@@ -91,18 +91,39 @@ function loadConfigAndData() {
 
   // Async cloud sync pull if enabled
   if (typeof syncFromCloud === 'function') {
-    syncFromCloud().then(updated => {
-      if (updated) {
-        state.config = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
-        state.products = typeof getStoredProducts === 'function' ? getStoredProducts() : [];
-        applyBranding();
-        renderBanners();
-        renderAnnouncement();
-        renderCategories();
-        renderProducts();
-      }
+    syncFromCloud().then(() => {
+      state.config = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
+      state.products = typeof getStoredProducts === 'function' ? getStoredProducts() : [];
+      applyBranding();
+      renderBanners();
+      renderAnnouncement();
+      renderCategories();
+      renderProducts();
     }).catch(e => console.warn("Cloud sync check error", e));
   }
+
+  // Direct multi-device live product catalog sync from Firebase RTDB
+  try {
+    fetch("https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json")
+      .then(res => res.ok ? res.json() : null)
+      .then(cloudProducts => {
+        if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
+          cloudProducts.forEach(p => {
+            if (p.image && typeof normalizeImageUrl === 'function') {
+              p.image = normalizeImageUrl(p.image);
+            }
+            if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
+              p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+            }
+          });
+          localStorage.setItem("rasoee_fresh_products", JSON.stringify(cloudProducts));
+          localStorage.setItem("raosee_fresh_products", JSON.stringify(cloudProducts));
+          state.products = cloudProducts;
+          renderProducts();
+        }
+      })
+      .catch(e => console.warn("Direct product sync error:", e));
+  } catch (e) {}
 }
 
 function applyBranding() {
@@ -530,28 +551,18 @@ function updateCartUI() {
   renderCartDrawerContent(summary);
 }
 
-// Select Payment Method in Drawer
-function selectPaymentMethod(method) {
-  state.selectedPaymentMethod = method;
+// Select Payment Method in Drawer (Cash / UPI on Delivery Default)
+function selectPaymentMethod(method = 'cod') {
+  state.selectedPaymentMethod = 'cod';
   
-  // Highlight chosen payment card
-  const methods = ['upi_qr', 'cod'];
-  methods.forEach(m => {
-    const el = document.getElementById(`pay-opt-${m}`);
-    const radio = document.getElementById(`radio-${m}`);
-    if (el) {
-      if (m === method) {
-        el.classList.add('border-green-600', 'bg-green-50/50');
-        el.classList.remove('border-gray-200', 'bg-white');
-      } else {
-        el.classList.remove('border-green-600', 'bg-green-50/50');
-        el.classList.add('border-gray-200', 'bg-white');
-      }
-    }
-    if (radio) radio.checked = (m === method);
-  });
+  const el = document.getElementById('pay-opt-cod');
+  const radio = document.getElementById('radio-cod');
+  if (el) {
+    el.classList.add('border-green-600', 'bg-green-50/70');
+    el.classList.remove('border-gray-200', 'bg-white');
+  }
+  if (radio) radio.checked = true;
 
-  // Update checkout button text
   updateCheckoutButtonText();
 }
 
@@ -564,17 +575,10 @@ function updateCheckoutButtonText() {
 
   if (!btn || !btnLabel) return;
 
-  if (state.selectedPaymentMethod === 'upi_qr') {
-    btn.className = "w-full bg-[#0C831F] hover:bg-emerald-800 text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all";
-    if (btnIcon) btnIcon.innerHTML = `📲`;
-    btnLabel.textContent = `Pay ₹${summary.grandTotal} via Direct UPI`;
-    if (btnSub) btnSub.textContent = `Scan QR / Google Pay / PhonePe / Paytm (0% Fee)`;
-  } else {
-    btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all";
-    if (btnIcon) btnIcon.innerHTML = `<svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>`;
-    btnLabel.textContent = `Order on WhatsApp (Pay ₹${summary.grandTotal} on Delivery)`;
-    if (btnSub) btnSub.textContent = `Cash or UPI to Rider at Doorstep`;
-  }
+  btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all";
+  if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">🛵</span>`;
+  btnLabel.textContent = `Place Order (Pay ₹${summary.grandTotal} on Delivery)`;
+  if (btnSub) btnSub.textContent = `Cash or UPI to Rider at Doorstep`;
 }
 
 function renderCartDrawerContent(summary) {
@@ -768,16 +772,12 @@ function handleUnifiedCheckout() {
 
   const orderId = `RF-${Date.now().toString().slice(-6)}`;
 
-  if (state.selectedPaymentMethod === 'upi_qr') {
-    initiateDirectUpiPayment(orderId, summary, customer);
-  } else {
-    // Cash / UPI on Delivery
-    processOrderCompletion(orderId, summary, customer, {
-      method: 'Cash / UPI on Delivery (COD)',
-      status: 'Pay to Rider at Doorstep',
-      paymentId: 'COD-' + orderId
-    });
-  }
+  // Default & Primary: Cash / UPI on Delivery
+  processOrderCompletion(orderId, summary, customer, {
+    method: 'Cash / UPI on Delivery',
+    status: 'Pay at Doorstep (Cash or UPI)',
+    paymentId: 'COD-' + orderId
+  });
 }
 
 // 1. Direct Instant UPI (0% Fee) QR & App Intent
