@@ -133,10 +133,9 @@
 
         <div class="mt-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <div class="text-xs font-semibold text-green-100 uppercase tracking-wider">Estimated Delivery Time</div>
-            <div class="text-3xl sm:text-4xl font-black mt-1 flex items-center gap-2 tracking-tight">
-              <span id="display-eta-clock">11 mins</span>
-              <span class="text-xl">⚡</span>
+            <div class="text-xs font-semibold text-green-100 uppercase tracking-wider">Live Delivery Status</div>
+            <div class="text-2xl sm:text-3xl font-black mt-1 flex items-center gap-2 tracking-tight">
+              <span id="display-eta-clock">Order Placed</span>
             </div>
             <p class="text-xs text-green-200 mt-1" id="display-status-tagline">
               Fresh items inspected and on the way from dark store
@@ -227,15 +226,15 @@
             <span class="step-indicator absolute -left-[35px] top-0.5 w-4 h-4 rounded-full bg-blinkit-green border-2 border-white ring-2 ring-green-100"></span>
             <div class="text-xs sm:text-sm font-black text-gray-900">Packing at Rasoee Fresh Dark Store</div>
             <div class="text-xs text-gray-500 mt-0.5">Farm fresh produce hand-sorted, chilled dairy packed in insulated totes.</div>
-            <div class="text-[10px] font-mono text-gray-400 mt-0.5" id="step-time-2">Estimated: 3 mins</div>
+            <div class="text-[10px] font-mono text-gray-400 mt-0.5" id="step-time-2">In Progress</div>
           </div>
 
           <!-- Stage 3 -->
           <div class="relative" id="step-node-3">
             <span class="step-indicator absolute -left-[35px] top-0.5 w-4 h-4 rounded-full bg-blinkit-green border-2 border-white ring-2 ring-green-100"></span>
-            <div class="text-xs sm:text-sm font-black text-gray-900">Delivery Partner Assigned</div>
-            <div class="text-xs text-gray-500 mt-0.5">Verified partner Ramesh Kumar arrived at hub with electric scooter.</div>
-            <div class="text-[10px] font-mono text-gray-400 mt-0.5" id="step-time-3">Verified partner</div>
+            <div class="text-xs sm:text-sm font-black text-gray-900">Delivery Partner Allotted</div>
+            <div class="text-xs text-gray-500 mt-0.5" id="step-desc-3">Store executive is packing fresh items. Partner will be allotted once packed.</div>
+            <div class="text-[10px] font-mono text-gray-400 mt-0.5" id="step-time-3">Pickup Bay</div>
           </div>
 
           <!-- Stage 4 -->
@@ -243,7 +242,7 @@
             <span class="step-indicator absolute -left-[35px] top-0.5 w-4 h-4 rounded-full bg-blinkit-green border-2 border-white ring-2 ring-green-100"></span>
             <div class="text-xs sm:text-sm font-black text-gray-900">Out for Delivery</div>
             <div class="text-xs text-gray-500 mt-0.5">Scooter en-route to your building address. Please keep doorbell active.</div>
-            <div class="text-[10px] font-mono text-gray-400 mt-0.5" id="step-time-4">Live ETA: 10m</div>
+            <div class="text-[10px] font-mono text-gray-400 mt-0.5" id="step-time-4">Direct Doorstep Handover</div>
           </div>
 
           <!-- Stage 5 -->
@@ -257,46 +256,18 @@
         </div>
       </div>
 
-      <!-- DELIVERY PARTNER CARD -->
-      <div class="bg-white rounded-3xl p-5 border border-gray-200 shadow-sm flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3.5">
-          <div class="relative">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-3xl shadow-inner">
-              🚴
+      <!-- DYNAMIC DELIVERY PARTNER CARD -->
+      <div id="track-rider-card-container">
+        <div class="bg-white rounded-3xl p-5 border border-gray-200 shadow-sm flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-3xl shadow-inner">
+              🛵
             </div>
-            <span class="absolute -bottom-1 -right-1 bg-green-500 text-white rounded-full p-0.5 text-[10px]">✓</span>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h4 class="font-black text-sm text-gray-900" id="rider-name">Ramesh Kumar</h4>
-              <span class="bg-yellow-100 text-yellow-800 text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                <span>⭐</span><span>4.9</span>
-              </span>
-            </div>
-            <p class="text-[11px] text-gray-500 mt-0.5">Rasoee Delivery Partner</p>
-            <div class="text-[10px] font-semibold text-emerald-700 mt-0.5 flex items-center gap-1">
-              <span>🛵 Hero Electric (KA-01-EQ-4021)</span>
-              <span>•</span>
-              <span>1,240 deliveries</span>
+            <div>
+              <h4 class="font-black text-sm text-gray-900">Partner Allotment Pending</h4>
+              <p class="text-[11px] text-gray-500 mt-0.5">Order is being packed. Delivery partner will be assigned on dispatch.</p>
             </div>
           </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button 
-            onclick="callRider()" 
-            class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center text-base transition-colors"
-            title="Call Delivery Partner"
-          >
-            📞
-          </button>
-          <button 
-            onclick="chatRiderWhatsApp()" 
-            class="w-10 h-10 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white flex items-center justify-center text-base transition-transform active:scale-95 shadow-sm"
-            title="WhatsApp Rider"
-          >
-            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
-          </button>
         </div>
       </div>
 
@@ -416,8 +387,8 @@
       }
     }
 
-    // Load order from URL param or LocalStorage
-    function loadOrderFromContext() {
+    // Load order from URL param or LocalStorage and Cloud RTDB
+    async function loadOrderFromContext() {
       const urlParams = new URLSearchParams(window.location.search);
       const requestedId = urlParams.get('orderId');
 
@@ -426,6 +397,27 @@
         orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
       } catch (e) {
         orders = [];
+      }
+
+      // Multi-device Cloud RTDB sync
+      if (typeof fetchOrdersFromCloud === 'function') {
+        try {
+          const cloudOrders = await fetchOrdersFromCloud();
+          if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+            const mergedMap = new Map();
+            orders.forEach(o => mergedMap.set(o.id, o));
+            cloudOrders.forEach(co => {
+              const local = mergedMap.get(co.id);
+              if (!local || new Date(co.updatedAt || co.date || 0) >= new Date(local.updatedAt || local.date || 0)) {
+                mergedMap.set(co.id, co);
+              }
+            });
+            orders = Array.from(mergedMap.values()).sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
+            localStorage.setItem('Rasoee_orders', JSON.stringify(orders));
+          }
+        } catch (e) {
+          console.warn("Cloud orders fetch in track:", e);
+        }
       }
 
       if (requestedId) {
@@ -449,7 +441,7 @@
       renderTrackingView(activeOrder);
     }
 
-    function searchOrder() {
+    async function searchOrder() {
       const q = document.getElementById('order-search-input').value.trim();
       if (!q) return;
 
@@ -458,6 +450,20 @@
         orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
       } catch (e) {
         orders = [];
+      }
+
+      // If not found locally, fetch fresh from cloud
+      if (typeof fetchOrdersFromCloud === 'function') {
+        try {
+          const cloudOrders = await fetchOrdersFromCloud();
+          if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+            const mergedMap = new Map();
+            orders.forEach(o => mergedMap.set(o.id, o));
+            cloudOrders.forEach(co => mergedMap.set(co.id, co));
+            orders = Array.from(mergedMap.values()).sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
+            localStorage.setItem('Rasoee_orders', JSON.stringify(orders));
+          }
+        } catch(e) {}
       }
 
       const cleanQuery = q.replace('#', '').trim();
@@ -521,15 +527,56 @@
         }
       }
 
-      // Rider details
-      if (order.rider) {
-        document.getElementById('rider-name').textContent = order.rider.name || 'Ramesh Kumar';
+      // Dynamic Delivery Partner Card
+      const riderContainer = document.getElementById('track-rider-card-container');
+      if (riderContainer) {
+        if (order.rider && order.rider.name) {
+          riderContainer.innerHTML = `
+            <div class="bg-white rounded-3xl p-5 border border-gray-200 shadow-sm flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3.5">
+                <div class="w-14 h-14 rounded-2xl bg-green-100 border border-green-200 flex items-center justify-center text-3xl shadow-inner">
+                  🛵
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-black text-sm text-gray-900">${escapeHtml(order.rider.name)}</h4>
+                    <span class="bg-green-100 text-blinkit-green font-bold text-[10px] px-2 py-0.5 rounded-full">Allotted Partner</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-0.5">${escapeHtml(order.rider.phone || 'Active')} • ${escapeHtml(order.rider.vehicle || 'Delivery Partner')}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="callRider()" class="w-10 h-10 rounded-2xl bg-green-50 hover:bg-green-100 text-blinkit-green flex items-center justify-center shadow-sm" title="Call Partner">
+                  📞
+                </button>
+                <button onclick="chatRiderWhatsApp()" class="w-10 h-10 rounded-2xl bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] flex items-center justify-center shadow-sm" title="WhatsApp Partner">
+                  💬
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          riderContainer.innerHTML = `
+            <div class="bg-white rounded-3xl p-5 border border-gray-200 shadow-sm flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3.5">
+                <div class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-3xl shadow-inner">
+                  🛵
+                </div>
+                <div>
+                  <h4 class="font-black text-sm text-gray-900">Partner Allotment Pending</h4>
+                  <p class="text-[11px] text-gray-500 mt-0.5">Order is being packed. Delivery partner will be assigned upon dispatch.</p>
+                </div>
+              </div>
+              <span class="text-[11px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">Awaiting Dispatch</span>
+            </div>
+          `;
+        }
       }
 
       // Render Items
       renderBillItems(order);
 
-      // Start live countdown
+      // Start live milestone status
       startEtaTimer(status);
     }
 
@@ -607,25 +654,17 @@
       if (etaInterval) clearInterval(etaInterval);
 
       const etaClock = document.getElementById('display-eta-clock');
+      if (!etaClock) return;
 
       if (status.includes('deliver') && !status.includes('out')) {
         etaClock.textContent = "Delivered ✓";
-        return;
+      } else if (status.includes('out') || status.includes('dispatched')) {
+        etaClock.textContent = "Out for Delivery";
+      } else if (status.includes('pack')) {
+        etaClock.textContent = "Packing at Store";
+      } else {
+        etaClock.textContent = "Order Placed";
       }
-
-      etaCountdownSeconds = 11 * 60 + 45;
-
-      etaInterval = setInterval(() => {
-        etaCountdownSeconds--;
-        if (etaCountdownSeconds <= 0) {
-          etaCountdownSeconds = 0;
-          etaClock.textContent = "Arriving now!";
-          return;
-        }
-        const m = Math.floor(etaCountdownSeconds / 60);
-        const s = etaCountdownSeconds % 60;
-        etaClock.textContent = `${m}m ${s < 10 ? '0' : ''}${s}s`;
-      }, 1000);
     }
 
     function renderBillItems(order) {
@@ -642,11 +681,12 @@
       container.innerHTML = items.map(item => {
         const itemTotal = item.total || (item.qty * (item.product?.price || 0));
         subtotal += itemTotal;
-        const img = item.product?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=100';
+        const rawImg = item.product?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=100';
+        const img = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(rawImg) : rawImg;
         return `
           <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
             <div class="flex items-center gap-2.5 min-w-0">
-              <img src="${img}" alt="${escapeHtml(item.product?.name)}" class="w-10 h-10 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
+              <img src="${img}" alt="${escapeHtml(item.product?.name)}" class="w-10 h-10 object-cover rounded-xl border border-gray-200 flex-shrink-0" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100';" />
               <div class="truncate">
                 <div class="font-bold text-gray-900 truncate">${escapeHtml(item.product?.name || 'Item')}</div>
                 <div class="text-[11px] text-gray-500">${item.product?.unit || '1 unit'} × <strong>${item.qty}</strong></div>
@@ -664,32 +704,36 @@
       paymentMethodEl.textContent = order.payment?.method || 'Cash on Delivery';
     }
 
-    // Cross-Tab live synchronization: updates immediately when Admin updates order status!
+    // Cross-Tab & Multi-device live synchronization
     function setupCrossTabSync() {
       window.addEventListener('storage', (e) => {
         if (e.key === 'Rasoee_orders') {
-          console.log("Detected order update in localStorage from Admin!");
+          console.log("Detected order update in localStorage from Admin/Operator!");
           loadOrderFromContext();
         } else if (e.key === 'Rasoee_fresh_config') {
-          console.log("Detected store branding/outlet update in localStorage from Admin!");
+          console.log("Detected store branding/outlet update in localStorage!");
           applyStoreBranding();
         }
       });
 
-      // Also periodic 5s polling for seamless single-browser updates
-      setInterval(() => {
-        if (activeOrder) {
-          let orders = [];
+      // Multi-device cloud polling every 4 seconds
+      setInterval(async () => {
+        if (activeOrder && typeof fetchOrdersFromCloud === 'function') {
           try {
-            orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
-          } catch (e) {
-            orders = [];
-          }
-          const fresh = orders.find(o => o.id === activeOrder.id);
-          if (fresh && fresh.status !== activeOrder.status) {
-            activeOrder = fresh;
-            renderTrackingView(fresh);
-          }
+            const cloudOrders = await fetchOrdersFromCloud();
+            if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+              const fresh = cloudOrders.find(o => o.id === activeOrder.id);
+              if (fresh && (fresh.status !== activeOrder.status || JSON.stringify(fresh.rider) !== JSON.stringify(activeOrder.rider))) {
+                activeOrder = fresh;
+                renderTrackingView(fresh);
+                let localOrders = [];
+                try { localOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]'); } catch(e){}
+                const idx = localOrders.findIndex(o => o.id === fresh.id);
+                if (idx !== -1) localOrders[idx] = fresh; else localOrders.unshift(fresh);
+                localStorage.setItem('Rasoee_orders', JSON.stringify(localOrders));
+              }
+            }
+          } catch(e) {}
         }
       }, 4000);
     }
@@ -700,14 +744,25 @@
     }
 
     function callRider() {
-      const phone = "9876543210";
+      if (!activeOrder?.rider?.phone) {
+        alert("Delivery partner has not been allotted yet. Store team is currently packing your fresh order.");
+        return;
+      }
+      const phone = activeOrder.rider.phone.replace(/\D/g, '');
       window.location.href = `tel:+91${phone}`;
     }
 
     function chatRiderWhatsApp() {
-      const orderId = activeOrder?.id || '';
-      const msg = `Hi Ramesh (Rasoee Fresh Rider)! I am checking on my delivery for Order #${orderId}. Please let me know once you reach the building gate.`;
-      window.open(`https://wa.me/919876543210?text=${encodeURIComponent(msg)}`, '_blank');
+      if (!activeOrder?.rider?.phone) {
+        alert("Delivery partner has not been allotted yet. You can chat with our store support below.");
+        chatAboutThisOrder();
+        return;
+      }
+      const riderName = activeOrder.rider.name || 'Delivery Partner';
+      const riderPhone = activeOrder.rider.phone.replace(/\D/g, '');
+      const orderId = activeOrder.id || '';
+      const msg = `Hi ${riderName}! I am checking on my delivery for Rasoee Fresh Order #${orderId}. Please let me know once you reach the building.`;
+      window.open(`https://wa.me/91${riderPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
     function chatAboutThisOrder() {

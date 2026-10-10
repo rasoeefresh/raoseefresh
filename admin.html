@@ -960,7 +960,7 @@
                 <div class="grid grid-cols-4 gap-2">
                   <button type="button" onclick="setPresetLogo('⚡', 'Quick Commerce Lightning')" class="p-2 border rounded-xl hover:bg-yellow-50 text-xl font-bold flex flex-col items-center">
                     <span>⚡</span>
-                    <span class="text-[9px] text-gray-500">10 Min</span>
+                    <span class="text-[9px] text-gray-500">Fast</span>
                   </button>
                   <button type="button" onclick="setPresetLogo('🛒', 'Fresh Supermarket Cart')" class="p-2 border rounded-xl hover:bg-green-50 text-xl font-bold flex flex-col items-center">
                     <span>🛒</span>
@@ -1837,8 +1837,11 @@
             <input type="text" id="modal-prod-tag" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. Bestseller / Organic" />
           </div>
           <div>
-            <label class="block font-bold text-gray-700 mb-1">Delivery ETA (Display)</label>
-            <input type="text" id="modal-prod-eta" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="10 mins" />
+            <label class="block font-bold text-gray-700 mb-1">Stock Availability</label>
+            <label class="flex items-center gap-2 p-2 bg-gray-50 border border-gray-300 rounded-xl cursor-pointer mt-0.5">
+              <input type="checkbox" id="modal-prod-stock" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 accent-[#0C831F]" />
+              <span class="text-xs font-bold text-gray-800">In Stock (Enabled)</span>
+            </label>
           </div>
         </div>
       </div>
@@ -2533,6 +2536,43 @@
       renderAllOrders();
       renderCustomersTab();
       populateOutletSettings();
+
+      // Sync cloud orders immediately and setup 5s polling
+      syncCloudOrdersToAdmin();
+      if (!window.adminCloudSyncInterval) {
+        window.adminCloudSyncInterval = setInterval(syncCloudOrdersToAdmin, 5000);
+      }
+    }
+
+    // Real-time Cloud RTDB sync for Admin Orders
+    async function syncCloudOrdersToAdmin() {
+      if (typeof fetchOrdersFromCloud !== 'function') return;
+      try {
+        const cloudOrders = await fetchOrdersFromCloud();
+        if (cloudOrders && cloudOrders.length > 0) {
+          let localOrders = [];
+          try {
+            localOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
+          } catch (e) { localOrders = []; }
+
+          const orderMap = new Map();
+          localOrders.forEach(o => { if (o && o.id) orderMap.set(o.id, o); });
+          cloudOrders.forEach(co => {
+            if (co && co.id) {
+              const ex = orderMap.get(co.id);
+              if (!ex || (co.updatedAt || co.timestamp || '') >= (ex.updatedAt || ex.timestamp || '')) {
+                orderMap.set(co.id, co);
+              }
+            }
+          });
+          ordersList = Array.from(orderMap.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+          localStorage.setItem('Rasoee_orders', JSON.stringify(ordersList));
+          updateKpis();
+          renderAllOrders();
+        }
+      } catch (err) {
+        console.warn("Admin cloud sync error:", err);
+      }
     }
 
     // Tabs Switcher
@@ -2988,7 +3028,9 @@
             if (unit) matched.unit = unit;
             if (cat) matched.category = cat;
             if (catLabel) matched.categoryLabel = catLabel;
-            if (imageVal && imageVal.startsWith('http')) matched.image = imageVal;
+            if (imageVal && imageVal.startsWith('http')) {
+              matched.image = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(imageVal) : imageVal;
+            }
 
             if (stockStr) {
               matched.inStock = (stockStr === 'yes' || stockStr === 'in stock' || stockStr === 'true' || stockStr === '1');
@@ -3010,10 +3052,10 @@
               unit: unit || '1 unit',
               price: finalPrice,
               mrp: finalMrp,
-              image: (imageVal && imageVal.startsWith('http')) ? imageVal : 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400',
+              image: (imageVal && imageVal.startsWith('http')) ? (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(imageVal) : imageVal) : 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400',
               inStock: stockStr ? (stockStr === 'yes' || stockStr === 'in stock' || stockStr === 'true' || stockStr === '1') : true,
               tag: 'Fresh',
-              deliveryTime: 'Fresh Delivery'
+              deliveryTime: 'Fresh Stock'
             };
 
             productsList.unshift(newProd);
@@ -3067,10 +3109,13 @@
         );
       }
 
-      tbody.innerHTML = filtered.map(p => `
+      tbody.innerHTML = filtered.map(p => {
+        const normImg = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(p.image) : (p.image || '');
+        const isEnabled = p.inStock !== false;
+        return `
         <tr class="hover:bg-gray-50/80">
           <td class="p-3">
-            <img src="${p.image}" class="w-10 h-10 object-cover rounded-lg bg-gray-100" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'" />
+            <img src="${normImg}" class="w-10 h-10 object-cover rounded-lg bg-gray-100" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'" />
           </td>
           <td class="p-3">
             <div class="font-bold text-gray-900">${escapeHtml(p.name)}</div>
@@ -3084,9 +3129,19 @@
             ${p.tag ? `<span class="bg-gray-100 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${p.tag}</span>` : '—'}
           </td>
           <td class="p-3">
-            <span class="${p.inStock !== false ? 'text-green-700 font-bold' : 'text-red-600 font-bold'}">
-              ${p.inStock !== false ? '✓ In Stock' : '✗ Out'}
-            </span>
+            <button 
+              type="button"
+              onclick="toggleProductStock('${p.id}')"
+              title="Click to toggle item Enabled/Disabled"
+              class="px-2.5 py-1 rounded-full text-xs font-bold transition-all shadow-2xs flex items-center gap-1 active:scale-95 ${
+                isEnabled 
+                  ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300' 
+                  : 'bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300'
+              }"
+            >
+              <span>${isEnabled ? '🟢' : '🔴'}</span>
+              <span>${isEnabled ? 'In Stock (Enabled)' : 'Out of Stock (Disabled)'}</span>
+            </button>
           </td>
           <td class="p-3 text-right">
             <div class="flex items-center justify-end gap-2">
@@ -3095,12 +3150,27 @@
             </div>
           </td>
         </tr>
-      `).join('');
+      `;}).join('');
+    }
+
+    function toggleProductStock(id) {
+      const p = productsList.find(item => item.id === id);
+      if (!p) return;
+      p.inStock = (p.inStock === false) ? true : false;
+      saveProducts(productsList);
+      if (typeof syncToCloud === 'function') {
+        syncToCloud();
+      }
+      renderItemsTable(document.getElementById('items-search-input')?.value || '');
+      renderRateCard();
+      updateKpis();
+      showNotificationToast(`Product "${p.name}" is now ${p.inStock ? 'Enabled (In Stock)' : 'Disabled (Out of Stock)'}! ✓`);
     }
 
     function openProductModal(id = null) {
       const modal = document.getElementById('product-modal');
       const title = document.getElementById('modal-product-title');
+      const stockInp = document.getElementById('modal-prod-stock');
       
       if (id) {
         const p = productsList.find(item => item.id === id);
@@ -3115,7 +3185,7 @@
         document.getElementById('modal-prod-mrp').value = p.mrp || p.price;
         document.getElementById('modal-prod-image').value = p.image || '';
         document.getElementById('modal-prod-tag').value = p.tag || '';
-        document.getElementById('modal-prod-eta').value = p.deliveryTime || 'Fresh Delivery';
+        if (stockInp) stockInp.checked = p.inStock !== false;
       } else {
         title.textContent = "Add New Product";
         document.getElementById('modal-orig-id').value = '';
@@ -3126,7 +3196,7 @@
         document.getElementById('modal-prod-mrp').value = '';
         document.getElementById('modal-prod-image').value = '';
         document.getElementById('modal-prod-tag').value = '';
-        document.getElementById('modal-prod-eta').value = 'Fresh Delivery';
+        if (stockInp) stockInp.checked = true;
       }
       modal.classList.remove('hidden');
     }
@@ -3143,9 +3213,10 @@
       const unit = document.getElementById('modal-prod-unit').value.trim();
       const price = parseInt(document.getElementById('modal-prod-price').value, 10);
       const mrp = parseInt(document.getElementById('modal-prod-mrp').value, 10) || price;
-      const image = document.getElementById('modal-prod-image').value.trim() || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
+      const rawImage = document.getElementById('modal-prod-image').value.trim() || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
+      const image = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(rawImage) : rawImage;
       const tag = document.getElementById('modal-prod-tag').value.trim();
-      const eta = document.getElementById('modal-prod-eta').value.trim() || 'Fresh Delivery';
+      const inStock = document.getElementById('modal-prod-stock') ? document.getElementById('modal-prod-stock').checked : true;
 
       if (!name || !unit || isNaN(price)) {
         alert("Please fill in Product Name, Unit and Selling Price");
@@ -3171,7 +3242,8 @@
           p.mrp = mrp;
           p.image = image;
           p.tag = tag;
-          p.deliveryTime = eta;
+          p.inStock = inStock;
+          p.deliveryTime = 'Fresh Stock';
         }
       } else {
         const newId = customId || ('item-' + Date.now());
@@ -3189,9 +3261,9 @@
           mrp,
           unit,
           image,
-          inStock: true,
+          inStock: inStock,
           tag: tag || 'Fresh',
-          deliveryTime: eta
+          deliveryTime: 'Fresh Stock'
         };
         productsList.unshift(newProduct);
       }
@@ -3720,7 +3792,8 @@
                   <span>Rider:</span>
                   <input 
                     type="text" 
-                    value="${order.rider?.name || 'Ramesh Kumar'}" 
+                    value="${order.rider?.name || ''}" 
+                    placeholder="Unassigned"
                     onchange="updateOrderRider('${order.id}', this.value)"
                     class="w-24 px-1 py-0.5 text-[10px] border border-gray-200 rounded font-semibold text-gray-800 outline-none focus:border-blinkit-green"
                     title="Assign Rider Name"
@@ -3849,7 +3922,11 @@
       const order = ordersList.find(o => o.id === orderId);
       if (order) {
         order.status = newStatus;
+        order.updatedAt = new Date().toISOString();
         localStorage.setItem('Rasoee_orders', JSON.stringify(ordersList));
+        if (typeof syncOrderToCloud === 'function') {
+          syncOrderToCloud(order);
+        }
         updateKpis();
         renderAllOrders();
 
@@ -3869,7 +3946,11 @@
       if (order) {
         if (!order.rider) order.rider = {};
         order.rider.name = riderName;
+        order.updatedAt = new Date().toISOString();
         localStorage.setItem('Rasoee_orders', JSON.stringify(ordersList));
+        if (typeof syncOrderToCloud === 'function') {
+          syncOrderToCloud(order);
+        }
         try {
           window.dispatchEvent(new Event('storage'));
         } catch (e) {}
@@ -3960,10 +4041,10 @@
         callBtn.href = order.customer?.phone ? `tel:+91${order.customer.phone.replace(/\D/g,'')}` : '#';
       }
 
-      // Rider details
-      document.getElementById('admin-modal-rider-name').value = order.rider?.name || 'Ramesh Kumar';
-      document.getElementById('admin-modal-rider-phone').value = order.rider?.phone || '9876543210';
-      document.getElementById('admin-modal-rider-vehicle').value = order.rider?.vehicle || 'Hero Electric (KA-01-EQ-4021)';
+      // Rider details (no hardcoded demo rider)
+      document.getElementById('admin-modal-rider-name').value = order.rider?.name || '';
+      document.getElementById('admin-modal-rider-phone').value = order.rider?.phone || '';
+      document.getElementById('admin-modal-rider-vehicle').value = order.rider?.vehicle || '';
 
       // Items table
       const tbody = document.getElementById('admin-modal-items-tbody');
@@ -4015,12 +4096,16 @@
       const phone = document.getElementById('admin-modal-rider-phone').value.trim();
       const vehicle = document.getElementById('admin-modal-rider-vehicle').value.trim();
 
-      order.rider = { name, phone, vehicle };
+      order.rider = { name, phone, vehicle, allottedAt: new Date().toISOString() };
+      order.updatedAt = new Date().toISOString();
       localStorage.setItem('Rasoee_orders', JSON.stringify(ordersList));
+      if (typeof syncOrderToCloud === 'function') {
+        syncOrderToCloud(order);
+      }
       try {
         window.dispatchEvent(new Event('storage'));
       } catch (e) {}
-      alert(`Updated delivery partner for Order #${order.id}!`);
+      alert(`Updated delivery partner for Order #${order.id}! ✓`);
       renderAllOrders();
     }
 

@@ -530,7 +530,7 @@
         }
       }
 
-      // Check if user exists in registered database
+      // Check if user exists in registered database or Cloud RTDB
       let users = [];
       try {
         users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
@@ -538,7 +538,37 @@
         users = [];
       }
 
-      const existing = users.find(u => u.phone === activePhone);
+      let existing = users.find(u => u.phone === activePhone);
+
+      // Multi-device Cloud lookup for permanent customer profile
+      if (!existing && typeof fetchCustomerFromCloud === 'function') {
+        try {
+          const cloudCustomer = await fetchCustomerFromCloud(activePhone);
+          if (cloudCustomer && (cloudCustomer.name || cloudCustomer.address)) {
+            existing = {
+              id: cloudCustomer.id || ('usr_' + activePhone.slice(-4)),
+              name: cloudCustomer.name || 'Valued Customer',
+              phone: activePhone,
+              address: cloudCustomer.address || {
+                flat: cloudCustomer.flat || '',
+                street: cloudCustomer.street || '',
+                landmark: cloudCustomer.landmark || '',
+                city: cloudCustomer.city || 'Bangalore',
+                pincode: cloudCustomer.pincode || '560102'
+              },
+              savedAddresses: cloudCustomer.savedAddresses || [
+                { type: 'Home', flat: cloudCustomer.flat || cloudCustomer.address?.flat || '', street: cloudCustomer.street || cloudCustomer.address?.street || '', landmark: cloudCustomer.landmark || cloudCustomer.address?.landmark || '' }
+              ],
+              createdAt: cloudCustomer.createdAt || new Date().toISOString(),
+              orderCount: cloudCustomer.orderCount || 1
+            };
+            users.push(existing);
+            localStorage.setItem('Rasoee_users', JSON.stringify(users));
+          }
+        } catch (e) {
+          console.warn("Cloud customer fetch error:", e);
+        }
+      }
 
       if (existing) {
         // Complete login
@@ -594,6 +624,11 @@
       users.push(newUser);
       localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
+      // Permanently sync customer profile to Firebase RTDB for all devices
+      if (typeof syncCustomerToCloud === 'function') {
+        syncCustomerToCloud(newUser);
+      }
+
       // Save active session
       setUserSession(newUser);
       showSuccessState(newUser);
@@ -628,6 +663,10 @@
       if (!users.some(u => u.phone === phone)) {
         users.push(user);
         localStorage.setItem('Rasoee_users', JSON.stringify(users));
+      }
+
+      if (typeof syncCustomerToCloud === 'function') {
+        syncCustomerToCloud(user);
       }
 
       setUserSession(user);

@@ -12,7 +12,7 @@ const state = {
   activeCategory: 'all',
   searchQuery: '',
   tipAmount: 0,
-  selectedPaymentMethod: 'upi_qr', // 'upi_qr', 'cod'
+  selectedPaymentMethod: 'cod', // 'cod' (primary default), 'upi_qr'
   currentUser: null,
   deliveryAddress: {
     name: '',
@@ -304,9 +304,11 @@ function renderProducts() {
   grid.innerHTML = filtered.map(product => {
     const qty = state.cart[product.id] || 0;
     const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
+    const isOutOfStock = product.inStock === false;
+    const imgUrl = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(product.image) : (product.image || '');
 
     return `
-      <div class="bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-col justify-between hover:shadow-lg transition-all duration-300 relative group">
+      <div class="bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-col justify-between hover:shadow-lg transition-all duration-300 relative group ${isOutOfStock ? 'opacity-80' : ''}">
         <!-- Tag / Discount badge -->
         <div class="flex items-center justify-between gap-1 mb-2">
           ${discount > 0 ? `
@@ -314,24 +316,35 @@ function renderProducts() {
               ${discount}% OFF
             </span>
           ` : '<span></span>'}
-          <span class="text-[11px] font-medium text-gray-500 flex items-center gap-1">
-            ⏱️ ${product.deliveryTime || '10m'}
-          </span>
+          ${isOutOfStock ? `
+            <span class="bg-rose-50 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+              Out of Stock
+            </span>
+          ` : `
+            <span class="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md flex items-center gap-1 font-bold">
+              🥬 Fresh Stock
+            </span>
+          `}
         </div>
 
         <!-- Product Image -->
         <div class="relative w-full aspect-square mb-3 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center">
           <img 
-            src="${product.image}" 
+            src="${imgUrl}" 
             alt="${escapeHtml(product.name)}"
             loading="lazy"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? 'grayscale' : ''}"
             onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=80'"
           />
           ${product.tag ? `
             <span class="absolute bottom-1.5 left-1.5 bg-black/60 backdrop-blur-md text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
               ${product.tag}
             </span>
+          ` : ''}
+          ${isOutOfStock ? `
+            <div class="absolute inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center">
+              <span class="bg-rose-600 text-white font-black text-xs px-3 py-1 rounded-full uppercase shadow">Sold Out</span>
+            </div>
           ` : ''}
         </div>
 
@@ -356,7 +369,11 @@ function renderProducts() {
 
           <!-- Add / Qty Controller -->
           <div id="btn-container-${product.id}">
-            ${renderCartButton(product.id, qty)}
+            ${isOutOfStock ? `
+              <span class="text-[11px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl cursor-not-allowed inline-block">
+                Out of Stock
+              </span>
+            ` : renderCartButton(product.id, qty)}
           </div>
         </div>
       </div>
@@ -399,6 +416,14 @@ function renderCartButton(productId, qty) {
 
 // Cart Item Updates
 function updateCartItem(productId, delta) {
+  if (delta > 0) {
+    const product = state.products.find(p => p.id === productId);
+    if (product && product.inStock === false) {
+      alert(`Sorry, "${product.name}" is currently out of stock.`);
+      return;
+    }
+  }
+
   const current = state.cart[productId] || 0;
   const newQty = Math.max(0, current + delta);
 
@@ -802,15 +827,36 @@ function closeUpiQrModal() {
 function confirmUpiPaymentCompleted() {
   if (!state.pendingUpiOrder) return;
   const refInput = document.getElementById('upi-utr-input');
-  const utr = (refInput ? refInput.value.trim() : '') || 'UPI-' + Date.now().toString().slice(-6);
+  const errEl = document.getElementById('upi-utr-error');
+  const utr = refInput ? refInput.value.trim().replace(/\s+/g, '') : '';
+
+  // Mandatory 12-Digit Indian UPI Reference / UTR validation
+  if (!utr || utr.length < 12) {
+    if (errEl) {
+      errEl.textContent = '⚠️ Payment confirmation required! Please enter the valid 12-digit UPI Reference / UTR Number from Google Pay / PhonePe / Paytm.';
+      errEl.classList.remove('hidden');
+    } else {
+      alert('⚠️ Payment confirmation required!\nPlease enter the 12-digit UPI Reference / UTR Number from Google Pay / PhonePe / Paytm before submitting your order.');
+    }
+    if (refInput) {
+      refInput.focus();
+      refInput.classList.add('border-rose-500', 'bg-rose-50');
+    }
+    return;
+  }
+
+  if (errEl) errEl.classList.add('hidden');
+  if (refInput) refInput.classList.remove('border-rose-500', 'bg-rose-50');
 
   const { orderId, summary, customer } = state.pendingUpiOrder;
   closeUpiQrModal();
 
   processOrderCompletion(orderId, summary, customer, {
-    method: 'Direct UPI (Google Pay / PhonePe / Paytm)',
-    status: 'PAID VIA UPI (Ref: ' + utr + ')',
-    paymentId: utr
+    method: 'Direct UPI (QR Payment)',
+    status: 'PAID VIA UPI (UTR: ' + utr + ')',
+    paymentId: utr,
+    utr: utr,
+    paidAt: new Date().toISOString()
   });
 }
 
@@ -1129,7 +1175,7 @@ async function handleModalVerifyOtp() {
     }
   }
 
-  // Lookup in saved users registry
+  // Lookup in local saved users registry or Cloud RTDB permanent storage
   let users = [];
   try {
     users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
@@ -1137,7 +1183,40 @@ async function handleModalVerifyOtp() {
     users = [];
   }
 
-  const existing = users.find(u => u.phone === modalActivePhone);
+  let existing = users.find(u => u.phone === modalActivePhone);
+
+  // If not found in local browser storage, fetch permanent record from Cloud RTDB
+  if (!existing && typeof fetchCustomerFromCloud === 'function') {
+    try {
+      const cloudCustomer = await fetchCustomerFromCloud(modalActivePhone);
+      if (cloudCustomer && cloudCustomer.name) {
+        existing = {
+          id: cloudCustomer.id || ('usr_' + modalActivePhone.slice(-4)),
+          name: cloudCustomer.name,
+          phone: modalActivePhone,
+          email: cloudCustomer.email || '',
+          address: {
+            flat: cloudCustomer.flat || '',
+            building: cloudCustomer.building || '',
+            street: cloudCustomer.street || '',
+            landmark: cloudCustomer.landmark || '',
+            city: cloudCustomer.city || 'Bangalore - 560102',
+            tag: cloudCustomer.tag || 'Home'
+          },
+          savedAddresses: [
+            { type: cloudCustomer.tag || 'Home', flat: cloudCustomer.flat || '', street: cloudCustomer.street || '', isDefault: true }
+          ],
+          createdAt: cloudCustomer.createdAt || new Date().toISOString(),
+          orderCount: cloudCustomer.orderCount || 0
+        };
+        users.push(existing);
+        localStorage.setItem('Rasoee_users', JSON.stringify(users));
+      }
+    } catch (err) {
+      console.warn("Cloud customer fetch error:", err);
+    }
+  }
+
   if (existing) {
     setCustomerSession(existing);
     closeLoginModal();
@@ -1191,6 +1270,20 @@ function handleModalSaveProfile() {
   }
   users.push(newUser);
   localStorage.setItem('Rasoee_users', JSON.stringify(users));
+
+  // Permanently sync customer to Cloud RTDB by mobile number
+  if (typeof syncCustomerToCloud === 'function') {
+    syncCustomerToCloud({
+      phone: modalActivePhone,
+      name: name,
+      flat: flat,
+      street: street,
+      landmark: landmark,
+      city: 'Bangalore - 560102',
+      tag: tag,
+      updatedAt: new Date().toISOString()
+    });
+  }
 
   setCustomerSession(newUser);
   closeLoginModal();
@@ -1962,6 +2055,8 @@ function updateTrackingModalContent(order) {
   const itemsEl = document.getElementById('track-order-items');
   const payBadge = document.getElementById('track-payment-badge');
   const fullScreenLink = document.getElementById('track-fullscreen-link');
+  const etaTimer = document.getElementById('track-eta-timer');
+  const riderContainer = document.getElementById('track-modal-rider-container');
 
   if (orderIdEl) orderIdEl.textContent = `#${order.id}`;
   if (totalEl) totalEl.textContent = `₹${order.total}`;
@@ -1972,9 +2067,9 @@ function updateTrackingModalContent(order) {
     fullScreenLink.href = `track.html?orderId=${order.id}`;
   }
   if (itemsEl) {
-    itemsEl.innerHTML = order.items.map(i => `
+    itemsEl.innerHTML = (order.items || []).map(i => `
       <div class="text-xs text-gray-600 flex justify-between py-1">
-        <span>${escapeHtml(i.product.name)} × ${i.qty}</span>
+        <span>${escapeHtml(i.product?.name || i.name || 'Item')} × ${i.qty}</span>
         <span class="font-bold text-gray-900">₹${i.total}</span>
       </div>
     `).join('');
@@ -1983,6 +2078,68 @@ function updateTrackingModalContent(order) {
   // Update status stepper based on order.status
   const status = (order.status || 'Confirmed').toLowerCase();
   applyTrackingStepHighlights(status);
+
+  // Status milestone badge (no fake countdown)
+  if (etaTimer) {
+    if (status.includes('deliver') && !status.includes('out')) {
+      etaTimer.textContent = "Delivered ✓";
+      etaTimer.className = "bg-emerald-600 text-white px-2.5 py-0.5 rounded-lg text-xs font-black uppercase";
+    } else if (status.includes('out') || status.includes('dispatched')) {
+      etaTimer.textContent = "Out for Delivery";
+      etaTimer.className = "bg-purple-600 text-white px-2.5 py-0.5 rounded-lg text-xs font-black uppercase";
+    } else if (status.includes('pack')) {
+      etaTimer.textContent = "Packing Items";
+      etaTimer.className = "bg-blue-600 text-white px-2.5 py-0.5 rounded-lg text-xs font-black uppercase";
+    } else {
+      etaTimer.textContent = "Order Confirmed";
+      etaTimer.className = "bg-blinkit-yellow text-blinkit-dark px-2.5 py-0.5 rounded-lg text-xs font-black uppercase";
+    }
+  }
+
+  // Dynamic Rider Allotment Card
+  if (riderContainer) {
+    if (order.rider && order.rider.name) {
+      const rName = escapeHtml(order.rider.name);
+      const rPhone = escapeHtml(order.rider.phone || '');
+      riderContainer.innerHTML = `
+        <div class="bg-emerald-50/80 rounded-2xl p-3.5 border border-emerald-200 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-emerald-100 flex items-center justify-center text-2xl shadow-inner">
+              🚴
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-black text-gray-800">${rName}</span>
+                <span class="bg-yellow-100 text-yellow-800 text-[9px] font-bold px-1.5 py-0.5 rounded">Allotted Partner</span>
+              </div>
+              <div class="text-[10px] text-gray-500 font-semibold">${rPhone ? '+91 ' + rPhone : 'Rasoee Store Delivery Partner'}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            ${rPhone ? `
+              <a href="tel:+91${rPhone}" class="w-8 h-8 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-xs shadow-xs" title="Call Rider">📞</a>
+              <button onclick="openWhatsAppChat('Hi ${rName}, checking on my live supermarket order #${order.id}')" class="w-8 h-8 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white flex items-center justify-center text-xs active:scale-95 shadow-xs" title="WhatsApp Rider">💬</button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+
+      const step3Desc = document.getElementById('track-step-3-desc');
+      if (step3Desc) step3Desc.textContent = `Partner ${rName} assigned for doorstep delivery`;
+    } else {
+      riderContainer.innerHTML = `
+        <div class="bg-gray-50 rounded-2xl p-3.5 border border-gray-200 flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl shadow-inner">
+            🛵
+          </div>
+          <div>
+            <div class="text-xs font-black text-gray-800">Delivery Partner Allocation</div>
+            <div class="text-[10px] text-gray-500">Store operator is packing your items. Partner will be allotted once packed.</div>
+          </div>
+        </div>
+      `;
+    }
+  }
 }
 
 function closeTrackingModal() {
@@ -2039,19 +2196,22 @@ function applyTrackingStepHighlights(status) {
 }
 
 function startOrderTrackingAnimation() {
-  const etaTimer = document.getElementById('track-eta-timer');
-  let secondsLeft = 11 * 60 + 45; // 11m 45s
   if (window.trackInterval) clearInterval(window.trackInterval);
 
-  window.trackInterval = setInterval(() => {
-    secondsLeft--;
-    if (secondsLeft < 0) secondsLeft = 0;
-    const mins = Math.floor(secondsLeft / 60);
-    const secs = secondsLeft % 60;
-    if (etaTimer) {
-      etaTimer.textContent = `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
-    }
-  }, 1000);
+  // Poll cloud orders every 4s to track live status & rider updates
+  window.trackInterval = setInterval(async () => {
+    if (!state.currentTrackingOrder) return;
+    try {
+      if (typeof fetchOrdersFromCloud === 'function') {
+        const cloudOrders = await fetchOrdersFromCloud();
+        const updated = (cloudOrders || []).find(o => o.id === state.currentTrackingOrder.id);
+        if (updated) {
+          state.currentTrackingOrder = updated;
+          updateTrackingModalContent(updated);
+        }
+      }
+    } catch (err) {}
+  }, 4000);
 }
 
 // Cross-Tab Live Synchronization for Real-Time Order Status
@@ -2123,6 +2283,22 @@ function saveRecentOrder(order) {
         });
       }
       localStorage.setItem('Rasoee_users', JSON.stringify(users));
+    }
+
+    // Real-time Cloud RTDB sync for multi-device Operator, Admin & Customer profile
+    if (typeof syncOrderToCloud === 'function') {
+      syncOrderToCloud(order);
+    }
+    if (order.customer && order.customer.phone && typeof syncCustomerToCloud === 'function') {
+      syncCustomerToCloud({
+        phone: order.customer.phone,
+        name: order.customer.name || 'Customer',
+        flat: order.customer.flat || '',
+        street: order.customer.street || '',
+        landmark: order.customer.landmark || '',
+        instructions: order.customer.instructions || '',
+        updatedAt: new Date().toISOString()
+      });
     }
   } catch (e) {
     console.warn("Could not save order", e);
@@ -2205,6 +2381,39 @@ function setupEventListeners() {
         state.deliveryAddress[key] = el.value.trim();
         localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
       });
+
+      // If customer enters their phone number in checkout drawer, auto-lookup from cloud
+      if (id === 'addr-phone') {
+        el.addEventListener('blur', async () => {
+          const rawPhone = el.value.replace(/\D/g, '').slice(-10);
+          if (rawPhone.length === 10 && typeof fetchCustomerFromCloud === 'function') {
+            try {
+              const cloudCust = await fetchCustomerFromCloud(rawPhone);
+              if (cloudCust && cloudCust.flat) {
+                const nameInp = document.getElementById('addr-name');
+                const flatInp = document.getElementById('addr-flat');
+                const streetInp = document.getElementById('addr-street');
+                const landmarkInp = document.getElementById('addr-landmark');
+
+                if (nameInp && !nameInp.value) nameInp.value = cloudCust.name || '';
+                if (flatInp && !flatInp.value) flatInp.value = cloudCust.flat || '';
+                if (streetInp && !streetInp.value) streetInp.value = cloudCust.street || '';
+                if (landmarkInp && !landmarkInp.value) landmarkInp.value = cloudCust.landmark || '';
+
+                state.deliveryAddress = {
+                  ...state.deliveryAddress,
+                  name: cloudCust.name || state.deliveryAddress.name,
+                  phone: rawPhone,
+                  flat: cloudCust.flat || state.deliveryAddress.flat,
+                  street: cloudCust.street || state.deliveryAddress.street,
+                  landmark: cloudCust.landmark || state.deliveryAddress.landmark
+                };
+                localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
+              }
+            } catch (err) {}
+          }
+        });
+      }
     }
   });
 

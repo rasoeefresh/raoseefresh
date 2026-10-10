@@ -107,7 +107,7 @@ const DEFAULT_CONFIG = {
     upiId: "RasoeeFresh@upi",
     upiName: "Rasoee Fresh Supermarket",
     enableCod: true,
-    defaultMethod: "upi_qr"
+    defaultMethod: "cod"
   },
 
   features: {
@@ -160,8 +160,8 @@ function getStoreConfig() {
       if (parsed.payment) {
         delete parsed.payment.enableRazorpay;
         delete parsed.payment.razorpayKeyId;
-        if (parsed.payment.defaultMethod === 'razorpay') {
-          parsed.payment.defaultMethod = 'upi_qr';
+        if (!parsed.payment.defaultMethod || parsed.payment.defaultMethod === 'razorpay') {
+          parsed.payment.defaultMethod = 'cod';
         }
       }
       return { 
@@ -1011,8 +1011,8 @@ function initDemoDataIfEmpty() {
             status: 'PAID ONLINE (Verified ✅)',
             paymentId: 'UPI-8492019482'
           },
-          status: 'Out for Delivery',
-          rider: { name: 'Ramesh Kumar', phone: '9876543210', vehicle: 'Hero Electric (KA-01-EQ-4021)', rating: 4.9 }
+          status: 'Confirmed',
+          rider: null
         },
         {
           id: 'RF-837192',
@@ -1036,7 +1036,7 @@ function initDemoDataIfEmpty() {
             paymentId: 'UPI-4829104820'
           },
           status: 'Packing',
-          rider: { name: 'Suresh Gowda', phone: '9876543210', vehicle: 'Ather 450X (KA-01-HR-9821)', rating: 4.8 }
+          rider: null
         },
         {
           id: 'RF-716492',
@@ -1069,6 +1069,122 @@ function initDemoDataIfEmpty() {
   }
 }
 
+// ================= GOOGLE DRIVE & CLOUD IMAGE NORMALIZER =================
+function normalizeImageUrl(url) {
+  if (!url || typeof url !== 'string') return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
+  url = url.trim();
+  
+  // Google Drive Link Conversion: supports /file/d/ID/view, id=ID, open?id=ID, uc?id=ID
+  if (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com')) {
+    let fileId = null;
+    const matchD = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (matchD && matchD[1]) {
+      fileId = matchD[1];
+    } else {
+      const matchId = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (matchId && matchId[1]) {
+        fileId = matchId[1];
+      }
+    }
+    if (fileId) {
+      // High-resolution, direct image thumbnail stream without CORS or Google Sign-In issues:
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+    }
+  }
+  return url;
+}
+
+// ================= DELIVERY RIDERS & ALLOTMENT REGISTRY =================
+const DEFAULT_RIDERS = [
+  { id: 'rider-1', name: 'Ramesh Kumar', phone: '9876543210', vehicle: 'Electric Scooter (KA-01-EQ-4021)', active: true },
+  { id: 'rider-2', name: 'Suresh Patil', phone: '9898989898', vehicle: 'Motorcycle (MH-12-AB-1234)', active: true },
+  { id: 'rider-3', name: 'Vijay Shinde', phone: '9765432109', vehicle: 'Delivery Van (MH-12-CD-5678)', active: true }
+];
+
+function getStoredRiders() {
+  try {
+    const saved = localStorage.getItem('rasoee_delivery_riders');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return DEFAULT_RIDERS;
+}
+
+function saveStoredRiders(riders) {
+  try {
+    localStorage.setItem('rasoee_delivery_riders', JSON.stringify(riders));
+    if (typeof syncToCloud === 'function') syncToCloud();
+  } catch (e) {}
+}
+
+// ================= CLOUD ORDERS & CUSTOMER PROFILE REALTIME SYNC =================
+const CLOUD_RTDB_BASE = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data";
+
+async function syncOrderToCloud(order) {
+  if (!order || !order.id) return false;
+  try {
+    const res = await fetch(`${CLOUD_RTDB_BASE}/orders/${encodeURIComponent(order.id)}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("syncOrderToCloud error:", e);
+    return false;
+  }
+}
+
+async function fetchOrdersFromCloud() {
+  try {
+    const res = await fetch(`${CLOUD_RTDB_BASE}/orders.json`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        return Object.values(data);
+      }
+    }
+  } catch (e) {
+    console.warn("fetchOrdersFromCloud error:", e);
+  }
+  return [];
+}
+
+async function syncCustomerToCloud(customer) {
+  if (!customer || !customer.phone) return false;
+  const cleanPhone = String(customer.phone).replace(/\D/g, '').slice(-10);
+  if (!cleanPhone) return false;
+  try {
+    const res = await fetch(`${CLOUD_RTDB_BASE}/customers/${cleanPhone}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customer)
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("syncCustomerToCloud error:", e);
+    return false;
+  }
+}
+
+async function fetchCustomerFromCloud(phone) {
+  if (!phone) return null;
+  const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+  if (!cleanPhone) return null;
+  try {
+    const res = await fetch(`${CLOUD_RTDB_BASE}/customers/${cleanPhone}.json`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'object') return data;
+    }
+  } catch (e) {
+    console.warn("fetchCustomerFromCloud error:", e);
+  }
+  return null;
+}
+
 // Auto-run initialization
 if (typeof window !== "undefined") {
   initDemoDataIfEmpty();
@@ -1088,7 +1204,15 @@ if (typeof module !== "undefined" && module.exports) {
     initDemoDataIfEmpty,
     getAdminSecurityConfig,
     verifyAdminCredentials,
-    updateAdminSecurityCredentials
+    updateAdminSecurityCredentials,
+    normalizeImageUrl,
+    DEFAULT_RIDERS,
+    getStoredRiders,
+    saveStoredRiders,
+    syncOrderToCloud,
+    fetchOrdersFromCloud,
+    syncCustomerToCloud,
+    fetchCustomerFromCloud
   };
 }
 

@@ -448,23 +448,35 @@
           <div class="flex items-center justify-between">
             <span class="font-black text-indigo-950 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
               <span>🚚</span>
-              <span>Delivery Partner / Rider Assignment</span>
+              <span>Delivery Partner Allotment</span>
             </span>
             <span class="text-[10px] text-indigo-700 font-bold bg-indigo-100 px-2 py-0.5 rounded-full">Dispatch Control</span>
           </div>
 
+          <!-- Quick Select Registered Delivery Partner -->
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Select Delivery Partner</label>
+            <select 
+              id="modal-rider-select" 
+              onchange="onOperatorRiderSelect(this.value)" 
+              class="w-full p-2.5 bg-white rounded-xl border border-indigo-200 focus:border-indigo-600 outline-none font-bold text-xs cursor-pointer"
+            >
+              <option value="">-- Choose Registered Delivery Partner --</option>
+            </select>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block font-bold text-slate-700 mb-1">Rider / Partner Name</label>
+              <label class="block font-bold text-slate-700 mb-1">Partner / Rider Name</label>
               <input 
                 type="text" 
                 id="modal-rider-name" 
-                placeholder="e.g. Ramesh / Store Runner / Dunzo" 
+                placeholder="e.g. Ramesh Kumar / Store Runner" 
                 class="w-full p-2.5 bg-white rounded-xl border border-slate-300 focus:border-indigo-600 outline-none font-semibold text-xs"
               />
             </div>
             <div>
-              <label class="block font-bold text-slate-700 mb-1">Rider Phone Number</label>
+              <label class="block font-bold text-slate-700 mb-1">Partner Phone Number</label>
               <input 
                 type="tel" 
                 id="modal-rider-phone" 
@@ -478,23 +490,42 @@
             <button 
               type="button" 
               onclick="saveRiderAssignment()" 
-              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-2xs"
+              class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center gap-1.5"
             >
-              Save Rider Info
+              <span>🚚</span>
+              <span>Allot Delivery Person &amp; Sync</span>
             </button>
-            <span id="rider-saved-feedback" class="text-xs text-emerald-700 font-bold hidden">✓ Saved</span>
+            <span id="rider-saved-feedback" class="text-xs text-emerald-700 font-bold hidden">✓ Partner Allotted &amp; Synced!</span>
           </div>
         </div>
 
-        <!-- Bill & Payment Summary -->
-        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs flex items-center justify-between">
-          <div>
-            <span class="text-slate-500 block text-[10px] font-bold uppercase">Payment Status</span>
-            <span id="modal-payment-status" class="font-black text-sm text-slate-900">-</span>
+        <!-- Bill & Payment Summary with UTR Verification -->
+        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-slate-500 block text-[10px] font-bold uppercase">Payment Status</span>
+              <span id="modal-payment-status" class="font-black text-sm text-slate-900">-</span>
+            </div>
+            <div class="text-right">
+              <span class="text-slate-500 block text-[10px] font-bold uppercase">Total Order Amount</span>
+              <span id="modal-order-total" class="font-black text-base text-blinkit-green">₹0</span>
+            </div>
           </div>
-          <div class="text-right">
-            <span class="text-slate-500 block text-[10px] font-bold uppercase">Total Order Amount</span>
-            <span id="modal-order-total" class="font-black text-base text-blinkit-green">₹0</span>
+
+          <!-- Direct UPI UTR Details & Operator Verification -->
+          <div id="modal-upi-utr-block" class="hidden pt-2 border-t border-slate-200 flex items-center justify-between bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200">
+            <div>
+              <span class="text-[10px] font-bold uppercase text-emerald-800 block">UPI Customer Reference / UTR</span>
+              <span id="modal-upi-utr-value" class="font-mono font-black text-xs text-slate-900">-</span>
+            </div>
+            <button 
+              type="button" 
+              id="modal-verify-upi-btn"
+              onclick="operatorVerifyUpiPayment()" 
+              class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black text-[11px] shadow-xs active:scale-95 transition-all"
+            >
+              ✅ Verify Payment Received
+            </button>
           </div>
         </div>
 
@@ -824,12 +855,41 @@
       }
     }
 
-    // Orders Loading & Processing
-    function loadOrders() {
+    // Orders Loading & Processing with Cloud RTDB Sync
+    async function loadOrders() {
+      let localOrders = [];
       try {
-        allOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
+        localOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
       } catch (e) {
-        allOrders = [];
+        localOrders = [];
+      }
+
+      // Multi-device Cloud RTDB live sync
+      if (typeof fetchOrdersFromCloud === 'function') {
+        try {
+          const cloudOrders = await fetchOrdersFromCloud();
+          if (cloudOrders && cloudOrders.length > 0) {
+            const orderMap = new Map();
+            localOrders.forEach(o => { if (o && o.id) orderMap.set(o.id, o); });
+            cloudOrders.forEach(co => {
+              if (co && co.id) {
+                const ex = orderMap.get(co.id);
+                if (!ex || (co.updatedAt || co.timestamp || '') >= (ex.updatedAt || ex.timestamp || '')) {
+                  orderMap.set(co.id, co);
+                }
+              }
+            });
+            allOrders = Array.from(orderMap.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+            localStorage.setItem('Rasoee_orders', JSON.stringify(allOrders));
+          } else {
+            allOrders = localOrders;
+          }
+        } catch (err) {
+          console.warn("Operator cloud orders fetch error:", err);
+          allOrders = localOrders;
+        }
+      } else {
+        allOrders = localOrders;
       }
 
       // Check if any brand new orders arrived
@@ -1137,9 +1197,17 @@
       } catch (e) {}
     }
 
-    function saveOrdersToStorage() {
+    function saveOrdersToStorage(orderToSync = null) {
       localStorage.setItem('Rasoee_orders', JSON.stringify(allOrders));
       updateMetrics();
+
+      const target = orderToSync || (activeModalOrderId ? allOrders.find(o => o.id === activeModalOrderId) : null);
+      if (target) {
+        target.updatedAt = new Date().toISOString();
+        if (typeof syncOrderToCloud === 'function') {
+          syncOrderToCloud(target);
+        }
+      }
     }
 
     // Open Packing & Dispatch Checklist Modal
@@ -1190,15 +1258,49 @@
       // Populate Items Checklist
       renderPackingChecklist(order);
 
-      // Populate Rider
+      // Populate Rider Selection Dropdown
+      const riderSelect = document.getElementById('modal-rider-select');
+      if (riderSelect) {
+        const riders = typeof getStoredRiders === 'function' ? getStoredRiders() : [];
+        riderSelect.innerHTML = `<option value="">-- Choose Registered Delivery Partner --</option>` +
+          riders.map(r => `<option value="${r.id}" ${order.rider?.phone === r.phone ? 'selected' : ''}>${r.name} (${r.vehicle || 'Bike'}) - ${r.phone}</option>`).join('') +
+          `<option value="custom">➕ Enter Custom Delivery Partner</option>`;
+      }
+
+      // Populate Rider fields
       document.getElementById('modal-rider-name').value = order.rider?.name || '';
       document.getElementById('modal-rider-phone').value = order.rider?.phone || '';
       document.getElementById('rider-saved-feedback').classList.add('hidden');
 
-      // Populate Total & Payment
+      // Populate Total & Payment & UTR block
       const isOnline = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').toLowerCase().includes('upi');
+      const utr = order.payment?.utr || order.payment?.paymentId || '';
       document.getElementById('modal-payment-status').textContent = isOnline ? 'Online Paid (Direct UPI QR)' : 'Cash on Delivery (COD)';
       document.getElementById('modal-order-total').textContent = `₹${order.total || 0}`;
+
+      const utrBlock = document.getElementById('modal-upi-utr-block');
+      const utrVal = document.getElementById('modal-upi-utr-value');
+      const verifyBtn = document.getElementById('modal-verify-upi-btn');
+      if (utrBlock && utrVal) {
+        if (isOnline || utr) {
+          utrBlock.classList.remove('hidden');
+          utrVal.textContent = utr ? utr : 'Verified via UPI';
+          if (verifyBtn) {
+            const isVerified = (order.payment?.status || '').includes('Verified by Operator');
+            if (isVerified) {
+              verifyBtn.textContent = '✅ Payment Verified';
+              verifyBtn.disabled = true;
+              verifyBtn.className = "px-3 py-1.5 bg-gray-200 text-gray-500 rounded-xl font-bold text-[11px] cursor-default";
+            } else {
+              verifyBtn.textContent = '✅ Verify Payment Received';
+              verifyBtn.disabled = false;
+              verifyBtn.className = "px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black text-[11px] shadow-xs active:scale-95 transition-all";
+            }
+          }
+        } else {
+          utrBlock.classList.add('hidden');
+        }
+      }
 
       // Populate Status Select
       const select = document.getElementById('modal-status-select');
@@ -1313,6 +1415,28 @@
       }
     }
 
+    function onOperatorRiderSelect(riderId) {
+      if (!riderId || riderId === 'custom') return;
+      const riders = typeof getStoredRiders === 'function' ? getStoredRiders() : [];
+      const match = riders.find(r => r.id === riderId);
+      if (match) {
+        document.getElementById('modal-rider-name').value = match.name;
+        document.getElementById('modal-rider-phone').value = match.phone;
+      }
+    }
+
+    function operatorVerifyUpiPayment() {
+      const order = allOrders.find(o => o.id === activeModalOrderId);
+      if (!order) return;
+      if (!order.payment) order.payment = {};
+      order.payment.status = 'PAID (Verified by Operator)';
+      order.payment.verifiedAt = new Date().toISOString();
+      saveOrdersToStorage(order);
+      renderOrders();
+      openPackingModal(order.id);
+      alert(`✅ UPI Payment for Order ${order.id} marked as VERIFIED!`);
+    }
+
     function saveRiderAssignment() {
       const order = allOrders.find(o => o.id === activeModalOrderId);
       if (!order) return;
@@ -1320,14 +1444,27 @@
       const name = document.getElementById('modal-rider-name').value.trim();
       const phone = document.getElementById('modal-rider-phone').value.trim();
 
-      order.rider = { name, phone };
-      saveOrdersToStorage();
+      if (!name) {
+        alert("Please enter or select a delivery partner name.");
+        return;
+      }
+
+      order.rider = { name, phone, allottedAt: new Date().toISOString() };
+      
+      // Auto-suggest 'Out for Delivery' if currently ready or packed
+      if ((order.status || '').toLowerCase().includes('ready') || (order.status || '').toLowerCase().includes('pack')) {
+        order.status = 'Out for Delivery';
+        const select = document.getElementById('modal-status-select');
+        if (select) select.value = 'Out for Delivery';
+      }
+
+      saveOrdersToStorage(order);
       renderOrders();
 
       const fb = document.getElementById('rider-saved-feedback');
       if (fb) {
         fb.classList.remove('hidden');
-        setTimeout(() => fb.classList.add('hidden'), 2000);
+        setTimeout(() => fb.classList.add('hidden'), 2500);
       }
     }
 
