@@ -540,29 +540,41 @@
 
       let existing = users.find(u => u.phone === activePhone);
 
-      // Multi-device Cloud lookup for permanent customer profile
-      if (!existing && typeof fetchCustomerFromCloud === 'function') {
+      // Always perform Multi-device Cloud lookup to fetch permanent cloud record
+      if (typeof fetchCustomerFromCloud === 'function') {
         try {
           const cloudCustomer = await fetchCustomerFromCloud(activePhone);
-          if (cloudCustomer && (cloudCustomer.name || cloudCustomer.address)) {
+          if (cloudCustomer && (cloudCustomer.name || cloudCustomer.flat || cloudCustomer.address)) {
+            const flat = cloudCustomer.flat || (cloudCustomer.address && cloudCustomer.address.flat) || (cloudCustomer.savedAddresses && cloudCustomer.savedAddresses[0]?.flat) || '';
+            const street = cloudCustomer.street || (cloudCustomer.address && cloudCustomer.address.street) || (cloudCustomer.savedAddresses && cloudCustomer.savedAddresses[0]?.street) || '';
+            const landmark = cloudCustomer.landmark || (cloudCustomer.address && cloudCustomer.address.landmark) || '';
+            const name = cloudCustomer.name || (existing ? existing.name : 'Valued Customer');
+
             existing = {
-              id: cloudCustomer.id || ('usr_' + activePhone.slice(-4)),
-              name: cloudCustomer.name || 'Valued Customer',
+              id: cloudCustomer.id || (existing ? existing.id : ('usr_' + activePhone.slice(-4))),
+              name: name,
               phone: activePhone,
-              address: cloudCustomer.address || {
-                flat: cloudCustomer.flat || '',
-                street: cloudCustomer.street || '',
-                landmark: cloudCustomer.landmark || '',
+              flat: flat,
+              street: street,
+              landmark: landmark,
+              instructions: cloudCustomer.instructions || (existing ? existing.instructions : 'Leave at door & ring bell'),
+              address: {
+                flat: flat,
+                street: street,
+                landmark: landmark,
                 city: cloudCustomer.city || 'Bangalore',
                 pincode: cloudCustomer.pincode || '560102'
               },
-              savedAddresses: cloudCustomer.savedAddresses || [
-                { type: 'Home', flat: cloudCustomer.flat || cloudCustomer.address?.flat || '', street: cloudCustomer.street || cloudCustomer.address?.street || '', landmark: cloudCustomer.landmark || cloudCustomer.address?.landmark || '' }
+              savedAddresses: [
+                { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
               ],
-              createdAt: cloudCustomer.createdAt || new Date().toISOString(),
-              orderCount: cloudCustomer.orderCount || 1
+              createdAt: cloudCustomer.createdAt || (existing ? existing.createdAt : new Date().toISOString()),
+              orderCount: cloudCustomer.orderCount || (existing ? existing.orderCount : 1)
             };
-            users.push(existing);
+
+            const idx = users.findIndex(u => u.phone === activePhone);
+            if (idx >= 0) users[idx] = existing;
+            else users.push(existing);
             localStorage.setItem('Rasoee_users', JSON.stringify(users));
           }
         } catch (e) {
@@ -570,14 +582,16 @@
         }
       }
 
-      if (existing) {
-        // Complete login
+      // If user exists and has a name or flat address, log them in immediately without prompting again!
+      if (existing && (existing.name || existing.flat || (existing.address && existing.address.flat))) {
         setUserSession(existing);
         showSuccessState(existing);
       } else {
-        // Move to step 3: profile details
+        // Only if brand new customer with no recorded profile, ask for profile details
         document.getElementById('login-step-otp').classList.add('hidden');
         document.getElementById('login-step-profile').classList.remove('hidden');
+        const nameInp = document.getElementById('profile-name-input');
+        if (nameInp) nameInp.focus();
       }
     }
 
@@ -600,6 +614,10 @@
         id: 'usr_' + Date.now().toString().slice(-6),
         name: name,
         phone: activePhone,
+        flat: flat,
+        street: street,
+        landmark: landmark,
+        instructions: 'Leave at door & ring bell',
         address: {
           flat: flat,
           street: street,
@@ -608,7 +626,7 @@
           pincode: '560102'
         },
         savedAddresses: [
-          { type: 'Home', flat: flat, street: street, landmark: landmark }
+          { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
         ],
         createdAt: new Date().toISOString(),
         orderCount: 0
@@ -621,7 +639,12 @@
       } catch (e) {
         users = [];
       }
-      users.push(newUser);
+      const existingIdx = users.findIndex(u => u.phone === activePhone);
+      if (existingIdx >= 0) {
+        users[existingIdx] = newUser;
+      } else {
+        users.push(newUser);
+      }
       localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
       // Permanently sync customer profile to Firebase RTDB for all devices
@@ -636,18 +659,26 @@
 
     function quickLogin(name, phone, addressStr) {
       const parts = addressStr.split(',');
+      const flat = parts[0]?.trim() || '';
+      const street = parts[1]?.trim() || '';
+      const landmark = parts[2]?.trim() || '';
+
       const user = {
         id: 'usr_' + phone.slice(-4),
         name: name,
         phone: phone,
+        flat: flat,
+        street: street,
+        landmark: landmark,
+        instructions: 'Leave at door & ring bell',
         address: {
-          flat: parts[0]?.trim() || '',
-          street: parts[1]?.trim() || '',
-          landmark: parts[2]?.trim() || '',
+          flat: flat,
+          street: street,
+          landmark: landmark,
           city: 'Bangalore'
         },
         savedAddresses: [
-          { type: 'Home', flat: parts[0]?.trim() || '', street: parts[1]?.trim() || '' }
+          { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
         ],
         createdAt: new Date().toISOString(),
         orderCount: 3
@@ -660,10 +691,13 @@
       } catch (e) {
         users = [];
       }
-      if (!users.some(u => u.phone === phone)) {
+      const idx = users.findIndex(u => u.phone === phone);
+      if (idx >= 0) {
+        users[idx] = user;
+      } else {
         users.push(user);
-        localStorage.setItem('Rasoee_users', JSON.stringify(users));
       }
+      localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
       if (typeof syncCustomerToCloud === 'function') {
         syncCustomerToCloud(user);
@@ -674,18 +708,56 @@
     }
 
     function setUserSession(user) {
-      localStorage.setItem('Rasoee_current_user', JSON.stringify(user));
-      // Also update delivery address for checkout
-      if (user.address) {
-        const addr = {
-          name: user.name,
-          phone: user.phone,
-          flat: user.address.flat || '',
-          street: user.address.street || '',
-          landmark: user.address.landmark || '',
-          instructions: 'Ring doorbell and leave at door'
-        };
-        localStorage.setItem('Rasoee_address', JSON.stringify(addr));
+      const flat = user.flat || (user.address && user.address.flat) || (user.savedAddresses && user.savedAddresses[0]?.flat) || (typeof user.address === 'string' ? user.address.split(',')[0].trim() : '') || '';
+      const street = user.street || (user.address && user.address.street) || (user.savedAddresses && user.savedAddresses[0]?.street) || (typeof user.address === 'string' ? user.address.split(',').slice(1).join(',').trim() : '') || '';
+      const landmark = user.landmark || (user.address && user.address.landmark) || (user.savedAddresses && user.savedAddresses[0]?.landmark) || '';
+      const name = user.name || 'Valued Customer';
+      const phone = user.phone || activePhone;
+      const instructions = user.instructions || 'Leave at door & ring bell';
+
+      const normalized = {
+        id: user.id || ('usr_' + phone.slice(-4)),
+        name: name,
+        phone: phone,
+        flat: flat,
+        street: street,
+        landmark: landmark,
+        instructions: instructions,
+        address: {
+          flat: flat,
+          street: street,
+          landmark: landmark,
+          city: user.address?.city || 'Bangalore'
+        },
+        savedAddresses: [
+          { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
+        ],
+        createdAt: user.createdAt || new Date().toISOString()
+      };
+
+      localStorage.setItem('Rasoee_current_user', JSON.stringify(normalized));
+
+      // Always update delivery address for immediate checkout
+      const addr = {
+        name: name,
+        phone: phone,
+        flat: flat,
+        street: street,
+        landmark: landmark,
+        instructions: instructions
+      };
+      localStorage.setItem('Rasoee_address', JSON.stringify(addr));
+
+      // Also ensure in Rasoee_users
+      let users = [];
+      try { users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]'); } catch (e) {}
+      const existingIdx = users.findIndex(u => u.phone === phone);
+      if (existingIdx >= 0) users[existingIdx] = { ...users[existingIdx], ...normalized };
+      else users.push(normalized);
+      localStorage.setItem('Rasoee_users', JSON.stringify(users));
+
+      if (typeof syncCustomerToCloud === 'function') {
+        syncCustomerToCloud(normalized);
       }
       if (typeof syncToCloud === 'function') {
         syncToCloud();

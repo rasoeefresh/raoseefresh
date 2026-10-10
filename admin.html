@@ -4156,6 +4156,22 @@
         if (u.phone) customerMap.set(u.phone, { ...u });
       });
 
+      // Background multi-device customer sync from Cloud RTDB
+      if (typeof fetchAllCustomersFromCloud === 'function' && !window._adminCloudCustomersLoaded) {
+        window._adminCloudCustomersLoaded = true;
+        fetchAllCustomersFromCloud().then(cloudCusts => {
+          if (Array.isArray(cloudCusts) && cloudCusts.length > 0) {
+            cloudCusts.forEach(c => {
+              if (c && c.phone && !customerMap.has(c.phone)) {
+                customerMap.set(c.phone, c);
+              }
+            });
+            localStorage.setItem('Rasoee_users', JSON.stringify(Array.from(customerMap.values())));
+            renderCustomersTab(filterQuery);
+          }
+        }).catch(e => {});
+      }
+
       ordersList.forEach(o => {
         const ph = o.customer?.phone;
         if (ph) {

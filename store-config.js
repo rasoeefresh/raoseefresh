@@ -1211,14 +1211,46 @@ async function fetchOrdersFromCloud() {
 }
 
 async function syncCustomerToCloud(customer) {
-  if (!customer || !customer.phone) return false;
-  const cleanPhone = String(customer.phone).replace(/\D/g, '').slice(-10);
+  if (!customer) return false;
+  const cleanPhone = String(customer.phone || customer.mobile || '').replace(/\D/g, '').slice(-10);
   if (!cleanPhone) return false;
+
+  const flat = customer.flat || (customer.address && typeof customer.address === 'object' ? customer.address.flat : '') || (customer.savedAddresses && customer.savedAddresses[0] ? customer.savedAddresses[0].flat : '') || (typeof customer.address === 'string' ? customer.address.split(',')[0].trim() : '') || '';
+  const street = customer.street || (customer.address && typeof customer.address === 'object' ? customer.address.street : '') || (customer.savedAddresses && customer.savedAddresses[0] ? customer.savedAddresses[0].street : '') || (typeof customer.address === 'string' ? customer.address.split(',').slice(1).join(',').trim() : '') || '';
+  const landmark = customer.landmark || (customer.address && typeof customer.address === 'object' ? customer.address.landmark : '') || (customer.savedAddresses && customer.savedAddresses[0] ? customer.savedAddresses[0].landmark : '') || '';
+  const name = customer.name || customer.customerName || 'Customer';
+  const instructions = customer.instructions || customer.notes || 'Leave at door & ring bell';
+  const city = customer.city || (customer.address && typeof customer.address === 'object' ? customer.address.city : '') || 'Bangalore';
+  const pincode = customer.pincode || (customer.address && typeof customer.address === 'object' ? customer.address.pincode : '') || '560102';
+
+  const payload = {
+    id: customer.id || ('usr_' + cleanPhone.slice(-4)),
+    phone: cleanPhone,
+    name: name,
+    flat: flat,
+    street: street,
+    landmark: landmark,
+    instructions: instructions,
+    city: city,
+    pincode: pincode,
+    address: {
+      flat: flat,
+      street: street,
+      landmark: landmark,
+      city: city,
+      pincode: pincode
+    },
+    savedAddresses: [
+      { type: 'Home', flat: flat, street: street, landmark: landmark, city: city, isDefault: true }
+    ],
+    updatedAt: new Date().toISOString()
+  };
+
   try {
     const res = await fetch(`${CLOUD_RTDB_BASE}/customers/${cleanPhone}.json`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(customer)
+      body: JSON.stringify(payload)
     });
     return res.ok;
   } catch (e) {
@@ -1235,12 +1267,58 @@ async function fetchCustomerFromCloud(phone) {
     const res = await fetch(`${CLOUD_RTDB_BASE}/customers/${cleanPhone}.json`);
     if (res.ok) {
       const data = await res.json();
-      if (data && typeof data === 'object') return data;
+      if (data && typeof data === 'object') {
+        const flat = data.flat || (data.address && typeof data.address === 'object' ? data.address.flat : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].flat : '') || (typeof data.address === 'string' ? data.address.split(',')[0].trim() : '') || '';
+        const street = data.street || (data.address && typeof data.address === 'object' ? data.address.street : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].street : '') || (typeof data.address === 'string' ? data.address.split(',').slice(1).join(',').trim() : '') || '';
+        const landmark = data.landmark || (data.address && typeof data.address === 'object' ? data.address.landmark : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].landmark : '') || '';
+        const name = data.name || data.customerName || 'Customer';
+        const instructions = data.instructions || data.notes || 'Leave at door & ring bell';
+        const city = data.city || (data.address && typeof data.address === 'object' ? data.address.city : '') || 'Bangalore';
+        const pincode = data.pincode || (data.address && typeof data.address === 'object' ? data.address.pincode : '') || '560102';
+
+        return {
+          id: data.id || ('usr_' + cleanPhone.slice(-4)),
+          phone: cleanPhone,
+          name: name,
+          flat: flat,
+          street: street,
+          landmark: landmark,
+          instructions: instructions,
+          city: city,
+          pincode: pincode,
+          address: {
+            flat: flat,
+            street: street,
+            landmark: landmark,
+            city: city,
+            pincode: pincode
+          },
+          savedAddresses: [
+            { type: 'Home', flat: flat, street: street, landmark: landmark, city: city, isDefault: true }
+          ],
+          updatedAt: data.updatedAt || new Date().toISOString()
+        };
+      }
     }
   } catch (e) {
     console.warn("fetchCustomerFromCloud error:", e);
   }
   return null;
+}
+
+async function fetchAllCustomersFromCloud() {
+  try {
+    const res = await fetch(`${CLOUD_RTDB_BASE}/customers.json`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        return Object.values(data);
+      }
+    }
+  } catch (e) {
+    console.warn("fetchAllCustomersFromCloud error:", e);
+  }
+  return [];
 }
 
 // Auto-run initialization
@@ -1270,7 +1348,8 @@ if (typeof module !== "undefined" && module.exports) {
     syncOrderToCloud,
     fetchOrdersFromCloud,
     syncCustomerToCloud,
-    fetchCustomerFromCloud
+    fetchCustomerFromCloud,
+    fetchAllCustomersFromCloud
   };
 }
 
