@@ -101,6 +101,18 @@ const DEFAULT_CONFIG = {
   handlingFee: 0,
   currencySymbol: "₹",
   
+  // Store Geofence & Delivery Zone Restriction
+  deliveryZone: {
+    maxRadiusKm: 5.0,
+    storeCoordinates: {
+      lat: 12.9116,
+      lng: 77.6389
+    },
+    storeName: "Main Dark Store - HSR Layout Hub",
+    strictBoundaryCheck: true,
+    allowedPincodes: ["560102", "560034", "560068", "560095", "560103", "560076", "560100"]
+  },
+
   // Payment Gateway Configuration
   payment: {
     enableDirectUpi: false,
@@ -166,6 +178,7 @@ function getStoreConfig() {
       return { 
         ...DEFAULT_CONFIG, 
         ...parsed,
+        deliveryZone: { ...DEFAULT_CONFIG.deliveryZone, ...(parsed.deliveryZone || {}) },
         payment: { ...DEFAULT_CONFIG.payment, ...(parsed.payment || {}) },
         outletAddress: { ...DEFAULT_CONFIG.outletAddress, ...(parsed.outletAddress || {}) },
         cloudSync: { ...DEFAULT_CONFIG.cloudSync, ...(parsed.cloudSync || {}) },
@@ -185,6 +198,7 @@ function updateStoreConfig(newConfig) {
     const merged = { 
       ...current, 
       ...newConfig,
+      deliveryZone: { ...current.deliveryZone, ...(newConfig.deliveryZone || {}) },
       payment: { ...current.payment, ...(newConfig.payment || {}) },
       outletAddress: { ...current.outletAddress, ...(newConfig.outletAddress || {}) },
       cloudSync: { ...current.cloudSync, ...(newConfig.cloudSync || {}) },
@@ -558,8 +572,8 @@ async function fetchProductsFromCloud() {
           if (p.image && typeof normalizeImageUrl === 'function') {
             p.image = normalizeImageUrl(p.image);
           }
-          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
-            p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/') || p.image.includes('thumbnail?id='))) {
+            p.image = 'https://lh3.googleusercontent.com/d/1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO=w400';
           }
         });
         localStorage.setItem("rasoee_fresh_products", JSON.stringify(data));
@@ -618,8 +632,8 @@ async function syncFromCloud() {
           if (p.image && typeof normalizeImageUrl === 'function') {
             p.image = normalizeImageUrl(p.image);
           }
-          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
-            p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/') || p.image.includes('thumbnail?id='))) {
+            p.image = 'https://lh3.googleusercontent.com/d/1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO=w400';
           }
         });
         localStorage.setItem("rasoee_fresh_products", JSON.stringify(data.products));
@@ -1131,9 +1145,14 @@ function initDemoDataIfEmpty() {
 function normalizeImageUrl(url) {
   if (!url || typeof url !== 'string') return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
   url = url.trim();
+
+  // If already base64 data url or relative path
+  if (url.startsWith('data:image/') || url.startsWith('blob:') || url.startsWith('./') || url.startsWith('/')) {
+    return url;
+  }
   
-  // Google Drive Link Conversion: supports /file/d/ID/view, id=ID, open?id=ID, uc?id=ID
-  if (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com')) {
+  // Google Drive Link Conversion: supports /file/d/ID/view, id=ID, open?id=ID, uc?id=ID, thumbnail?id=ID
+  if (url.includes('drive.google.com') || url.includes('drive.usercontent.google.com') || url.includes('lh3.googleusercontent.com')) {
     let fileId = null;
     const matchD = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (matchD && matchD[1]) {
@@ -1142,14 +1161,39 @@ function normalizeImageUrl(url) {
       const matchId = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
       if (matchId && matchId[1]) {
         fileId = matchId[1];
+      } else {
+        const matchLh = url.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+        if (matchLh && matchLh[1]) {
+          fileId = matchLh[1];
+        }
       }
     }
     if (fileId) {
-      // High-resolution, direct image thumbnail stream without CORS or Google Sign-In issues:
-      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+      // High-speed Google edge image cache (<100ms) with clean square scaling:
+      return `https://lh3.googleusercontent.com/d/${fileId}=w400`;
     }
   }
   return url;
+}
+
+// ================= 5 KM DELIVERY ZONE DISTANCE CALCULATOR =================
+function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return 0;
+  const numLat1 = parseFloat(lat1);
+  const numLon1 = parseFloat(lon1);
+  const numLat2 = parseFloat(lat2);
+  const numLon2 = parseFloat(lon2);
+  if (isNaN(numLat1) || isNaN(numLon1) || isNaN(numLat2) || isNaN(numLon2)) return 0;
+
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (numLat2 - numLat1) * Math.PI / 180;
+  const dLon = (numLon2 - numLon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(numLat1 * Math.PI / 180) * Math.cos(numLat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10;
 }
 
 // ================= DELIVERY RIDERS & ALLOTMENT REGISTRY =================
@@ -1321,8 +1365,18 @@ async function fetchAllCustomersFromCloud() {
   return [];
 }
 
-// Auto-run initialization
+// Auto-run initialization and global exports
 if (typeof window !== "undefined") {
+  window.calculateDistanceKm = calculateDistanceKm;
+  window.normalizeImageUrl = normalizeImageUrl;
+  window.getStoreConfig = getStoreConfig;
+  window.updateStoreConfig = updateStoreConfig;
+  window.getStoredRiders = getStoredRiders;
+  window.syncOrderToCloud = syncOrderToCloud;
+  window.fetchOrdersFromCloud = fetchOrdersFromCloud;
+  window.syncCustomerToCloud = syncCustomerToCloud;
+  window.fetchCustomerFromCloud = fetchCustomerFromCloud;
+  window.fetchAllCustomersFromCloud = fetchAllCustomersFromCloud;
   initDemoDataIfEmpty();
 }
 
@@ -1342,6 +1396,7 @@ if (typeof module !== "undefined" && module.exports) {
     verifyAdminCredentials,
     updateAdminSecurityCredentials,
     normalizeImageUrl,
+    calculateDistanceKm,
     DEFAULT_RIDERS,
     getStoredRiders,
     saveStoredRiders,

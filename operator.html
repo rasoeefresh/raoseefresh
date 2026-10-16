@@ -264,6 +264,25 @@
     </div>
   </header>
 
+  <!-- Floating New Order Toast Alert -->
+  <div id="order-alert-toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 hidden transition-all duration-300">
+    <div class="bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border-2 border-emerald-400 flex items-center gap-3 animate-pulse">
+      <span class="text-2xl">🔔</span>
+      <div>
+        <div class="text-[11px] font-black text-emerald-400 uppercase tracking-wider">New Customer Order Received!</div>
+        <div id="order-alert-toast-text" class="text-xs font-bold text-white">#RF-ORDER placed</div>
+      </div>
+      <button onclick="dismissAlertToast()" class="ml-2 text-gray-400 hover:text-white font-black text-sm cursor-pointer">✕</button>
+    </div>
+  </div>
+
+  <!-- Audio Autoplay Unlock Notice (if audio is suspended) -->
+  <div id="audio-unlock-notice" onclick="unlockAudio()" class="bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs py-2 px-4 text-center cursor-pointer flex items-center justify-center gap-2 transition-colors">
+    <span>🔔</span>
+    <span>Sound Alerts Active: Tap or Click anywhere to enable instant audible order chime!</span>
+    <span class="underline text-[11px] font-extrabold ml-1">Enable Now</span>
+  </div>
+
   <!-- ================= SUB-HEADER METRICS & FILTERS ================= -->
   <div class="bg-white border-b border-slate-200 shadow-2xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -561,6 +580,7 @@
           </select>
 
           <button 
+            id="btn-modal-update-status"
             onclick="saveModalStatusChange()" 
             class="px-4 py-2.5 bg-blinkit-green hover:bg-blinkit-greenHover text-white rounded-xl font-black text-xs shadow-md transition-all active:scale-95 flex items-center gap-1"
           >
@@ -793,8 +813,33 @@
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
           if (AudioContextClass) audioContext = new AudioContextClass();
         }
+        if (audioContext && audioContext.state === 'running') {
+          const notice = document.getElementById('audio-unlock-notice');
+          if (notice) notice.classList.add('hidden');
+        }
       } catch (e) {}
     }
+
+    function unlockAudio() {
+      initAudio();
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          const notice = document.getElementById('audio-unlock-notice');
+          if (notice) notice.classList.add('hidden');
+        }).catch(() => {});
+      } else {
+        const notice = document.getElementById('audio-unlock-notice');
+        if (notice) notice.classList.add('hidden');
+      }
+
+      // Request browser notification permission if not yet requested
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
 
     function playNewOrderChime() {
       if (!audioAlertEnabled) return;
@@ -812,28 +857,55 @@
         const gain1 = audioContext.createGain();
         osc1.type = 'sine';
         osc1.frequency.setValueAtTime(587.33, now);
-        gain1.gain.setValueAtTime(0.3, now);
-        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        gain1.gain.setValueAtTime(0.4, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
         osc1.connect(gain1);
         gain1.connect(audioContext.destination);
         osc1.start(now);
-        osc1.stop(now + 0.4);
+        osc1.stop(now + 0.45);
 
         // Bell note 2: 880 Hz (A5)
         const osc2 = audioContext.createOscillator();
         const gain2 = audioContext.createGain();
         osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(880, now + 0.15);
-        gain2.gain.setValueAtTime(0.35, now + 0.15);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        osc2.frequency.setValueAtTime(880, now + 0.16);
+        gain2.gain.setValueAtTime(0.45, now + 0.16);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
         osc2.connect(gain2);
         gain2.connect(audioContext.destination);
-        osc2.start(now + 0.15);
-        osc2.stop(now + 0.8);
+        osc2.start(now + 0.16);
+        osc2.stop(now + 0.85);
 
       } catch (e) {
         console.warn("Audio chime error:", e);
       }
+    }
+
+    function showOrderAlertToast(order) {
+      const toast = document.getElementById('order-alert-toast');
+      const textEl = document.getElementById('order-alert-toast-text');
+      if (toast && textEl) {
+        textEl.textContent = `Order #${order.id || 'NEW'} • ₹${order.total || 0} • ${order.customer?.name || 'Walk-in'}`;
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+          toast.classList.add('hidden');
+        }, 8000);
+      }
+
+      // Browser push notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('🛍️ New Order Received!', {
+            body: `Order #${order.id} for ₹${order.total}. Tap to view items.`,
+            icon: 'icon-192.png'
+          });
+        } catch (e) {}
+      }
+    }
+
+    function dismissAlertToast() {
+      const toast = document.getElementById('order-alert-toast');
+      if (toast) toast.classList.add('hidden');
     }
 
     function toggleAudioAlerts() {
@@ -847,6 +919,7 @@
         text.textContent = 'Sound ON';
         btn.className = "px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100";
         initAudio();
+        unlockAudio();
         playNewOrderChime();
       } else {
         icon.textContent = '🔕';
@@ -893,18 +966,19 @@
       }
 
       // Check if any brand new orders arrived
-      let hasNewOrder = false;
+      let newOrderDetected = null;
       allOrders.forEach(o => {
         if (!lastSeenOrderIds.has(o.id)) {
           if (lastSeenOrderIds.size > 0 && !(o.status || '').toLowerCase().includes('deliver')) {
-            hasNewOrder = true;
+            newOrderDetected = o;
           }
           lastSeenOrderIds.add(o.id);
         }
       });
 
-      if (hasNewOrder) {
+      if (newOrderDetected) {
         playNewOrderChime();
+        showOrderAlertToast(newOrderDetected);
       }
 
       updateMetrics();
@@ -1187,8 +1261,14 @@
       const order = allOrders.find(o => o.id === orderId);
       if (!order) return;
 
+      // Lock Delivered Status: Cannot revert once marked Delivered
+      if ((order.status || '').toLowerCase().includes('deliver') && !(order.status || '').toLowerCase().includes('out') && newStatus !== 'Delivered') {
+        alert("This order has been completed & delivered. It cannot be reverted to any earlier stage.");
+        return;
+      }
+
       order.status = newStatus;
-      saveOrdersToStorage();
+      saveOrdersToStorage(order);
       renderOrders();
 
       // Trigger cross-tab sync event
@@ -1302,10 +1382,31 @@
         }
       }
 
-      // Populate Status Select
+      // Populate Status Select & Delivered Lockdown
       const select = document.getElementById('modal-status-select');
+      const updateBtn = document.getElementById('btn-modal-update-status');
+      const isDelivered = (order.status || '').toLowerCase().includes('deliver') && !(order.status || '').toLowerCase().includes('out');
+
       if (select) {
         select.value = order.status || 'Confirmed';
+        select.disabled = isDelivered;
+        if (isDelivered) {
+          select.className = "text-xs font-bold py-2.5 px-3 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 outline-none cursor-not-allowed";
+        } else {
+          select.className = "text-xs font-bold py-2.5 px-3 rounded-xl border border-slate-300 bg-white outline-none focus:border-blinkit-green cursor-pointer";
+        }
+      }
+
+      if (updateBtn) {
+        if (isDelivered) {
+          updateBtn.disabled = true;
+          updateBtn.className = "px-4 py-2.5 bg-gray-200 text-gray-500 rounded-xl font-black text-xs cursor-not-allowed flex items-center gap-1";
+          updateBtn.innerHTML = "<span>🔒 Order Completed & Locked</span>";
+        } else {
+          updateBtn.disabled = false;
+          updateBtn.className = "px-4 py-2.5 bg-blinkit-green hover:bg-blinkit-greenHover text-white rounded-xl font-black text-xs shadow-md transition-all active:scale-95 flex items-center gap-1";
+          updateBtn.innerHTML = "<span>Update Status</span><span>➔</span>";
+        }
       }
 
       modal.classList.remove('hidden');
@@ -1473,6 +1574,13 @@
       if (!order) return;
 
       const newStatus = document.getElementById('modal-status-select').value;
+
+      // Lock Delivered Status: Cannot revert once marked Delivered
+      if ((order.status || '').toLowerCase().includes('deliver') && !(order.status || '').toLowerCase().includes('out') && newStatus !== 'Delivered') {
+        alert("This order has been completed & delivered. It cannot be reverted to any earlier stage.");
+        return;
+      }
+
       order.status = newStatus;
 
       // Also save rider info if typed
@@ -1482,7 +1590,7 @@
         order.rider = { name: riderName, phone: riderPhone };
       }
 
-      saveOrdersToStorage();
+      saveOrdersToStorage(order);
       renderOrders();
       closePackingModal();
       alert(`Order ${order.id} status updated to: ${newStatus} ✓`);

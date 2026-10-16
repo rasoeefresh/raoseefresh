@@ -603,7 +603,25 @@
         }
       };
 
-      if (status.includes('deliver') && !status.includes('out')) {
+      if (status.includes('cancel')) {
+        // Cancelled by store / operator
+        const ind1 = step1.querySelector('.step-indicator');
+        const title1 = step1.querySelector('div:first-of-type');
+        if (ind1) ind1.className = "step-indicator absolute -left-[35px] top-0.5 w-4 h-4 rounded-full bg-rose-600 border-2 border-white ring-2 ring-rose-200";
+        if (title1) {
+          title1.className = "text-xs sm:text-sm font-black text-rose-700";
+          title1.textContent = "Order Cancelled";
+        }
+        [step2, step3, step4, step5].forEach(node => setNodeActive(node, false));
+        if (progressBar) {
+          progressBar.style.width = '0%';
+          progressBar.className = "bg-rose-500 h-1.5 rounded-full transition-all duration-700";
+        }
+        if (scooterMarker) scooterMarker.style.display = 'none';
+        badgeStatus.className = "bg-rose-600 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm";
+        badgeStatus.textContent = "Order Cancelled ✕";
+        statusTagline.textContent = "This order was cancelled by store. If amount was deducted, 100% full refund is initiated.";
+      } else if (status.includes('deliver') && !status.includes('out')) {
         // Delivered
         setNodeActive(step1, true, true);
         setNodeActive(step2, true, true);
@@ -611,7 +629,11 @@
         setNodeActive(step4, true, true);
         setNodeActive(step5, true, true);
         progressBar.style.width = '100%';
-        scooterMarker.style.left = '100%';
+        if (scooterMarker) {
+          scooterMarker.style.display = 'block';
+          scooterMarker.style.left = '100%';
+        }
+        badgeStatus.className = "bg-white/20 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm";
         badgeStatus.textContent = "Delivered at Doorstep 🎉";
         statusTagline.textContent = "Your fresh grocery bag has been safely handed over!";
       } else if (status.includes('out') || status.includes('dispatched')) {
@@ -622,7 +644,11 @@
         setNodeActive(step4, true);
         setNodeActive(step5, false);
         progressBar.style.width = '75%';
-        scooterMarker.style.left = '75%';
+        if (scooterMarker) {
+          scooterMarker.style.display = 'block';
+          scooterMarker.style.left = '75%';
+        }
+        badgeStatus.className = "bg-white/20 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm";
         badgeStatus.textContent = "Rider Out For Delivery 🛵";
         statusTagline.textContent = "Speeding safely on electric scooter to your building.";
       } else if (status.includes('pack')) {
@@ -633,7 +659,11 @@
         setNodeActive(step4, false);
         setNodeActive(step5, false);
         progressBar.style.width = '35%';
-        scooterMarker.style.left = '35%';
+        if (scooterMarker) {
+          scooterMarker.style.display = 'block';
+          scooterMarker.style.left = '35%';
+        }
+        badgeStatus.className = "bg-white/20 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm";
         badgeStatus.textContent = "Packing at Dark Store 🥬";
         statusTagline.textContent = "Store executives are packing fresh vegetables and chilled dairy.";
       } else {
@@ -644,7 +674,11 @@
         setNodeActive(step4, false);
         setNodeActive(step5, false);
         progressBar.style.width = '15%';
-        scooterMarker.style.left = '15%';
+        if (scooterMarker) {
+          scooterMarker.style.display = 'block';
+          scooterMarker.style.left = '15%';
+        }
+        badgeStatus.className = "bg-white/20 text-white text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm";
         badgeStatus.textContent = "Order Confirmed ⚡";
         statusTagline.textContent = "Store team has accepted order and assigned picker.";
       }
@@ -656,14 +690,21 @@
       const etaClock = document.getElementById('display-eta-clock');
       if (!etaClock) return;
 
-      if (status.includes('deliver') && !status.includes('out')) {
+      if (status.includes('cancel')) {
+        etaClock.textContent = "Order Cancelled ✕";
+        etaClock.className = "text-2xl sm:text-3xl font-black mt-1 flex items-center gap-2 tracking-tight text-rose-300";
+      } else if (status.includes('deliver') && !status.includes('out')) {
         etaClock.textContent = "Delivered ✓";
+        etaClock.className = "text-2xl sm:text-3xl font-black mt-1 flex items-center gap-2 tracking-tight";
       } else if (status.includes('out') || status.includes('dispatched')) {
         etaClock.textContent = "Out for Delivery";
+        etaClock.className = "text-2xl sm:text-3xl font-black mt-1 flex items-center gap-2 tracking-tight";
       } else if (status.includes('pack')) {
         etaClock.textContent = "Packing at Store";
+        etaClock.className = "text-2xl sm:text-3xl font-black mt-1 flex items-center gap-2 tracking-tight";
       } else {
         etaClock.textContent = "Order Placed";
+        etaClock.className = "text-2xl sm:text-3xl font-black mt-1 flex items-center gap-2 tracking-tight";
       }
     }
 
@@ -686,7 +727,7 @@
         return `
           <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
             <div class="flex items-center gap-2.5 min-w-0">
-              <img src="${img}" alt="${escapeHtml(item.product?.name)}" class="w-10 h-10 object-cover rounded-xl border border-gray-200 flex-shrink-0" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100';" />
+              <img src="${img}" alt="${escapeHtml(item.product?.name)}" class="w-10 h-10 object-contain bg-white rounded-xl border border-gray-200 p-0.5 flex-shrink-0" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100';" />
               <div class="truncate">
                 <div class="font-bold text-gray-900 truncate">${escapeHtml(item.product?.name || 'Item')}</div>
                 <div class="text-[11px] text-gray-500">${item.product?.unit || '1 unit'} × <strong>${item.qty}</strong></div>

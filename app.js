@@ -306,27 +306,61 @@ function loadConfigAndData() {
   }
 
   // Direct multi-device live product catalog sync from Firebase RTDB
-  try {
-    fetch("https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json")
-      .then(res => res.ok ? res.json() : null)
-      .then(cloudProducts => {
-        if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
-          cloudProducts.forEach(p => {
-            if (p.image && typeof normalizeImageUrl === 'function') {
-              p.image = normalizeImageUrl(p.image);
-            }
-            if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
-              p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
-            }
-          });
+  startLiveCatalogSync();
+}
+
+// Continuous Multi-Device Realtime Catalog & Image Sync
+function startLiveCatalogSync() {
+  const syncCatalog = async () => {
+    try {
+      const res = await fetch("https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json?_t=" + Date.now(), { 
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" }
+      });
+      if (!res.ok) return;
+      const cloudProducts = await res.json();
+      if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
+        cloudProducts.forEach(p => {
+          if (p.image && typeof normalizeImageUrl === 'function') {
+            p.image = normalizeImageUrl(p.image);
+          }
+          if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/') || p.image.includes('thumbnail?id='))) {
+            p.image = 'https://lh3.googleusercontent.com/d/1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO=w400';
+          }
+        });
+
+        // Determine if images, prices, names, stock, or items changed
+        const currentSig = (state.products || []).map(p => `${p.id}:${p.name}:${p.price}:${p.image}:${p.inStock}:${p.enabled !== false}`).join('|');
+        const newSig = cloudProducts.map(p => `${p.id}:${p.name}:${p.price}:${p.image}:${p.inStock}:${p.enabled !== false}`).join('|');
+
+        if (currentSig !== newSig || (state.products || []).length !== cloudProducts.length) {
+          state.products = cloudProducts;
           localStorage.setItem("rasoee_fresh_products", JSON.stringify(cloudProducts));
           localStorage.setItem("raosee_fresh_products", JSON.stringify(cloudProducts));
-          state.products = cloudProducts;
+          localStorage.setItem("Rasoee_products", JSON.stringify(cloudProducts));
           renderProducts();
         }
-      })
-      .catch(e => console.warn("Direct product sync error:", e));
-  } catch (e) {}
+      }
+    } catch (e) {
+      console.warn("Catalog sync error:", e);
+    }
+  };
+
+  // Immediate initial sync
+  syncCatalog();
+
+  // Background poll every 8 seconds
+  setInterval(syncCatalog, 8000);
+
+  // Instant re-sync when customer switches tabs or resumes app
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        syncCatalog();
+      }
+    });
+    window.addEventListener('focus', syncCatalog);
+  }
 }
 
 function applyBranding() {
@@ -552,12 +586,12 @@ function renderProducts() {
         </div>
 
         <!-- Product Image -->
-        <div class="relative w-full aspect-square mb-3 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center">
+        <div class="relative w-full aspect-square mb-2.5 overflow-hidden rounded-2xl bg-white border border-gray-100 flex items-center justify-center p-2.5 group-hover:border-green-200 transition-colors">
           <img 
             src="${imgUrl}" 
             alt="${escapeHtml(product.name)}"
             loading="lazy"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? 'grayscale' : ''}"
+            class="max-w-full max-h-full object-contain mx-auto group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? 'grayscale opacity-60' : ''}"
             onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=80'"
           />
           ${product.tag ? `
@@ -769,16 +803,165 @@ function selectPaymentMethod(method = 'cod') {
   updateCheckoutButtonText();
 }
 
+// ================= 5 KM DELIVERY BARRIER & ZONE VALIDATION =================
+function validateDeliveryZone() {
+  const cfg = state.config?.deliveryZone || { 
+    maxRadiusKm: 5.0, 
+    storeCoordinates: { lat: 12.9116, lng: 77.6389 },
+    allowedPincodes: ["560102", "560034", "560068", "560095", "560103", "560076", "560100"]
+  };
+  const storeLat = cfg.storeCoordinates?.lat || 12.9116;
+  const storeLng = cfg.storeCoordinates?.lng || 77.6389;
+  const maxRadius = cfg.maxRadiusKm || 5.0;
+
+  // 1. Direct GPS Location check if detected
+  if (state.userGpsCoords && state.userGpsCoords.lat && state.userGpsCoords.lng) {
+    const dist = typeof calculateDistanceKm === 'function' 
+      ? calculateDistanceKm(storeLat, storeLng, state.userGpsCoords.lat, state.userGpsCoords.lng)
+      : 0;
+    const isWithin = dist <= maxRadius;
+    return {
+      isWithin,
+      distanceKm: dist,
+      maxRadius,
+      method: 'gps',
+      message: isWithin 
+        ? `📍 GPS Verified: ${dist} km away (Within ${maxRadius} km delivery zone)`
+        : `🚫 GPS Location is ${dist} km away. We deliver strictly within ${maxRadius} km of our outlet.`
+    };
+  }
+
+  // 2. Check 6-digit Pincode from input or saved address
+  const pincodeInput = document.getElementById('addr-pincode')?.value?.trim();
+  const addressObj = state.deliveryAddress || {};
+  const currentPin = pincodeInput || addressObj.pincode || (typeof addressObj.street === 'string' && addressObj.street.match(/\b560\d{3}\b/)?.[0]) || '';
+  const allowedPins = cfg.allowedPincodes || ["560102", "560034", "560068", "560095", "560103", "560076", "560100"];
+
+  if (currentPin && currentPin.length === 6) {
+    if (allowedPins.includes(currentPin)) {
+      return {
+        isWithin: true,
+        distanceKm: 2.5,
+        maxRadius,
+        method: 'pincode',
+        message: `🟢 Pincode ${currentPin} is inside our ${maxRadius} km delivery zone.`
+      };
+    } else {
+      return {
+        isWithin: false,
+        distanceKm: 8.5,
+        maxRadius,
+        method: 'pincode',
+        message: `🚫 Delivery unavailable for pincode ${currentPin}. We deliver strictly within ${maxRadius} km of HSR Hub.`
+      };
+    }
+  }
+
+  // 3. Fallback: locality boundary verification
+  const combinedAddr = `${addressObj.flat || ''} ${addressObj.street || ''} ${addressObj.landmark || ''}`.toLowerCase();
+  if (combinedAddr.includes('whitefield') || combinedAddr.includes('electronic city') || combinedAddr.includes('hebbal') || combinedAddr.includes('yelahanka') || combinedAddr.includes('malleswaram') || combinedAddr.includes('indiranagar') || combinedAddr.includes('jayanagar')) {
+    return {
+      isWithin: false,
+      distanceKm: 12.0,
+      maxRadius,
+      method: 'area',
+      message: `🚫 Address is outside our ${maxRadius} km service boundary. We deliver strictly in HSR Layout and immediate surroundings.`
+    };
+  }
+
+  return {
+    isWithin: true,
+    distanceKm: null,
+    maxRadius,
+    method: 'default',
+    message: `📍 Outlet Delivery Zone: Limited to 5.0 km from HSR Layout Outlet.`
+  };
+}
+
+// GPS Auto-Detection handler for customers
+function detectUserGpsLocation() {
+  const btn = document.getElementById('btn-detect-gps');
+  if (btn) btn.innerHTML = `<span>⏳ Detecting...</span>`;
+
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser or device.");
+    if (btn) btn.innerHTML = `<span>📍 Auto-Detect</span>`;
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      state.userGpsCoords = { lat, lng };
+
+      const cfg = state.config?.deliveryZone || { maxRadiusKm: 5.0, storeCoordinates: { lat: 12.9116, lng: 77.6389 } };
+      const storeLat = cfg.storeCoordinates?.lat || 12.9116;
+      const storeLng = cfg.storeCoordinates?.lng || 77.6389;
+      const dist = typeof calculateDistanceKm === 'function' 
+        ? calculateDistanceKm(storeLat, storeLng, lat, lng)
+        : 0;
+
+      if (btn) {
+        if (dist <= (cfg.maxRadiusKm || 5.0)) {
+          btn.innerHTML = `<span class="text-emerald-700 font-bold">✓ ${dist} km (In Zone)</span>`;
+        } else {
+          btn.innerHTML = `<span class="text-rose-700 font-bold">✕ ${dist} km (Out of Zone)</span>`;
+        }
+      }
+
+      updateCheckoutButtonText();
+    },
+    (err) => {
+      console.warn("GPS detection error:", err);
+      alert("Unable to detect GPS position. Please check browser location permissions or enter your 6-digit Pincode.");
+      if (btn) btn.innerHTML = `<span>📍 Auto-Detect</span>`;
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+  );
+}
+
 function updateCheckoutButtonText() {
   const summary = getCartSummary();
   const btn = document.getElementById('btn-checkout-primary');
   const btnIcon = document.getElementById('btn-checkout-icon');
   const btnLabel = document.getElementById('btn-checkout-label');
   const btnSub = document.getElementById('btn-checkout-sub');
+  const zoneBadge = document.getElementById('delivery-zone-live-badge');
 
   if (!btn || !btnLabel) return;
 
-  btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all";
+  const zoneCheck = validateDeliveryZone();
+
+  if (zoneBadge) {
+    zoneBadge.classList.remove('hidden');
+    if (zoneCheck.isWithin) {
+      zoneBadge.className = "bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-2.5 text-xs font-bold flex items-center justify-between";
+      zoneBadge.innerHTML = `
+        <span class="flex items-center gap-1.5"><span>🟢</span> <span>${zoneCheck.message}</span></span>
+        <span class="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full uppercase font-black">Within 5 km</span>
+      `;
+    } else {
+      zoneBadge.className = "bg-rose-50 border border-rose-300 text-rose-800 rounded-xl p-2.5 text-xs font-bold flex items-center justify-between";
+      zoneBadge.innerHTML = `
+        <span class="flex items-center gap-1.5"><span>🚫</span> <span>${zoneCheck.message}</span></span>
+        <span class="text-[10px] bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full uppercase font-black">Blocked (> 5 km)</span>
+      `;
+    }
+  }
+
+  // Enforce 5 km Boundary: Disable checkout button if outside zone
+  if (!zoneCheck.isWithin) {
+    btn.disabled = true;
+    btn.className = "w-full bg-slate-300 text-slate-500 py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-none cursor-not-allowed opacity-80";
+    if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">🚫</span>`;
+    btnLabel.textContent = `Delivery Not Available (> 5 km)`;
+    if (btnSub) btnSub.textContent = `Address is beyond 5.0 km outlet boundary`;
+    return;
+  }
+
+  btn.disabled = false;
+  btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all cursor-pointer";
   if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">🛵</span>`;
   btnLabel.textContent = `Place Order (Pay ₹${summary.grandTotal} on Delivery)`;
   if (btnSub) btnSub.textContent = `Cash or UPI to Rider at Doorstep`;
@@ -808,7 +991,7 @@ function renderCartDrawerContent(summary) {
       freeProgress.innerHTML = `
         <div class="bg-green-50 border border-green-200 text-green-800 rounded-xl p-3 text-xs sm:text-sm font-semibold flex items-center gap-2">
           <span>🎉</span>
-          <span>Yay! You've unlocked <strong>FREE 10-min Delivery</strong>!</span>
+          <span>Yay! You've unlocked <strong>FREE Standard Delivery</strong>!</span>
         </div>
       `;
     } else {
@@ -830,7 +1013,7 @@ function renderCartDrawerContent(summary) {
   // Items List
   drawerItems.innerHTML = summary.items.map(({ product, qty, total }) => `
     <div class="flex items-center justify-between gap-3 p-3 bg-white rounded-xl border border-gray-100">
-      <img src="${product.image}" class="w-14 h-14 object-cover rounded-lg bg-gray-50 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=80'" />
+      <img src="${product.image}" class="w-14 h-14 object-contain rounded-xl bg-white border border-gray-100 p-1 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&auto=format&fit=crop&q=80'" />
       <div class="flex-1 min-w-0">
         <h5 class="text-xs sm:text-sm font-bold text-gray-800 truncate">${escapeHtml(product.name)}</h5>
         <div class="text-[11px] text-gray-500">${product.unit}</div>
@@ -976,6 +1159,9 @@ function extractAddressForm() {
     } catch (e) {}
   }
 
+  const pincodeInput = document.getElementById('addr-pincode');
+  let pincode = pincodeInput ? pincodeInput.value.trim() : (state.deliveryAddress?.pincode || '');
+
   // 4. Fill values back into DOM inputs so the customer sees them
   if (nameInput && customerName && !nameInput.value) nameInput.value = customerName;
   if (phoneInput && customerPhone && !phoneInput.value) phoneInput.value = customerPhone;
@@ -983,6 +1169,7 @@ function extractAddressForm() {
   if (streetInput && street && !streetInput.value) streetInput.value = street;
   if (landmarkInput && landmark && !landmarkInput.value) landmarkInput.value = landmark;
   if (notesInput && notes && !notesInput.value) notesInput.value = notes;
+  if (pincodeInput && pincode && !pincodeInput.value) pincodeInput.value = pincode;
 
   if (!customerPhone || !flat) {
     const addrSection = document.getElementById('address-section-drawer');
@@ -999,6 +1186,8 @@ function extractAddressForm() {
     flat,
     street: street || 'Main Road',
     landmark,
+    pincode,
+    gpsCoords: state.userGpsCoords || null,
     instructions: notes || 'Leave at door & ring bell'
   };
   localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
@@ -1016,6 +1205,13 @@ function handleUnifiedCheckout() {
   const summary = getCartSummary();
   if (summary.itemCount === 0) {
     alert("Your cart is empty! Please add some grocery items first.");
+    return;
+  }
+
+  // Strict 5 km Outlet Delivery Boundary Enforcement
+  const zoneCheck = validateDeliveryZone();
+  if (!zoneCheck.isWithin) {
+    alert(`🚫 Delivery Restricted Outside 5 KM Boundary!\n\n${zoneCheck.message}\n\nPlease choose an address within 5.0 km of our dark store.`);
     return;
   }
 
@@ -2066,6 +2262,7 @@ function renderAccountOrders() {
     let statusBadgeClass = 'bg-green-100 text-green-800 border-green-200';
     if (status.includes('Packing')) statusBadgeClass = 'bg-yellow-100 text-yellow-800 border-yellow-200';
     if (status.includes('Out')) statusBadgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+    if (status.toLowerCase().includes('cancel')) statusBadgeClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
 
     return `
       <div onclick="openOrderReceipt('${order.id}')" class="bg-gray-50 hover:bg-green-50/40 rounded-2xl p-4 border border-gray-200 hover:border-green-300 transition-all space-y-3 cursor-pointer">
@@ -2212,7 +2409,19 @@ function openOrderReceipt(orderId) {
 
   // Live Status Badge & Tracking Link
   const statusEl = document.getElementById('receipt-order-status');
-  if (statusEl) statusEl.textContent = order.status || 'Confirmed';
+  const sLower = (order.status || 'Confirmed').toLowerCase();
+  if (statusEl) {
+    if (sLower.includes('cancel')) {
+      statusEl.textContent = 'Cancelled ✕';
+      statusEl.className = 'bg-rose-100 text-rose-800 border border-rose-300 text-[11px] font-black px-2.5 py-0.5 rounded-full';
+    } else if (sLower.includes('deliver')) {
+      statusEl.textContent = 'Delivered ✓';
+      statusEl.className = 'bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-black px-2.5 py-0.5 rounded-full';
+    } else {
+      statusEl.textContent = order.status || 'Confirmed';
+      statusEl.className = 'bg-green-100 text-green-800 border border-green-200 text-[11px] font-black px-2.5 py-0.5 rounded-full';
+    }
+  }
 
   const trackBtn = document.getElementById('receipt-track-btn');
   if (trackBtn) trackBtn.href = `track.html?orderId=${order.id}`;
@@ -2228,7 +2437,7 @@ function openOrderReceipt(orderId) {
         <tr class="border-b border-gray-100 text-xs">
           <td class="py-2 pr-2">
             <div class="flex items-center gap-2">
-              <img src="${item.product?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=80'}" class="w-7 h-7 rounded-lg object-cover bg-gray-100 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=80'" />
+              <img src="${item.product?.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=80'}" class="w-8 h-8 rounded-lg object-contain bg-white border border-gray-100 p-0.5 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=80'" />
               <div>
                 <div class="font-bold text-gray-900">${escapeHtml(item.product?.name || 'Product')}</div>
                 <div class="text-[10px] text-gray-400">${escapeHtml(item.product?.unit || '')}</div>
@@ -2325,7 +2534,10 @@ function updateTrackingModalContent(order) {
 
   // Status milestone badge (no fake countdown)
   if (etaTimer) {
-    if (status.includes('deliver') && !status.includes('out')) {
+    if (status.includes('cancel')) {
+      etaTimer.textContent = "Order Cancelled ✕";
+      etaTimer.className = "bg-rose-600 text-white px-2.5 py-0.5 rounded-lg text-xs font-black uppercase";
+    } else if (status.includes('deliver') && !status.includes('out')) {
       etaTimer.textContent = "Delivered ✓";
       etaTimer.className = "bg-emerald-600 text-white px-2.5 py-0.5 rounded-lg text-xs font-black uppercase";
     } else if (status.includes('out') || status.includes('dispatched')) {
@@ -2340,9 +2552,21 @@ function updateTrackingModalContent(order) {
     }
   }
 
-  // Dynamic Rider Allotment Card
+  // Dynamic Rider Allotment Card or Cancellation Notice
   if (riderContainer) {
-    if (order.rider && order.rider.name) {
+    if (status.includes('cancel')) {
+      riderContainer.innerHTML = `
+        <div class="bg-rose-50 rounded-2xl p-3.5 border border-rose-200 flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center text-xl font-black">
+            ✕
+          </div>
+          <div>
+            <div class="text-xs font-black text-rose-900">Order Cancelled by Supermarket</div>
+            <div class="text-[10px] text-rose-700 font-medium mt-0.5">This order was cancelled by the store/operator. If you made any payment, full refund will be credited back.</div>
+          </div>
+        </div>
+      `;
+    } else if (order.rider && order.rider.name) {
       const rName = escapeHtml(order.rider.name);
       const rPhone = escapeHtml(order.rider.phone || '');
       riderContainer.innerHTML = `
@@ -2412,7 +2636,19 @@ function applyTrackingStepHighlights(status) {
     }
   };
 
-  if (status.includes('deliver') && !status.includes('out')) {
+  if (status.includes('cancel')) {
+    setNode(step1, true);
+    setNode(step2, false);
+    setNode(step3, false);
+    setNode(step4, false);
+    setNode(step5, false);
+    if (step1) {
+      const dot = step1.querySelector('span');
+      const title = step1.querySelector('div:first-of-type');
+      if (dot) dot.className = "absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-rose-600 border-2 border-white ring-2 ring-rose-200";
+      if (title) title.innerHTML = `<span class="text-xs font-black text-rose-600">Order Cancelled by Store ✕</span>`;
+    }
+  } else if (status.includes('deliver') && !status.includes('out')) {
     setNode(step1, true);
     setNode(step2, true);
     setNode(step3, true);

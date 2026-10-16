@@ -881,7 +881,7 @@ const DEFAULT_PRODUCTS = [
         "price":  20,
         "mrp":  20,
         "unit":  "1 bunch",
-        "image":  "https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800",
+        "image":  "https://lh3.googleusercontent.com/d/1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO=w400",
         "inStock":  true,
         "tag":  "",
         "rating":  4.9,
@@ -3129,7 +3129,7 @@ function getStoredProducts() {
             modified = true;
           }
           if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
-            p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+            p.image = 'https://lh3.googleusercontent.com/d/1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO=w400';
             modified = true;
           }
           if (p.image && typeof normalizeImageUrl === 'function' && (p.image.includes('drive.google.com') || p.image.includes('drive.usercontent.google.com'))) {

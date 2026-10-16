@@ -1,13 +1,14 @@
 /**
- * Rasoee Fresh Supermarket - Service Worker (v3)
- * Network-first for HTML pages so deployments update instantly,
- * with fast offline caching for static assets.
+ * Rasoee Fresh Supermarket - Service Worker (v5)
+ * Network-first for HTML pages and real-time bypass for Firebase and images,
+ * ensuring catalog updates, live images, and multi-device order sync occur instantaneously.
  */
-const CACHE_NAME = 'rasoee-fresh-v4';
+const CACHE_NAME = 'rasoee-fresh-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './admin.html',
+  './operator.html',
   './track.html',
   './login.html',
   './outlet.html',
@@ -40,6 +41,29 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = event.request.url;
+
+  // Never cache non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Live Cloud RTDB, image CDNs, SMS gateways, and cache-busted requests: ALWAYS fetch live network
+  if (
+    url.includes('firebasedatabase.app') ||
+    url.includes('firebaseio.com') ||
+    url.includes('googleusercontent.com') ||
+    url.includes('drive.google.com') ||
+    url.includes('api.qrserver.com') ||
+    url.includes('unsplash.com') ||
+    url.includes('_t=') ||
+    url.includes('fast2sms.com') ||
+    url.includes('2factor.in')
+  ) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   // Navigation requests (HTML pages): Network-first with cache fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
@@ -56,7 +80,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets: Stale-while-revalidate
+  // Static Local Assets: Stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
