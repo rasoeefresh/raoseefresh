@@ -1503,8 +1503,14 @@ async function handleModalSendOtp() {
     return;
   }
   modalActivePhone = phone;
+  window.__prefetchedCloudCustomer = null;
 
-  // Clear any existing error
+  // Pre-fetch customer profile from Cloud RTDB in background while OTP is entered
+  if (typeof fetchCustomerFromCloud === 'function') {
+    fetchCustomerFromCloud(phone).then(cust => {
+      if (cust) window.__prefetchedCloudCustomer = cust;
+    }).catch(() => {});
+  }
   const errEl = document.getElementById('modal-otp-error');
   if (errEl) {
     errEl.classList.add('hidden');
@@ -1634,22 +1640,16 @@ async function handleModalVerifyOtp() {
 
   let existing = users.find(u => u.phone === modalActivePhone);
 
-  // Always perform cloud lookup from Cloud RTDB
-  if (typeof fetchCustomerFromCloud === 'function') {
-    try {
-      const cloudCustomer = await fetchCustomerFromCloud(modalActivePhone);
-      if (cloudCustomer && (cloudCustomer.name || cloudCustomer.flat || cloudCustomer.address)) {
-        const normalized = normalizeCustomerData(cloudCustomer);
-        if (normalized) {
-          existing = { ...(existing || {}), ...normalized };
-          const idx = users.findIndex(u => u.phone === modalActivePhone);
-          if (idx >= 0) users[idx] = existing;
-          else users.push(existing);
-          localStorage.setItem('Rasoee_users', JSON.stringify(users));
-        }
-      }
-    } catch (err) {
-      console.warn("Cloud customer fetch error:", err);
+  // Check prefetched customer or perform cloud lookup from Cloud RTDB
+  const cloudData = window.__prefetchedCloudCustomer || (typeof fetchCustomerFromCloud === 'function' ? await fetchCustomerFromCloud(modalActivePhone) : null);
+  if (cloudData && (cloudData.name || cloudData.flat || cloudData.address)) {
+    const normalized = normalizeCustomerData(cloudData);
+    if (normalized) {
+      existing = { ...(existing || {}), ...normalized };
+      const idx = users.findIndex(u => u.phone === modalActivePhone);
+      if (idx >= 0) users[idx] = existing;
+      else users.push(existing);
+      localStorage.setItem('Rasoee_users', JSON.stringify(users));
     }
   }
 
@@ -1786,9 +1786,6 @@ function setCustomerSession(user) {
   // Push to cloud sync
   if (typeof syncCustomerToCloud === 'function') {
     syncCustomerToCloud(normalized);
-  }
-  if (typeof syncToCloud === 'function') {
-    syncToCloud();
   }
 }
 

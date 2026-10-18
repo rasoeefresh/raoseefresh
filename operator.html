@@ -685,6 +685,15 @@
       const gate = document.getElementById('operator-login-gate');
       const session = localStorage.getItem('Rasoee_operator_session');
       
+      // Background pre-fetch of latest security credentials
+      if (typeof fetchSecurityCredentialsFromCloud === 'function') {
+        fetchSecurityCredentialsFromCloud().then(sec => {
+          if (sec && currentConfig) {
+            currentConfig.security = { ...(currentConfig.security || {}), ...sec };
+          }
+        }).catch(() => {});
+      }
+
       if (!session) {
         if (gate) gate.classList.remove('hidden');
         return;
@@ -757,34 +766,66 @@
       verifyOperatorPin(input ? input.value : '');
     }
 
-    function verifyOperatorPin(pin) {
-      const validPin = currentConfig.security?.operatorPin || "1234";
-      const masterAdminPin = currentConfig.security?.adminPin || "7890";
+    async function verifyOperatorPin(pin) {
+      let sec = typeof getAdminSecurityConfig === 'function' ? getAdminSecurityConfig() : (currentConfig.security || {});
+      let validPin = sec.operatorPin || "1234";
+      let masterAdminPin = sec.adminPin || "7890";
 
       if (pin === validPin || pin === masterAdminPin || pin === "1234") {
         grantOperatorSession();
-      } else {
-        alert("Incorrect Operator PIN. Please try again.");
-        clearPin();
-        document.getElementById('operator-pin-input')?.focus();
+        return;
       }
+
+      // Check cloud credentials if local check fails
+      if (typeof fetchSecurityCredentialsFromCloud === 'function') {
+        const cloudSec = await fetchSecurityCredentialsFromCloud();
+        if (cloudSec) {
+          validPin = cloudSec.operatorPin || validPin;
+          masterAdminPin = cloudSec.adminPin || masterAdminPin;
+          if (pin === validPin || pin === masterAdminPin) {
+            grantOperatorSession();
+            return;
+          }
+        }
+      }
+
+      alert("Incorrect Operator PIN. Please try again.");
+      clearPin();
+      document.getElementById('operator-pin-input')?.focus();
     }
 
-    function handleOperatorPasswordSubmit(e) {
+    async function handleOperatorPasswordSubmit(e) {
       e.preventDefault();
       const u = document.getElementById('operator-username-input')?.value.trim();
       const p = document.getElementById('operator-password-input')?.value.trim();
 
-      const validUser = currentConfig.security?.operatorUser || "operator";
-      const validPass = currentConfig.security?.operatorPassword || "operator@rasoee2026";
-      const adminUser = currentConfig.security?.adminUser || "admin";
-      const adminPass = currentConfig.security?.adminPassword || "admin@rasoee2026";
+      let sec = typeof getAdminSecurityConfig === 'function' ? getAdminSecurityConfig() : (currentConfig.security || {});
+      let validUser = sec.operatorUser || "operator";
+      let validPass = sec.operatorPassword || "operator@rasoee2026";
+      let adminUser = sec.adminUser || "admin";
+      let adminPass = sec.adminPassword || "admin@rasoee2026";
 
       if ((u === validUser && p === validPass) || (u === adminUser && p === adminPass)) {
         grantOperatorSession();
-      } else {
-        alert("Invalid operator username or password.");
+        return;
       }
+
+      // Check cloud credentials if local check fails
+      if (typeof fetchSecurityCredentialsFromCloud === 'function') {
+        const cloudSec = await fetchSecurityCredentialsFromCloud();
+        if (cloudSec) {
+          validUser = cloudSec.operatorUser || validUser;
+          validPass = cloudSec.operatorPassword || validPass;
+          adminUser = cloudSec.adminUser || adminUser;
+          adminPass = cloudSec.adminPassword || adminPass;
+          if ((u === validUser && p === validPass) || (u === adminUser && p === adminPass)) {
+            grantOperatorSession();
+            return;
+          }
+        }
+      }
+
+      alert("Invalid operator username or password.");
     }
 
     function grantOperatorSession() {

@@ -2365,6 +2365,11 @@
       const gate = document.getElementById('admin-login-gate');
       const app = document.getElementById('admin-app-container');
 
+      // Pre-fetch latest credentials from cloud in background
+      if (typeof fetchSecurityCredentialsFromCloud === 'function') {
+        fetchSecurityCredentialsFromCloud().catch(() => {});
+      }
+
       if (isUserAuthenticated()) {
         if (gate) gate.classList.add('hidden');
         if (app) app.style.display = 'block';
@@ -2412,7 +2417,7 @@
       }
     }
 
-    function handlePinSubmit(event) {
+    async function handlePinSubmit(event) {
       event.preventDefault();
       if (checkBruteForceLockout()) return;
 
@@ -2420,9 +2425,16 @@
       const remember = document.getElementById('pin-remember-me')?.checked;
       const errBox = document.getElementById('pin-error-box');
 
-      const verification = typeof verifyAdminCredentials === 'function' 
+      let verification = typeof verifyAdminCredentials === 'function' 
         ? verifyAdminCredentials(pin, '') 
         : { success: pin === '7890' };
+
+      if (!verification.success && typeof fetchSecurityCredentialsFromCloud === 'function') {
+        await fetchSecurityCredentialsFromCloud();
+        verification = typeof verifyAdminCredentials === 'function' 
+          ? verifyAdminCredentials(pin, '') 
+          : { success: pin === '7890' };
+      }
 
       if (verification.success) {
         grantAdminAccess(remember);
@@ -2431,7 +2443,7 @@
       }
     }
 
-    function handlePasswordSubmit(event) {
+    async function handlePasswordSubmit(event) {
       event.preventDefault();
       if (checkBruteForceLockout()) return;
 
@@ -2440,9 +2452,16 @@
       const remember = document.getElementById('pass-remember-me')?.checked;
       const errBox = document.getElementById('password-error-box');
 
-      const verification = typeof verifyAdminCredentials === 'function'
+      let verification = typeof verifyAdminCredentials === 'function'
         ? verifyAdminCredentials(user, pass)
         : { success: user.toLowerCase() === 'admin' && (pass === 'admin@rasoee2026' || pass === 'admin@raosee2026') };
+
+      if (!verification.success && typeof fetchSecurityCredentialsFromCloud === 'function') {
+        await fetchSecurityCredentialsFromCloud();
+        verification = typeof verifyAdminCredentials === 'function'
+          ? verifyAdminCredentials(user, pass)
+          : { success: user.toLowerCase() === 'admin' && (pass === 'admin@rasoee2026' || pass === 'admin@raosee2026') };
+      }
 
       if (verification.success) {
         grantAdminAccess(remember);
@@ -2543,7 +2562,7 @@
       }
     }
 
-    function handleSecurityUpdateSubmit(event) {
+    async function handleSecurityUpdateSubmit(event) {
       event.preventDefault();
       const newU = document.getElementById('sec-user-input')?.value.trim();
       const newP = document.getElementById('sec-pass-input')?.value.trim();
@@ -2558,6 +2577,15 @@
         return;
       }
 
+      const secPayload = {
+        adminUser: newU,
+        adminPassword: newP,
+        adminPin: newPin,
+        operatorUser: newOpU,
+        operatorPassword: newOpP,
+        operatorPin: newOpPin
+      };
+
       if (typeof updateAdminSecurityCredentials === 'function') {
         updateAdminSecurityCredentials(newU, newP, newPin);
       }
@@ -2565,8 +2593,13 @@
         updateOperatorSecurityCredentials(newOpU, newOpP, newOpPin);
       }
 
+      if (typeof syncSecurityCredentialsToCloud === 'function') {
+        await syncSecurityCredentialsToCloud(secPayload);
+      }
+
       closeSecurityModal();
-      alert("🎉 Admin & Operator credentials updated successfully!\nYour new passwords and PINs are active and synced to Firebase.");
+      showNotificationToast('✓ Credentials saved and synced to Cloud!');
+      alert("🎉 Admin & Operator credentials updated successfully!\nYour new passwords and PINs are active, backed up to the cloud, and will persist across all devices & future deployments.");
     }
 
     function showNotificationToast(msg) {

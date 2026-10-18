@@ -229,7 +229,12 @@ function updateStoreConfig(newConfig) {
 // ================= ADMIN DASHBOARD AUTHENTICATION & SECURITY =================
 function getAdminSecurityConfig() {
   const cfg = getStoreConfig();
-  return { ...DEFAULT_CONFIG.security, ...(cfg.security || {}) };
+  let cloudSec = {};
+  try {
+    const raw = localStorage.getItem('rasoee_cloud_security');
+    if (raw) cloudSec = JSON.parse(raw);
+  } catch (e) {}
+  return { ...DEFAULT_CONFIG.security, ...(cfg.security || {}), ...cloudSec };
 }
 
 function verifyAdminCredentials(inputUserOrPin, inputPassword) {
@@ -256,6 +261,24 @@ function verifyAdminCredentials(inputUserOrPin, inputPassword) {
   return { success: false, reason: 'Invalid Username, Password, or PIN.' };
 }
 
+async function verifyAdminCredentialsWithCloud(inputUserOrPin, inputPassword) {
+  let result = verifyAdminCredentials(inputUserOrPin, inputPassword);
+  if (result.success) return result;
+
+  // Cloud fallback: fetch latest security credentials from Firebase Realtime Database
+  if (typeof fetchSecurityCredentialsFromCloud === 'function') {
+    try {
+      const cloudSec = await fetchSecurityCredentialsFromCloud();
+      if (cloudSec) {
+        result = verifyAdminCredentials(inputUserOrPin, inputPassword);
+      }
+    } catch (e) {
+      console.warn("verifyAdminCredentialsWithCloud error:", e);
+    }
+  }
+  return result;
+}
+
 function updateAdminSecurityCredentials(newUsername, newPassword, newPin) {
   const currentSec = getAdminSecurityConfig();
   const updatedSec = {
@@ -264,6 +287,12 @@ function updateAdminSecurityCredentials(newUsername, newPassword, newPin) {
     adminPassword: newPassword ? String(newPassword).trim() : currentSec.adminPassword,
     adminPin: newPin ? String(newPin).trim() : currentSec.adminPin
   };
+  try {
+    localStorage.setItem('rasoee_cloud_security', JSON.stringify(updatedSec));
+  } catch (e) {}
+  if (typeof syncSecurityCredentialsToCloud === 'function') {
+    syncSecurityCredentialsToCloud(updatedSec);
+  }
   return updateStoreConfig({ security: updatedSec });
 }
 
@@ -275,6 +304,12 @@ function updateOperatorSecurityCredentials(newUsername, newPassword, newPin) {
     operatorPassword: newPassword ? String(newPassword).trim() : (currentSec.operatorPassword || 'operator@rasoee2026'),
     operatorPin: newPin ? String(newPin).trim() : (currentSec.operatorPin || '1234')
   };
+  try {
+    localStorage.setItem('rasoee_cloud_security', JSON.stringify(updatedSec));
+  } catch (e) {}
+  if (typeof syncSecurityCredentialsToCloud === 'function') {
+    syncSecurityCredentialsToCloud(updatedSec);
+  }
   return updateStoreConfig({ security: updatedSec });
 }
 
@@ -515,7 +550,7 @@ async function syncToCloud() {
       if (!url.endsWith('.json')) url += '/store_live_data.json';
       if (syncCfg.authToken) url += `?auth=${encodeURIComponent(syncCfg.authToken.trim())}`;
       const res = await fetch(url, {
-        method: 'PUT',
+        method: 'PATCH', // Changed from PUT to PATCH to safely preserve /customers, /orders, and /security_credentials
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -776,7 +811,16 @@ if (typeof module !== "undefined" && module.exports) {
 }
 
 function generatePermanentStoreConfigJs(customConfig, customCategories, customBanners) {
-  const cfg = customConfig || (typeof getStoreConfig === 'function' ? getStoreConfig() : DEFAULT_CONFIG);
+  const baseCfg = customConfig || (typeof getStoreConfig === 'function' ? getStoreConfig() : DEFAULT_CONFIG);
+  const activeSec = typeof getAdminSecurityConfig === 'function' ? getAdminSecurityConfig() : (baseCfg.security || DEFAULT_CONFIG.security);
+  const cfg = {
+    ...baseCfg,
+    security: {
+      ...DEFAULT_CONFIG.security,
+      ...(baseCfg.security || {}),
+      ...activeSec
+    }
+  };
   const cats = customCategories || (typeof getStoredCategories === 'function' ? getStoredCategories() : DEFAULT_CATEGORIES);
   const bans = customBanners || (typeof getStoredBanners === 'function' ? getStoredBanners() : DEFAULT_BANNERS);
 
@@ -1365,6 +1409,60 @@ async function fetchAllCustomersFromCloud() {
   return [];
 }
 
+// ================= CLOUD SECURITY CREDENTIALS SYNC =================
+async function syncSecurityCredentialsToCloud(securityObj) {
+  try {
+    const sec = securityObj || getAdminSecurityConfig();
+    const payload = {
+      adminUser: String(sec.adminUser || 'admin').trim(),
+      adminPassword: String(sec.adminPassword || 'admin@rasoee2026').trim(),
+      adminPin: String(sec.adminPin || '7890').trim(),
+      operatorUser: String(sec.operatorUser || 'operator').trim(),
+      operatorPassword: String(sec.operatorPassword || 'operator@rasoee2026').trim(),
+      operatorPin: String(sec.operatorPin || '1234').trim(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Cache locally as well
+    try {
+      localStorage.setItem('rasoee_cloud_security', JSON.stringify(payload));
+    } catch (e) {}
+
+    const res = await fetch(`${CLOUD_RTDB_BASE}/security_credentials.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("syncSecurityCredentialsToCloud error:", err);
+    return false;
+  }
+}
+
+async function fetchSecurityCredentialsFromCloud() {
+  try {
+    const res = await fetch(`${CLOUD_RTDB_BASE}/security_credentials.json?_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'object' && (data.adminPin || data.adminPassword || data.operatorPin)) {
+        try {
+          localStorage.setItem('rasoee_cloud_security', JSON.stringify(data));
+          // Merge with live store config in localStorage
+          const cfg = getStoreConfig();
+          cfg.security = { ...(cfg.security || {}), ...data };
+          localStorage.setItem('rasoee_fresh_config', JSON.stringify(cfg));
+          localStorage.setItem('raosee_fresh_config', JSON.stringify(cfg));
+        } catch (e) {}
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn("fetchSecurityCredentialsFromCloud error:", err);
+  }
+  return null;
+}
+
 // Auto-run initialization and global exports
 if (typeof window !== "undefined") {
   window.calculateDistanceKm = calculateDistanceKm;
@@ -1377,6 +1475,9 @@ if (typeof window !== "undefined") {
   window.syncCustomerToCloud = syncCustomerToCloud;
   window.fetchCustomerFromCloud = fetchCustomerFromCloud;
   window.fetchAllCustomersFromCloud = fetchAllCustomersFromCloud;
+  window.syncSecurityCredentialsToCloud = syncSecurityCredentialsToCloud;
+  window.fetchSecurityCredentialsFromCloud = fetchSecurityCredentialsFromCloud;
+  window.verifyAdminCredentialsWithCloud = verifyAdminCredentialsWithCloud;
   initDemoDataIfEmpty();
 }
 
@@ -1394,7 +1495,11 @@ if (typeof module !== "undefined" && module.exports) {
     initDemoDataIfEmpty,
     getAdminSecurityConfig,
     verifyAdminCredentials,
+    verifyAdminCredentialsWithCloud,
     updateAdminSecurityCredentials,
+    updateOperatorSecurityCredentials,
+    syncSecurityCredentialsToCloud,
+    fetchSecurityCredentialsFromCloud,
     normalizeImageUrl,
     calculateDistanceKm,
     DEFAULT_RIDERS,
