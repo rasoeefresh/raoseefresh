@@ -2788,6 +2788,11 @@
         ordersList = [];
       }
 
+      // Proactively back up all existing customers in localStorage / orders to Cloud RTDB
+      if (typeof syncAllLocalCustomersToCloud === 'function') {
+        syncAllLocalCustomersToCloud().catch(() => {});
+      }
+
       // If orders list is empty, initialize demo orders so tables are immediately populated
       if (!Array.isArray(ordersList) || ordersList.length === 0) {
         if (typeof initDemoDataIfEmpty === 'function') {
@@ -4549,10 +4554,40 @@
         registeredUsers = [];
       }
 
-      // Aggregate customers from registry and order histories
+      // Aggregate customers from registry and order histories (normalized by clean 10-digit phone)
       const customerMap = new Map();
       registeredUsers.forEach(u => {
-        if (u.phone) customerMap.set(u.phone, { ...u });
+        if (!u) return;
+        const ph = String(u.phone || u.mobile || '').replace(/\D/g, '').slice(-10);
+        if (ph.length === 10) customerMap.set(ph, { ...u, phone: ph });
+      });
+
+      ordersList.forEach(o => {
+        const ph = String(o?.customer?.phone || o?.customer?.mobile || '').replace(/\D/g, '').slice(-10);
+        if (ph.length === 10) {
+          if (customerMap.has(ph)) {
+            const existing = customerMap.get(ph);
+            existing.orderCount = (existing.orderCount || 0) + 1;
+            existing.totalSpend = (existing.totalSpend || 0) + (o.total || 0);
+            if (!existing.flat && o.customer?.flat) existing.flat = o.customer.flat;
+            if (!existing.street && o.customer?.street) existing.street = o.customer.street;
+            if (o.customer?.name && (existing.name === 'Customer' || existing.name === 'Valued Customer')) existing.name = o.customer.name;
+          } else {
+            customerMap.set(ph, {
+              id: 'usr_' + ph.slice(-4),
+              name: o.customer?.name || 'Customer',
+              phone: ph,
+              flat: o.customer?.flat || '',
+              street: o.customer?.street || '',
+              landmark: o.customer?.landmark || '',
+              instructions: o.customer?.instructions || 'Leave at door & ring bell',
+              address: { flat: o.customer?.flat || '', street: o.customer?.street || '', landmark: o.customer?.landmark || '' },
+              orderCount: 1,
+              totalSpend: o.total || 0,
+              createdAt: o.timestamp || new Date().toISOString()
+            });
+          }
+        }
       });
 
       // Background multi-device customer sync from Cloud RTDB
@@ -4561,8 +4596,9 @@
         fetchAllCustomersFromCloud().then(cloudCusts => {
           if (Array.isArray(cloudCusts) && cloudCusts.length > 0) {
             cloudCusts.forEach(c => {
-              if (c && c.phone && !customerMap.has(c.phone)) {
-                customerMap.set(c.phone, c);
+              const cp = String(c?.phone || '').replace(/\D/g, '').slice(-10);
+              if (cp.length === 10 && !customerMap.has(cp)) {
+                customerMap.set(cp, c);
               }
             });
             localStorage.setItem('Rasoee_users', JSON.stringify(Array.from(customerMap.values())));
@@ -4571,24 +4607,10 @@
         }).catch(e => {});
       }
 
-      ordersList.forEach(o => {
-        const ph = o.customer?.phone;
-        if (ph) {
-          if (customerMap.has(ph)) {
-            const existing = customerMap.get(ph);
-            existing.orderCount = (existing.orderCount || 0) + 1;
-            existing.totalSpend = (existing.totalSpend || 0) + (o.total || 0);
-          } else {
-            customerMap.set(ph, {
-              id: 'usr_' + ph.slice(-4),
-              name: o.customer?.name || 'Customer',
-              phone: ph,
-              address: { flat: o.customer?.flat || '', street: o.customer?.street || '' },
-              orderCount: 1,
-              totalSpend: o.total || 0,
-              createdAt: o.timestamp || new Date().toISOString()
-            });
-          }
+      // Proactively back up all aggregated customers to Cloud RTDB so they are accessible to every device
+      customerMap.forEach(c => {
+        if (typeof syncCustomerToCloud === 'function' && c.phone && c.phone.length === 10) {
+          syncCustomerToCloud(c);
         }
       });
 

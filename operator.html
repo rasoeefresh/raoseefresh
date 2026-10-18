@@ -978,6 +978,10 @@
         localOrders = [];
       }
 
+      if (typeof syncAllLocalCustomersToCloud === 'function') {
+        syncAllLocalCustomersToCloud().catch(() => {});
+      }
+
       // Multi-device Cloud RTDB live sync
       if (typeof fetchOrdersFromCloud === 'function') {
         try {

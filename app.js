@@ -287,6 +287,11 @@ function loadConfigAndData() {
     }).catch(e => console.warn("Background customer sync check error", e));
   }
 
+  // Proactively back up all local customers from users registry & order records to Cloud RTDB
+  if (typeof syncAllLocalCustomersToCloud === 'function') {
+    syncAllLocalCustomersToCloud().catch(() => {});
+  }
+
   // Apply branding
   applyBranding();
   renderBanners();
@@ -1496,8 +1501,9 @@ function startModalOtpTimer(duration = 30) {
 
 async function handleModalSendOtp() {
   const input = document.getElementById('modal-login-phone');
-  const phone = input ? input.value.trim().replace(/\D/g, '') : '';
-  if (phone.length < 10) {
+  const raw = input ? input.value.trim() : '';
+  const phone = raw.replace(/\D/g, '').slice(-10);
+  if (phone.length !== 10) {
     alert("Please enter a valid 10-digit mobile number.");
     input?.focus();
     return;
@@ -1505,10 +1511,16 @@ async function handleModalSendOtp() {
   modalActivePhone = phone;
   window.__prefetchedCloudCustomer = null;
 
-  // Pre-fetch customer profile from Cloud RTDB in background while OTP is entered
+  // 1. Immediately check local registry / order records for instant pre-fill
+  if (typeof findCustomerLocally === 'function') {
+    const local = findCustomerLocally(phone);
+    if (local) window.__prefetchedCloudCustomer = local;
+  }
+
+  // 2. Pre-fetch customer profile from Cloud RTDB in background while OTP is entered
   if (typeof fetchCustomerFromCloud === 'function') {
     fetchCustomerFromCloud(phone).then(cust => {
-      if (cust) window.__prefetchedCloudCustomer = cust;
+      if (cust) window.__prefetchedCloudCustomer = { ...(window.__prefetchedCloudCustomer || {}), ...cust };
     }).catch(() => {});
   }
   const errEl = document.getElementById('modal-otp-error');
@@ -1630,34 +1642,37 @@ async function handleModalVerifyOtp() {
     }
   }
 
-  // Lookup in local saved users registry or Cloud RTDB permanent storage
-  let users = [];
-  try {
-    users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
-  } catch (e) {
-    users = [];
+  const cleanPhone = String(modalActivePhone || '').replace(/\D/g, '').slice(-10);
+
+  // 1. Check local customer registries and past orders
+  let existing = typeof findCustomerLocally === 'function' ? findCustomerLocally(cleanPhone) : null;
+  if (!existing) {
+    let users = [];
+    try { users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]'); } catch (e) {}
+    existing = users.find(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone);
   }
 
-  let existing = users.find(u => u.phone === modalActivePhone);
-
-  // Check prefetched customer or perform cloud lookup from Cloud RTDB
-  const cloudData = window.__prefetchedCloudCustomer || (typeof fetchCustomerFromCloud === 'function' ? await fetchCustomerFromCloud(modalActivePhone) : null);
+  // 2. Merge with prefetched cloud customer or fetch from Cloud RTDB
+  const cloudData = window.__prefetchedCloudCustomer || (typeof fetchCustomerFromCloud === 'function' ? await fetchCustomerFromCloud(cleanPhone) : null);
   if (cloudData && (cloudData.name || cloudData.flat || cloudData.address)) {
     const normalized = normalizeCustomerData(cloudData);
     if (normalized) {
       existing = { ...(existing || {}), ...normalized };
-      const idx = users.findIndex(u => u.phone === modalActivePhone);
+      let users = [];
+      try { users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]'); } catch (e) {}
+      const idx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone);
       if (idx >= 0) users[idx] = existing;
       else users.push(existing);
       localStorage.setItem('Rasoee_users', JSON.stringify(users));
     }
   }
 
-  // If user exists and has a name or flat address, log them in immediately without prompting again!
-  if (existing && (existing.name || existing.flat || (existing.address && existing.address.flat))) {
+  // 3. If user exists and has a name or flat address, log them in immediately without prompting again!
+  if (existing && (existing.name || existing.flat || (existing.address && (existing.address.flat || existing.address.street)))) {
     setCustomerSession(existing);
     closeLoginModal();
-    alert(`Welcome back, ${existing.name}! 🎉`);
+    alert(`Welcome back, ${existing.name || 'Valued Customer'}! 🎉`);
+    return;
   } else {
     // New customer: ask for Name & Delivery Flat
     document.getElementById('modal-login-step-otp')?.classList.add('hidden');

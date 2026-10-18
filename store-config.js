@@ -1350,16 +1350,17 @@ async function syncCustomerToCloud(customer) {
 async function fetchCustomerFromCloud(phone) {
   if (!phone) return null;
   const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
-  if (!cleanPhone) return null;
+  if (!cleanPhone || cleanPhone.length !== 10) return null;
   try {
-    const res = await fetch(`${CLOUD_RTDB_BASE}/customers/${cleanPhone}.json`);
+    // 1. Direct lookup in Cloud RTDB /customers/<cleanPhone>.json
+    const res = await fetch(`${CLOUD_RTDB_BASE}/customers/${cleanPhone}.json?_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      if (data && typeof data === 'object') {
+      if (data && typeof data === 'object' && (data.name || data.flat || (data.address && (data.address.flat || data.address.street)))) {
         const flat = data.flat || (data.address && typeof data.address === 'object' ? data.address.flat : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].flat : '') || (typeof data.address === 'string' ? data.address.split(',')[0].trim() : '') || '';
         const street = data.street || (data.address && typeof data.address === 'object' ? data.address.street : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].street : '') || (typeof data.address === 'string' ? data.address.split(',').slice(1).join(',').trim() : '') || '';
         const landmark = data.landmark || (data.address && typeof data.address === 'object' ? data.address.landmark : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].landmark : '') || '';
-        const name = data.name || data.customerName || 'Customer';
+        const name = data.name || data.customerName || 'Valued Customer';
         const instructions = data.instructions || data.notes || 'Leave at door & ring bell';
         const city = data.city || (data.address && typeof data.address === 'object' ? data.address.city : '') || 'Bangalore';
         const pincode = data.pincode || (data.address && typeof data.address === 'object' ? data.address.pincode : '') || '560102';
@@ -1374,18 +1375,45 @@ async function fetchCustomerFromCloud(phone) {
           instructions: instructions,
           city: city,
           pincode: pincode,
-          address: {
+          address: { flat, street, landmark, city, pincode },
+          savedAddresses: [{ type: 'Home', flat, street, landmark, city, isDefault: true }],
+          updatedAt: data.updatedAt || new Date().toISOString()
+        };
+      }
+    }
+
+    // 2. Fallback: Search Cloud RTDB /orders.json for past order with matching phone
+    const ordersRes = await fetch(`${CLOUD_RTDB_BASE}/orders.json?_t=${Date.now()}`);
+    if (ordersRes.ok) {
+      const allOrders = await ordersRes.json();
+      if (allOrders && typeof allOrders === 'object') {
+        const list = Object.values(allOrders);
+        const match = list.find(o => {
+          const oPhone = String(o?.customer?.phone || o?.customer?.mobile || '').replace(/\D/g, '').slice(-10);
+          return oPhone === cleanPhone;
+        });
+        if (match && match.customer) {
+          const c = match.customer;
+          const flat = c.flat || (c.address && typeof c.address === 'object' ? c.address.flat : '') || (typeof c.address === 'string' ? c.address.split(',')[0].trim() : '') || '';
+          const street = c.street || (c.address && typeof c.address === 'object' ? c.address.street : '') || (typeof c.address === 'string' ? c.address.split(',').slice(1).join(',').trim() : '') || '';
+          const landmark = c.landmark || (c.address && typeof c.address === 'object' ? c.address.landmark : '') || '';
+          const name = c.name || 'Valued Customer';
+          const instructions = c.instructions || 'Leave at door & ring bell';
+          const restored = {
+            id: 'usr_' + cleanPhone.slice(-4),
+            phone: cleanPhone,
+            name: name,
             flat: flat,
             street: street,
             landmark: landmark,
-            city: city,
-            pincode: pincode
-          },
-          savedAddresses: [
-            { type: 'Home', flat: flat, street: street, landmark: landmark, city: city, isDefault: true }
-          ],
-          updatedAt: data.updatedAt || new Date().toISOString()
-        };
+            instructions: instructions,
+            address: { flat, street, landmark, city: 'Bangalore', pincode: '560102' },
+            savedAddresses: [{ type: 'Home', flat, street, landmark, city: 'Bangalore', isDefault: true }],
+            updatedAt: new Date().toISOString()
+          };
+          syncCustomerToCloud(restored);
+          return restored;
+        }
       }
     }
   } catch (e) {
@@ -1394,9 +1422,147 @@ async function fetchCustomerFromCloud(phone) {
   return null;
 }
 
+// Local customer lookup helper: checks Rasoee_users, Rasoee_orders, Rasoee_current_user, Rasoee_address
+function findCustomerLocally(phone) {
+  if (!phone) return null;
+  const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+  if (!cleanPhone || cleanPhone.length !== 10) return null;
+
+  // 1. Check Rasoee_users
+  try {
+    const users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
+    const match = users.find(u => {
+      const uPhone = String(u?.phone || u?.mobile || '').replace(/\D/g, '').slice(-10);
+      return uPhone === cleanPhone;
+    });
+    if (match && (match.name || match.flat || (match.address && (match.address.flat || match.address.street)))) {
+      return {
+        id: match.id || ('usr_' + cleanPhone.slice(-4)),
+        phone: cleanPhone,
+        name: match.name || 'Valued Customer',
+        flat: match.flat || (match.address && typeof match.address === 'object' ? match.address.flat : '') || '',
+        street: match.street || (match.address && typeof match.address === 'object' ? match.address.street : '') || '',
+        landmark: match.landmark || '',
+        instructions: match.instructions || 'Leave at door & ring bell',
+        address: match.address || { flat: match.flat || '', street: match.street || '', landmark: match.landmark || '', city: 'Bangalore', pincode: '560102' }
+      };
+    }
+  } catch (e) {}
+
+  // 2. Check Rasoee_orders / raosee_orders
+  try {
+    const orders = JSON.parse(localStorage.getItem('Rasoee_orders') || localStorage.getItem('raosee_orders') || '[]');
+    const match = orders.find(o => {
+      const oPhone = String(o?.customer?.phone || o?.customer?.mobile || '').replace(/\D/g, '').slice(-10);
+      return oPhone === cleanPhone;
+    });
+    if (match && match.customer && (match.customer.name || match.customer.flat || match.customer.address)) {
+      const c = match.customer;
+      const flat = c.flat || (c.address && typeof c.address === 'object' ? c.address.flat : '') || (typeof c.address === 'string' ? c.address.split(',')[0].trim() : '') || '';
+      const street = c.street || (c.address && typeof c.address === 'object' ? c.address.street : '') || (typeof c.address === 'string' ? c.address.split(',').slice(1).join(',').trim() : '') || '';
+      const landmark = c.landmark || (c.address && typeof c.address === 'object' ? c.address.landmark : '') || '';
+      const name = c.name || 'Valued Customer';
+      const instructions = c.instructions || 'Leave at door & ring bell';
+      return {
+        id: 'usr_' + cleanPhone.slice(-4),
+        phone: cleanPhone,
+        name: name,
+        flat: flat,
+        street: street,
+        landmark: landmark,
+        instructions: instructions,
+        address: { flat, street, landmark, city: 'Bangalore', pincode: '560102' },
+        savedAddresses: [{ type: 'Home', flat, street, landmark, isDefault: true }]
+      };
+    }
+  } catch (e) {}
+
+  // 3. Check Rasoee_current_user
+  try {
+    const cur = JSON.parse(localStorage.getItem('Rasoee_current_user') || 'null');
+    if (cur) {
+      const curPhone = String(cur.phone || cur.mobile || '').replace(/\D/g, '').slice(-10);
+      if (curPhone === cleanPhone && (cur.name || cur.flat || cur.address)) {
+        return cur;
+      }
+    }
+  } catch (e) {}
+
+  // 4. Check Rasoee_address
+  try {
+    const addr = JSON.parse(localStorage.getItem('Rasoee_address') || 'null');
+    if (addr) {
+      const addrPhone = String(addr.phone || addr.mobile || '').replace(/\D/g, '').slice(-10);
+      if (addrPhone === cleanPhone && (addr.name || addr.flat)) {
+        return {
+          id: 'usr_' + cleanPhone.slice(-4),
+          phone: cleanPhone,
+          name: addr.name || 'Valued Customer',
+          flat: addr.flat || '',
+          street: addr.street || '',
+          landmark: addr.landmark || '',
+          instructions: addr.instructions || 'Leave at door & ring bell',
+          address: { flat: addr.flat || '', street: addr.street || '', landmark: addr.landmark || '', city: 'Bangalore', pincode: '560102' }
+        };
+      }
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+// Proactive Sync: uploads all local customer records from Rasoee_users and Rasoee_orders to Cloud RTDB
+async function syncAllLocalCustomersToCloud() {
+  try {
+    let users = [];
+    try { users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]'); } catch (e) {}
+    let orders = [];
+    try { orders = JSON.parse(localStorage.getItem('Rasoee_orders') || localStorage.getItem('raosee_orders') || '[]'); } catch (e) {}
+
+    const map = new Map();
+    if (Array.isArray(users)) {
+      users.forEach(u => {
+        if (!u) return;
+        const p = String(u.phone || u.mobile || '').replace(/\D/g, '').slice(-10);
+        if (p.length === 10) map.set(p, u);
+      });
+    }
+
+    if (Array.isArray(orders)) {
+      orders.forEach(o => {
+        if (!o || !o.customer) return;
+        const p = String(o.customer.phone || o.customer.mobile || '').replace(/\D/g, '').slice(-10);
+        if (p.length === 10 && !map.has(p)) {
+          map.set(p, {
+            id: 'usr_' + p.slice(-4),
+            phone: p,
+            name: o.customer.name || 'Valued Customer',
+            flat: o.customer.flat || (o.customer.address && typeof o.customer.address === 'object' ? o.customer.address.flat : '') || '',
+            street: o.customer.street || (o.customer.address && typeof o.customer.address === 'object' ? o.customer.address.street : '') || '',
+            landmark: o.customer.landmark || '',
+            instructions: o.customer.instructions || 'Leave at door & ring bell'
+          });
+        }
+      });
+    }
+
+    const promises = [];
+    for (const [phone, cust] of map.entries()) {
+      if (typeof syncCustomerToCloud === 'function') {
+        promises.push(syncCustomerToCloud(cust));
+      }
+    }
+    await Promise.all(promises);
+    return true;
+  } catch (err) {
+    console.warn("syncAllLocalCustomersToCloud error:", err);
+    return false;
+  }
+}
+
 async function fetchAllCustomersFromCloud() {
   try {
-    const res = await fetch(`${CLOUD_RTDB_BASE}/customers.json`);
+    const res = await fetch(`${CLOUD_RTDB_BASE}/customers.json?_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
       if (data && typeof data === 'object') {
@@ -1475,6 +1641,8 @@ if (typeof window !== "undefined") {
   window.syncCustomerToCloud = syncCustomerToCloud;
   window.fetchCustomerFromCloud = fetchCustomerFromCloud;
   window.fetchAllCustomersFromCloud = fetchAllCustomersFromCloud;
+  window.findCustomerLocally = findCustomerLocally;
+  window.syncAllLocalCustomersToCloud = syncAllLocalCustomersToCloud;
   window.syncSecurityCredentialsToCloud = syncSecurityCredentialsToCloud;
   window.fetchSecurityCredentialsFromCloud = fetchSecurityCredentialsFromCloud;
   window.verifyAdminCredentialsWithCloud = verifyAdminCredentialsWithCloud;
@@ -1509,7 +1677,9 @@ if (typeof module !== "undefined" && module.exports) {
     fetchOrdersFromCloud,
     syncCustomerToCloud,
     fetchCustomerFromCloud,
-    fetchAllCustomersFromCloud
+    fetchAllCustomersFromCloud,
+    findCustomerLocally,
+    syncAllLocalCustomersToCloud
   };
 }
 

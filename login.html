@@ -356,6 +356,10 @@
         });
       });
 
+      if (typeof syncAllLocalCustomersToCloud === 'function') {
+        syncAllLocalCustomersToCloud().catch(() => {});
+      }
+
       window.addEventListener('storage', (e) => {
         if (e.key === 'Rasoee_fresh_config') {
           applyStoreBranding();
@@ -392,15 +396,31 @@
 
     async function handleSendOtp() {
       const phoneInput = document.getElementById('login-phone-input');
-      const phone = phoneInput.value.trim().replace(/\D/g, '');
+      const rawPhone = phoneInput ? phoneInput.value.trim() : '';
+      const phone = rawPhone.replace(/\D/g, '').slice(-10);
 
-      if (phone.length < 10) {
+      if (phone.length !== 10) {
         alert("Please enter a valid 10-digit mobile number.");
-        phoneInput.focus();
+        phoneInput?.focus();
         return;
       }
 
       activePhone = phone;
+      window.__prefetchedCloudCustomer = null;
+
+      // 1. Check local registry & orders first for instant pre-fill
+      if (typeof findCustomerLocally === 'function') {
+        const local = findCustomerLocally(phone);
+        if (local) window.__prefetchedCloudCustomer = local;
+      }
+
+      // 2. Pre-fetch from cloud in background while user types OTP
+      if (typeof fetchCustomerFromCloud === 'function') {
+        fetchCustomerFromCloud(phone).then(cust => {
+          if (cust) window.__prefetchedCloudCustomer = { ...(window.__prefetchedCloudCustomer || {}), ...cust };
+        }).catch(() => {});
+      }
+
       document.getElementById('otp-phone-display').textContent = `+91 ${phone}`;
 
       // Clear any previous error
@@ -530,62 +550,59 @@
         }
       }
 
-      // Check if user exists in registered database or Cloud RTDB
-      let users = [];
-      try {
-        users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
-      } catch (e) {
-        users = [];
+      const cleanPhone = String(activePhone || '').replace(/\D/g, '').slice(-10);
+
+      // 1. Check local customer registries and past orders
+      let existing = typeof findCustomerLocally === 'function' ? findCustomerLocally(cleanPhone) : null;
+      if (!existing) {
+        let users = [];
+        try { users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]'); } catch (e) {}
+        existing = users.find(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone);
       }
 
-      let existing = users.find(u => u.phone === activePhone);
+      // 2. Merge with prefetched customer or fetch from Cloud RTDB
+      const cloudCustomer = window.__prefetchedCloudCustomer || (typeof fetchCustomerFromCloud === 'function' ? await fetchCustomerFromCloud(cleanPhone) : null);
+      if (cloudCustomer && (cloudCustomer.name || cloudCustomer.flat || cloudCustomer.address)) {
+        const flat = cloudCustomer.flat || (cloudCustomer.address && cloudCustomer.address.flat) || (cloudCustomer.savedAddresses && cloudCustomer.savedAddresses[0]?.flat) || '';
+        const street = cloudCustomer.street || (cloudCustomer.address && cloudCustomer.address.street) || (cloudCustomer.savedAddresses && cloudCustomer.savedAddresses[0]?.street) || '';
+        const landmark = cloudCustomer.landmark || (cloudCustomer.address && cloudCustomer.address.landmark) || '';
+        const name = cloudCustomer.name || (existing ? existing.name : 'Valued Customer');
 
-      // Always perform Multi-device Cloud lookup to fetch permanent cloud record
-      if (typeof fetchCustomerFromCloud === 'function') {
-        try {
-          const cloudCustomer = await fetchCustomerFromCloud(activePhone);
-          if (cloudCustomer && (cloudCustomer.name || cloudCustomer.flat || cloudCustomer.address)) {
-            const flat = cloudCustomer.flat || (cloudCustomer.address && cloudCustomer.address.flat) || (cloudCustomer.savedAddresses && cloudCustomer.savedAddresses[0]?.flat) || '';
-            const street = cloudCustomer.street || (cloudCustomer.address && cloudCustomer.address.street) || (cloudCustomer.savedAddresses && cloudCustomer.savedAddresses[0]?.street) || '';
-            const landmark = cloudCustomer.landmark || (cloudCustomer.address && cloudCustomer.address.landmark) || '';
-            const name = cloudCustomer.name || (existing ? existing.name : 'Valued Customer');
+        existing = {
+          id: cloudCustomer.id || (existing ? existing.id : ('usr_' + cleanPhone.slice(-4))),
+          name: name,
+          phone: cleanPhone,
+          flat: flat,
+          street: street,
+          landmark: landmark,
+          instructions: cloudCustomer.instructions || (existing ? existing.instructions : 'Leave at door & ring bell'),
+          address: {
+            flat: flat,
+            street: street,
+            landmark: landmark,
+            city: cloudCustomer.city || 'Bangalore',
+            pincode: cloudCustomer.pincode || '560102'
+          },
+          savedAddresses: [
+            { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
+          ],
+          createdAt: cloudCustomer.createdAt || (existing ? existing.createdAt : new Date().toISOString()),
+          orderCount: cloudCustomer.orderCount || (existing ? existing.orderCount : 1)
+        };
 
-            existing = {
-              id: cloudCustomer.id || (existing ? existing.id : ('usr_' + activePhone.slice(-4))),
-              name: name,
-              phone: activePhone,
-              flat: flat,
-              street: street,
-              landmark: landmark,
-              instructions: cloudCustomer.instructions || (existing ? existing.instructions : 'Leave at door & ring bell'),
-              address: {
-                flat: flat,
-                street: street,
-                landmark: landmark,
-                city: cloudCustomer.city || 'Bangalore',
-                pincode: cloudCustomer.pincode || '560102'
-              },
-              savedAddresses: [
-                { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
-              ],
-              createdAt: cloudCustomer.createdAt || (existing ? existing.createdAt : new Date().toISOString()),
-              orderCount: cloudCustomer.orderCount || (existing ? existing.orderCount : 1)
-            };
-
-            const idx = users.findIndex(u => u.phone === activePhone);
-            if (idx >= 0) users[idx] = existing;
-            else users.push(existing);
-            localStorage.setItem('Rasoee_users', JSON.stringify(users));
-          }
-        } catch (e) {
-          console.warn("Cloud customer fetch error:", e);
-        }
+        let users = [];
+        try { users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]'); } catch (e) {}
+        const idx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone);
+        if (idx >= 0) users[idx] = existing;
+        else users.push(existing);
+        localStorage.setItem('Rasoee_users', JSON.stringify(users));
       }
 
-      // If user exists and has a name or flat address, log them in immediately without prompting again!
-      if (existing && (existing.name || existing.flat || (existing.address && existing.address.flat))) {
+      // 3. If user exists and has a name or flat address, log them in immediately without prompting again!
+      if (existing && (existing.name || existing.flat || (existing.address && (existing.address.flat || existing.address.street)))) {
         setUserSession(existing);
         showSuccessState(existing);
+        return;
       } else {
         // Only if brand new customer with no recorded profile, ask for profile details
         document.getElementById('login-step-otp').classList.add('hidden');
