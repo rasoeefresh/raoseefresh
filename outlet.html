@@ -219,7 +219,7 @@
               type="text" 
               id="outlet-branch-name" 
               class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-              placeholder="e.g. Main Dark Store - HSR Layout Hub #01"
+              placeholder="e.g. Main Store Outlet #01"
               oninput="updateInvoicePreview()"
             />
           </div>
@@ -231,7 +231,7 @@
                 type="text" 
                 id="outlet-code" 
                 class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono uppercase"
-                placeholder="RF-BLR-01"
+                placeholder="RF-STORE-01"
                 oninput="updateInvoicePreview()"
               />
             </div>
@@ -316,7 +316,7 @@
                 type="text" 
                 id="outlet-addr-area" 
                 class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
-                placeholder="e.g. HSR Layout Sector 2"
+                placeholder="e.g. Central Market Area"
                 oninput="updateFullAddressPreview()"
               />
             </div>
@@ -328,7 +328,7 @@
                   type="text" 
                   id="outlet-addr-city" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
-                  placeholder="e.g. Bangalore"
+                  placeholder="e.g. City Name"
                   oninput="updateFullAddressPreview()"
                 />
               </div>
@@ -340,7 +340,7 @@
                   id="outlet-addr-pincode" 
                   maxlength="6"
                   class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-bold"
-                  placeholder="e.g. 560102"
+                  placeholder="e.g. 6-digit Pincode"
                   oninput="updateFullAddressPreview()"
                 />
               </div>
@@ -364,7 +364,7 @@
                   type="text" 
                   id="outlet-addr-landmark" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-                  placeholder="e.g. Near BDA Complex"
+                  placeholder="e.g. Near Main Market"
                   oninput="updateFullAddressPreview()"
                 />
               </div>
@@ -459,19 +459,19 @@
               <div class="flex-1">
                 <div class="text-[9px] font-black text-green-700 bg-green-100 px-1.5 py-0.2 rounded inline-block uppercase">Official Tax Invoice</div>
                 <div class="font-black text-xs text-gray-900 mt-0.5" id="preview-bill-company">Rasoee Fresh Retail Pvt Ltd</div>
-                <div class="text-[10px] font-bold text-gray-600" id="preview-bill-outlet">Main Dark Store - HSR Layout</div>
-                <div class="text-[10px] text-gray-400 font-mono">Invoice #RF-948210 • Doorstep Delivery</div>
+                <div class="text-[10px] font-bold text-gray-600" id="preview-bill-outlet">Main Store Outlet</div>
+                <div class="text-[10px] text-gray-400 font-mono">Invoice #RF-100001 • Doorstep Delivery</div>
               </div>
             </div>
 
             <!-- Dispatch Address & Registration -->
             <div class="bg-white rounded-xl p-2.5 border border-gray-200/80 space-y-1 text-[10px]">
               <div class="text-gray-400 font-bold uppercase tracking-wider text-[9px] flex justify-between">
-                <span>Dispatch Dark Store</span>
-                <span class="text-blinkit-green font-mono font-bold" id="preview-bill-code">RF-BLR-01</span>
+                <span>Dispatch Store Outlet</span>
+                <span class="text-blinkit-green font-mono font-bold" id="preview-bill-code">RF-STORE-01</span>
               </div>
               <div class="text-gray-800 font-medium leading-relaxed" id="preview-bill-address">
-                Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102
+                Central Market Complex, Station Road
               </div>
               <div class="pt-1 border-t border-gray-100 flex items-center justify-between font-mono text-gray-600">
                 <span>GST: <strong id="preview-bill-gstin" class="text-gray-900 font-bold">29ABCDE1234F1Z5</strong></span>
@@ -572,21 +572,21 @@
       // Fill Company & Brand
       document.getElementById('outlet-company-name').value = activeConfig.companyName || 'Rasoee Fresh Retail Private Limited';
       document.getElementById('outlet-store-name').value = activeConfig.storeName || 'Rasoee Fresh Supermarket';
-      document.getElementById('outlet-branch-name').value = activeConfig.outletName || 'Main Dark Store - HSR Layout Hub #01';
-      document.getElementById('outlet-code').value = activeConfig.outletCode || 'RF-BLR-01';
+      document.getElementById('outlet-branch-name').value = activeConfig.outletName || 'Rasoee Fresh - Main Store Outlet';
+      document.getElementById('outlet-code').value = activeConfig.outletCode || 'RF-STORE-01';
       document.getElementById('outlet-eta').value = activeConfig.deliveryTimeEstimate || 'Standard';
-      document.getElementById('outlet-tagline').value = activeConfig.tagline || 'Farm Fresh Groceries Delivered in Standard';
+      document.getElementById('outlet-tagline').value = activeConfig.tagline || 'Farm Fresh Groceries Delivered to Your Doorstep';
 
       // Fill Address Components
       const addr = activeConfig.outletAddress || {};
-      document.getElementById('outlet-addr-shop').value = addr.shopNo || 'Shop #12, Ground Floor';
-      document.getElementById('outlet-addr-building').value = addr.building || 'Central Market Complex';
-      document.getElementById('outlet-addr-street').value = addr.street || '19th Main Road';
-      document.getElementById('outlet-addr-area').value = addr.area || 'HSR Layout Sector 2';
-      document.getElementById('outlet-addr-city').value = addr.city || 'Bangalore';
-      document.getElementById('outlet-addr-pincode').value = addr.pincode || '560102';
-      document.getElementById('outlet-addr-landmark').value = addr.landmark || 'Near BDA Complex & City Garden';
-      document.getElementById('outlet-addr-state').value = addr.state || 'Karnataka';
+      document.getElementById('outlet-addr-shop').value = addr.shopNo || '';
+      document.getElementById('outlet-addr-building').value = addr.building || '';
+      document.getElementById('outlet-addr-street').value = addr.street || '';
+      document.getElementById('outlet-addr-area').value = addr.area || '';
+      document.getElementById('outlet-addr-city').value = addr.city || activeConfig.city || '';
+      document.getElementById('outlet-addr-pincode').value = addr.pincode || activeConfig.pincode || '';
+      document.getElementById('outlet-addr-landmark').value = addr.landmark || '';
+      document.getElementById('outlet-addr-state').value = addr.state || '';
 
       // Full address preview
       document.getElementById('outlet-full-address-preview').value = activeConfig.storeAddress || formatAddressFromInputs();
@@ -694,8 +694,8 @@
 
     function updateInvoicePreview() {
       const company = document.getElementById('outlet-company-name').value.trim() || 'Rasoee Fresh Retail Pvt Ltd';
-      const branch = document.getElementById('outlet-branch-name').value.trim() || 'Main Dark Store - HSR Layout';
-      const code = document.getElementById('outlet-code').value.trim() || 'RF-BLR-01';
+      const branch = document.getElementById('outlet-branch-name').value.trim() || 'Rasoee Fresh - Main Store Outlet';
+      const code = document.getElementById('outlet-code').value.trim() || 'RF-STORE-01';
       const fullAddr = document.getElementById('outlet-full-address-preview').value.trim() || formatAddressFromInputs();
       const gstin = document.getElementById('outlet-gstin').value.trim() || '29ABCDE1234F1Z5';
       const fssai = document.getElementById('outlet-fssai').value.trim() || '11223344000123';

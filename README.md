@@ -123,8 +123,8 @@ A centralized configuration hub for retail outlet branding, legal identification
 ### 2. Company & Outlet Identification
 - **Company Legal Entity Name**: (e.g. `Rasoee Fresh Retail Private Limited`) printed on official Tax Invoices and regulatory filings.
 - **Public Trade Name**: (e.g. `Rasoee Fresh Supermarket`) displayed in customer app headers and browser titles.
-- **Outlet / Branch Name**: (e.g. `Main Dark Store - HSR Layout Hub #01`) identifying specific distribution centers.
-- **Outlet Branch Code**: (e.g. `RF-BLR-01`) used for inventory tagging and order tracking.
+- **Outlet / Branch Name**: (e.g. `Rasoee Fresh - Main Store Outlet`) identifying specific distribution centers.
+- **Outlet Branch Code**: (e.g. `RF-MAIN-01`) used for inventory tagging and order tracking.
 - **Brand Tagline**: (e.g. `Farm Fresh Groceries Delivered to Your Doorstep`).
 
 ### 3. Structured Dark Store Physical Address

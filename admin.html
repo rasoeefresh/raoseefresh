@@ -109,7 +109,7 @@
         <form id="admin-password-form" onsubmit="handlePasswordSubmit(event)" class="space-y-3.5 hidden">
           <div>
             <label class="block text-xs font-bold text-gray-700 mb-1">Admin Username</label>
-            <input type="text" id="admin-user-input" autocomplete="username" placeholder="admin" value="admin" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none text-xs font-bold" />
+            <input type="text" id="admin-user-input" autocomplete="username" placeholder="Enter admin username" value="" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none text-xs font-bold" />
           </div>
 
           <div>
@@ -139,20 +139,6 @@
             <span>🔓 Sign In to Dashboard</span>
           </button>
         </form>
-
-        <!-- Owner Helper Info Card -->
-        <div class="bg-amber-50 rounded-2xl p-3 border border-amber-200 text-[11px] text-amber-900 space-y-1">
-          <div class="font-bold flex items-center gap-1">
-            <span>💡</span>
-            <span>Default Owner Login Credentials:</span>
-          </div>
-          <div class="font-mono text-[10px] text-amber-950 flex flex-wrap gap-x-3 gap-y-1">
-            <span>Quick PIN: <strong class="bg-amber-100 px-1 py-0.5 rounded font-bold">7890</strong></span>
-            <span>Username: <strong class="bg-amber-100 px-1 py-0.5 rounded font-bold">admin</strong></span>
-            <span>Password: <strong class="bg-amber-100 px-1 py-0.5 rounded font-bold">admin@Rasoee2026</strong></span>
-          </div>
-          <p class="text-[10px] text-amber-700 pt-0.5">Only you have access. You can customize your Password &amp; PIN inside Passwords modal anytime.</p>
-        </div>
 
         <div class="text-center pt-1">
           <a href="index.html" class="text-xs text-gray-400 hover:text-gray-700 font-semibold flex items-center justify-center gap-1">
@@ -710,7 +696,7 @@
           <!-- Dark Store Address -->
           <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200 space-y-3">
             <span class="font-bold text-sm text-gray-900">Dark Store Location / Hub</span>
-            <input type="text" id="op-address" class="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="e.g. Shop #12, Central Market Road, Bangalore" />
+            <input type="text" id="op-address" class="w-full p-2.5 rounded-xl border border-gray-300 text-xs focus:border-blinkit-green outline-none" placeholder="e.g. Shop No. 1, Main Market Road, Station Area" />
           </div>
 
           <!-- Outlet 5 KM Delivery Radius Barrier -->
@@ -801,19 +787,26 @@
             </h2>
             <p class="text-xs text-gray-500">Live order tracking with customer phone numbers and real-time status management</p>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="relative">
+              <input 
+                type="tel" 
+                id="order-phone-filter" 
+                placeholder="Filter by Mobile No. (e.g. 9876543210)" 
+                oninput="filterOrdersByPhone(this.value)"
+                class="text-xs p-2.5 pl-8 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green w-48 sm:w-64 font-bold text-gray-800"
+              />
+              <span class="absolute left-2.5 top-2.5 text-gray-400">📞</span>
+            </div>
             <input 
               type="text" 
               id="order-search-input" 
-              placeholder="Search by ID, name, phone..." 
+              placeholder="Search by ID, name, items..." 
               oninput="filterOrdersBySearch(this.value)"
-              class="text-xs p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green w-48 sm:w-60"
+              class="text-xs p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green w-40 sm:w-52"
             />
-            <button onclick="seedDemoOrders()" class="text-xs text-blinkit-green hover:text-emerald-800 font-bold px-3 py-2 border border-green-200 rounded-xl hover:bg-green-50 flex-shrink-0" title="Load Sample Demo Orders for Testing">
-              ⚡ Sample Orders
-            </button>
-            <button onclick="clearOrderHistory()" class="text-xs text-red-600 hover:text-red-800 font-bold px-3 py-2 border border-red-200 rounded-xl hover:bg-red-50 flex-shrink-0">
-              Clear History
+            <button onclick="resetOrderFilters()" class="text-xs text-gray-600 hover:text-gray-900 font-bold px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 flex-shrink-0" title="Reset Filters">
+              ↺ Reset
             </button>
           </div>
         </div>
@@ -1064,7 +1057,7 @@
                 type="text" 
                 id="outlet-branch-name" 
                 class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
-                placeholder="e.g. Main Dark Store - HSR Layout Hub #01"
+                placeholder="e.g. Main Store Outlet #01"
                 oninput="updateInvoicePreview()"
               />
             </div>
@@ -1076,7 +1069,7 @@
                   type="text" 
                   id="outlet-code" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono uppercase"
-                  placeholder="RF-BLR-01"
+                  placeholder="RF-STORE-01"
                   oninput="updateInvoicePreview()"
                 />
               </div>
@@ -1130,7 +1123,7 @@
                   type="text" 
                   id="outlet-addr-shop" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
-                  placeholder="e.g. Shop #12, Ground Floor"
+                  placeholder="e.g. Shop No. 1, Ground Floor"
                   oninput="updateFullAddressPreview()"
                 />
               </div>
@@ -1141,7 +1134,7 @@
                   type="text" 
                   id="outlet-addr-building" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-                  placeholder="e.g. Central Market Complex"
+                  placeholder="e.g. Market Complex / Building"
                   oninput="updateFullAddressPreview()"
                 />
               </div>
@@ -1152,7 +1145,7 @@
                   type="text" 
                   id="outlet-addr-street" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-                  placeholder="e.g. 19th Main Road"
+                  placeholder="e.g. Station Road / Main Road"
                   oninput="updateFullAddressPreview()"
                 />
               </div>
@@ -1163,7 +1156,7 @@
                   type="text" 
                   id="outlet-addr-area" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
-                  placeholder="e.g. HSR Layout Sector 2"
+                  placeholder="e.g. Central Market Area"
                   oninput="updateFullAddressPreview()"
                 />
               </div>
@@ -1175,7 +1168,7 @@
                     type="text" 
                     id="outlet-addr-city" 
                     class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-semibold"
-                    placeholder="e.g. Bangalore"
+                    placeholder="e.g. City Name"
                     oninput="updateFullAddressPreview()"
                   />
                 </div>
@@ -1187,7 +1180,7 @@
                     id="outlet-addr-pincode" 
                     maxlength="6"
                     class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-bold"
-                    placeholder="e.g. 560102"
+                    placeholder="e.g. 6-digit Pincode"
                     oninput="updateFullAddressPreview()"
                   />
                 </div>
@@ -1211,7 +1204,7 @@
                     type="text" 
                     id="outlet-addr-landmark" 
                     class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green"
-                    placeholder="e.g. Near BDA Complex"
+                    placeholder="e.g. Near Main Market"
                     oninput="updateFullAddressPreview()"
                   />
                 </div>
@@ -1375,19 +1368,19 @@
                 <div class="flex-1 min-w-0">
                   <div class="text-[9px] font-black text-green-700 bg-green-100 px-1.5 py-0.2 rounded inline-block uppercase">Official Tax Invoice</div>
                   <div class="font-black text-xs text-gray-900 mt-0.5 truncate" id="preview-bill-company">Rasoee Fresh Retail Pvt Ltd</div>
-                  <div class="text-[10px] font-bold text-gray-600 truncate" id="preview-bill-outlet">Main Dark Store - HSR Layout</div>
-                  <div class="text-[10px] text-gray-400 font-mono">Invoice #RF-948210 • Doorstep Delivery</div>
+                  <div class="text-[10px] font-bold text-gray-600 truncate" id="preview-bill-outlet">Main Store Outlet</div>
+                  <div class="text-[10px] text-gray-400 font-mono">Invoice #RF-100001 • Doorstep Delivery</div>
                 </div>
               </div>
 
               <!-- Dispatch Address & Registration -->
               <div class="bg-white rounded-xl p-2.5 border border-gray-200/80 space-y-1 text-[10px]">
                 <div class="text-gray-400 font-bold uppercase tracking-wider text-[9px] flex justify-between">
-                  <span>Dispatch Dark Store</span>
-                  <span class="text-blinkit-green font-mono font-bold" id="preview-bill-code">RF-BLR-01</span>
+                  <span>Dispatch Store Outlet</span>
+                  <span class="text-blinkit-green font-mono font-bold" id="preview-bill-code">RF-STORE-01</span>
                 </div>
                 <div class="text-gray-800 font-medium leading-relaxed text-[10px]" id="preview-bill-address">
-                  Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102
+                  Central Market Complex, Station Road
                 </div>
                 <div class="pt-1 border-t border-gray-100 flex items-center justify-between font-mono text-gray-600 flex-wrap gap-1">
                   <span>GST: <strong id="preview-bill-gstin" class="text-gray-900 font-bold">29ABCDE1234F1Z5</strong></span>
@@ -2256,8 +2249,8 @@
       <form onsubmit="handleSecurityUpdateSubmit(event)" class="p-6 space-y-4 text-xs">
         <div>
           <label class="block font-bold text-gray-700 mb-1">Store Owner Username *</label>
-          <input type="text" id="sec-user-input" class="w-full p-2.5 rounded-xl border border-gray-300 font-bold outline-none focus:border-blinkit-green" placeholder="admin" required />
-          <span class="text-[10px] text-gray-400 mt-0.5 block">Current default: admin</span>
+          <input type="text" id="sec-user-input" class="w-full p-2.5 rounded-xl border border-gray-300 font-bold outline-none focus:border-blinkit-green" placeholder="Enter username" required />
+          <span class="text-[10px] text-gray-400 mt-0.5 block">Username for dashboard login</span>
         </div>
 
         <div>
@@ -2271,7 +2264,7 @@
 
         <div>
           <label class="block font-bold text-gray-700 mb-1">New Quick 4-Digit Master PIN *</label>
-          <input type="text" maxlength="4" id="sec-pin-input" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-black tracking-widest text-center text-lg" placeholder="7890" pattern="\d{4}" required />
+          <input type="text" maxlength="4" id="sec-pin-input" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-black tracking-widest text-center text-lg" placeholder="4-digit PIN" pattern="\d{4}" required />
           <span class="text-[10px] text-gray-400 mt-0.5 block">4 digits (0-9) for quick mobile &amp; desktop unlock</span>
         </div>
 
@@ -2288,17 +2281,17 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-gray-700 mb-0.5">Operator User</label>
-              <input type="text" id="sec-operator-user" class="w-full p-2 rounded-xl border border-gray-300 font-bold outline-none focus:border-indigo-600" placeholder="operator" />
+              <input type="text" id="sec-operator-user" class="w-full p-2 rounded-xl border border-gray-300 font-bold outline-none focus:border-indigo-600" placeholder="Operator username" />
             </div>
             <div>
               <label class="block font-bold text-gray-700 mb-0.5">Operator PIN (4-digit)</label>
-              <input type="text" maxlength="4" id="sec-operator-pin" class="w-full p-2 rounded-xl border border-gray-300 text-center font-mono font-black text-base outline-none focus:border-indigo-600" placeholder="1234" />
+              <input type="text" maxlength="4" id="sec-operator-pin" class="w-full p-2 rounded-xl border border-gray-300 text-center font-mono font-black text-base outline-none focus:border-indigo-600" placeholder="4-digit PIN" />
             </div>
           </div>
 
           <div>
             <label class="block font-bold text-gray-700 mb-0.5">Operator Password</label>
-            <input type="password" id="sec-operator-pass" class="w-full p-2 rounded-xl border border-gray-300 outline-none focus:border-indigo-600 font-mono" placeholder="operator@rasoee2026" />
+            <input type="password" id="sec-operator-pass" class="w-full p-2 rounded-xl border border-gray-300 outline-none focus:border-indigo-600 font-mono" placeholder="Enter operator password" />
           </div>
         </div>
 
@@ -2540,12 +2533,12 @@
       const opPassEl = document.getElementById('sec-operator-pass');
       const opPinEl = document.getElementById('sec-operator-pin');
 
-      if (userEl) userEl.value = sec.adminUser || 'admin';
-      if (passEl) passEl.value = sec.adminPassword || 'admin@Rasoee2026';
-      if (pinEl) pinEl.value = sec.adminPin || '7890';
-      if (opUserEl) opUserEl.value = sec.operatorUser || 'operator';
-      if (opPassEl) opPassEl.value = sec.operatorPassword || 'operator@rasoee2026';
-      if (opPinEl) opPinEl.value = sec.operatorPin || '1234';
+      if (userEl) userEl.value = sec.adminUser || '';
+      if (passEl) passEl.value = '';
+      if (pinEl) pinEl.value = '';
+      if (opUserEl) opUserEl.value = sec.operatorUser || '';
+      if (opPassEl) opPassEl.value = '';
+      if (opPinEl) opPinEl.value = '';
 
       const modal = document.getElementById('security-modal');
       if (modal) {
@@ -2568,9 +2561,10 @@
       const newP = document.getElementById('sec-pass-input')?.value.trim();
       const newPin = document.getElementById('sec-pin-input')?.value.trim();
       
-      const newOpU = document.getElementById('sec-operator-user')?.value.trim() || 'operator';
-      const newOpP = document.getElementById('sec-operator-pass')?.value.trim() || 'operator@rasoee2026';
-      const newOpPin = document.getElementById('sec-operator-pin')?.value.trim() || '1234';
+      const currentSec = (typeof getStoreConfig === 'function' ? getStoreConfig()?.security : null) || {};
+      const newOpU = document.getElementById('sec-operator-user')?.value.trim() || currentSec.operatorUser || 'operator';
+      const newOpP = document.getElementById('sec-operator-pass')?.value.trim() || currentSec.operatorPassword || '';
+      const newOpPin = document.getElementById('sec-operator-pin')?.value.trim() || currentSec.operatorPin || '';
 
       if (!newU || !newP || !newPin || newPin.length !== 4) {
         alert("Please provide a valid Username, Password, and a 4-digit numeric PIN for the Store Owner.");
@@ -2793,11 +2787,8 @@
         syncAllLocalCustomersToCloud().catch(() => {});
       }
 
-      // If orders list is empty, initialize demo orders so tables are immediately populated
-      if (!Array.isArray(ordersList) || ordersList.length === 0) {
-        if (typeof initDemoDataIfEmpty === 'function') {
-          initDemoDataIfEmpty();
-        }
+      // Load orders list
+      if (!Array.isArray(ordersList)) {
         try {
           ordersList = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
         } catch (e) {
@@ -3990,9 +3981,9 @@
 
       const dz = currentConfig.deliveryZone ? { ...currentConfig.deliveryZone } : {
         maxRadiusKm: 5.0,
-        storeCoordinates: { lat: 12.9116, lng: 77.6389 },
-        strictBoundary: true,
-        allowedPincodes: ["560102", "560034", "560068", "560095", "560103", "560076", "560100"]
+        storeCoordinates: { lat: 0, lng: 0 },
+        strictBoundary: false,
+        allowedPincodes: []
       };
       dz.maxRadiusKm = opRadius;
 
@@ -4055,6 +4046,24 @@
       renderAllOrders();
     }
 
+    let currentOrderPhoneFilter = '';
+
+    function filterOrdersByPhone(phoneQuery) {
+      currentOrderPhoneFilter = (phoneQuery || '').trim();
+      renderAllOrders();
+    }
+
+    function resetOrderFilters() {
+      currentOrderPhoneFilter = '';
+      currentOrderSearchQuery = '';
+      currentOrderStatusFilter = 'all';
+      const phoneInp = document.getElementById('order-phone-filter');
+      if (phoneInp) phoneInp.value = '';
+      const searchInp = document.getElementById('order-search-input');
+      if (searchInp) searchInp.value = '';
+      renderAllOrders();
+    }
+
     function filterOrdersBySearch(query) {
       currentOrderSearchQuery = query;
       renderAllOrders();
@@ -4089,10 +4098,10 @@
 
       if (ordersList.length === 0) {
         if (tbody) {
-          tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-gray-500 font-medium">No customer orders recorded yet. <button onclick="seedDemoOrders()" class="text-blinkit-green font-bold underline ml-1 hover:text-emerald-800 cursor-pointer">⚡ Load 3 Sample Orders</button></td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-gray-500 font-medium">No customer orders recorded yet. Live orders from storefront will appear here automatically.</td></tr>';
         }
         if (overviewTbody) {
-          overviewTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500 font-medium">No orders logged yet. <button onclick="seedDemoOrders()" class="text-blinkit-green font-bold underline ml-1 hover:text-emerald-800 cursor-pointer">⚡ Load Sample Orders</button></td></tr>';
+          overviewTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500 font-medium">No customer orders recorded yet.</td></tr>';
         }
         if (emptyMsg) emptyMsg.classList.add('hidden');
         return;
@@ -4110,6 +4119,14 @@
           if (target === 'delivered') return s.includes('deliver') && !s.includes('out');
           if (target === 'cancelled') return s.includes('cancel');
           return s.includes(target);
+        });
+      }
+
+      if (currentOrderPhoneFilter) {
+        const cleanFilter = currentOrderPhoneFilter.replace(/\D/g, '');
+        filtered = filtered.filter(o => {
+          const p = String(o.customer?.phone || o.customer?.mobile || '').replace(/\D/g, '');
+          return p.includes(cleanFilter);
         });
       }
 
@@ -4283,16 +4300,8 @@
     }
 
     function seedDemoOrders() {
-      localStorage.removeItem('Rasoee_orders');
-      if (typeof initDemoDataIfEmpty === 'function') {
-        initDemoDataIfEmpty();
-      }
-      loadMasterData();
-      renderAllOrders();
-      updateKpis();
-      try {
-        window.dispatchEvent(new Event('storage'));
-      } catch (e) {}
+      // Production mode: Sample demo orders disabled
+      return;
     }
 
     function advanceOrderStatus(orderId) {
@@ -4695,14 +4704,6 @@
       window.open(`https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
-    function clearOrderHistory() {
-      if (confirm("Are you sure you want to clear order history?")) {
-        ordersList = [];
-        localStorage.removeItem('Rasoee_orders');
-        loadMasterData();
-      }
-    }
-
     // ================= OUTLET & COMPANY SETTINGS LOGIC =================
     let currentUploadedLogoDataUrl = '';
 
@@ -4721,10 +4722,10 @@
 
       if (companyEl) companyEl.value = cfg.companyName || 'Rasoee Fresh Retail Private Limited';
       if (storeEl) storeEl.value = cfg.storeName || 'Rasoee Fresh Supermarket';
-      if (branchEl) branchEl.value = cfg.outletName || 'Main Dark Store - HSR Layout Hub #01';
-      if (codeEl) codeEl.value = cfg.outletCode || 'RF-BLR-01';
+      if (branchEl) branchEl.value = cfg.outletName || 'Rasoee Fresh - Main Store Outlet';
+      if (codeEl) codeEl.value = cfg.outletCode || 'RF-STORE-01';
       if (etaEl) etaEl.value = cfg.deliveryTimeEstimate || 'Standard';
-      if (taglineEl) taglineEl.value = cfg.tagline || 'Farm Fresh Groceries Delivered in Standard';
+      if (taglineEl) taglineEl.value = cfg.tagline || 'Farm Fresh Groceries Delivered to Your Doorstep';
       if (gstinEl) gstinEl.value = cfg.gstin || '29ABCDE1234F1Z5';
       if (fssaiEl) fssaiEl.value = cfg.fssaiNumber || '11223344000123';
       if (noteEl) noteEl.value = cfg.invoiceFooterNote || 'Thank you for shopping with Rasoee Fresh! Freshness & 100% replacement guaranteed on WhatsApp.';
@@ -4741,14 +4742,14 @@
       const stateEl = document.getElementById('outlet-addr-state');
       const fullAddrEl = document.getElementById('outlet-full-address-preview');
 
-      if (shopEl) shopEl.value = addr.shopNo || 'Shop #12, Ground Floor';
-      if (bldgEl) bldgEl.value = addr.building || 'Central Market Complex';
-      if (streetEl) streetEl.value = addr.street || '19th Main Road';
-      if (areaEl) areaEl.value = addr.area || 'HSR Layout Sector 2';
-      if (cityEl) cityEl.value = addr.city || cfg.city || 'Bangalore';
-      if (pinEl) pinEl.value = addr.pincode || cfg.pincode || '560102';
-      if (landmarkEl) landmarkEl.value = addr.landmark || 'Near BDA Complex & City Garden';
-      if (stateEl) stateEl.value = addr.state || 'Karnataka';
+      if (shopEl) shopEl.value = addr.shopNo || '';
+      if (bldgEl) bldgEl.value = addr.building || '';
+      if (streetEl) streetEl.value = addr.street || '';
+      if (areaEl) areaEl.value = addr.area || '';
+      if (cityEl) cityEl.value = addr.city || cfg.city || '';
+      if (pinEl) pinEl.value = addr.pincode || cfg.pincode || '';
+      if (landmarkEl) landmarkEl.value = addr.landmark || '';
+      if (stateEl) stateEl.value = addr.state || '';
       if (fullAddrEl) fullAddrEl.value = cfg.storeAddress || formatAddressFromInputs();
 
       const dz = cfg.deliveryZone || {};
@@ -4757,8 +4758,8 @@
       const lngEl = document.getElementById('outlet-store-lng');
       const strictEl = document.getElementById('outlet-strict-boundary');
       if (radiusEl) radiusEl.value = dz.maxRadiusKm || 5.0;
-      if (latEl) latEl.value = dz.storeCoordinates?.lat || 12.9116;
-      if (lngEl) lngEl.value = dz.storeCoordinates?.lng || 77.6389;
+      if (latEl) latEl.value = dz.storeCoordinates?.lat || 0;
+      if (lngEl) lngEl.value = dz.storeCoordinates?.lng || 0;
       if (strictEl) strictEl.checked = dz.strictBoundary !== false;
 
       currentUploadedLogoDataUrl = cfg.logoUrl || '';
@@ -4861,9 +4862,9 @@
     }
 
     function updateInvoicePreview() {
-      const company = document.getElementById('outlet-company-name')?.value.trim() || 'Rasoee Fresh Retail Pvt Ltd';
-      const branch = document.getElementById('outlet-branch-name')?.value.trim() || 'Main Dark Store - HSR Layout';
-      const code = document.getElementById('outlet-code')?.value.trim() || 'RF-BLR-01';
+      const company = document.getElementById('outlet-company-name')?.value.trim() || currentConfig?.companyName || 'Rasoee Fresh Retail Pvt Ltd';
+      const branch = document.getElementById('outlet-branch-name')?.value.trim() || currentConfig?.outletName || 'Rasoee Fresh - Main Store Outlet';
+      const code = document.getElementById('outlet-code')?.value.trim() || currentConfig?.outletCode || 'RF-MAIN-01';
       const fullAddr = document.getElementById('outlet-full-address-preview')?.value.trim() || formatAddressFromInputs();
       const gstin = document.getElementById('outlet-gstin')?.value.trim() || '29ABCDE1234F1Z5';
       const fssai = document.getElementById('outlet-fssai')?.value.trim() || '11223344000123';
@@ -4907,10 +4908,10 @@
     function saveOutletSettings(silent = false) {
       const companyName = document.getElementById('outlet-company-name')?.value.trim() || 'Rasoee Fresh Retail Private Limited';
       const storeName = document.getElementById('outlet-store-name')?.value.trim() || 'Rasoee Fresh Supermarket';
-      const branchName = document.getElementById('outlet-branch-name')?.value.trim() || 'Main Dark Store - HSR Layout Hub #01';
-      const outletCode = document.getElementById('outlet-code')?.value.trim() || 'RF-BLR-01';
+      const branchName = document.getElementById('outlet-branch-name')?.value.trim() || 'Rasoee Fresh - Main Store Outlet';
+      const outletCode = document.getElementById('outlet-code')?.value.trim() || 'RF-STORE-01';
       const eta = document.getElementById('outlet-eta')?.value.trim() || 'Standard';
-      const tagline = document.getElementById('outlet-tagline')?.value.trim() || 'Farm Fresh Groceries Delivered in Standard';
+      const tagline = document.getElementById('outlet-tagline')?.value.trim() || 'Farm Fresh Groceries Delivered to Your Doorstep';
       const gstin = document.getElementById('outlet-gstin')?.value.trim() || '';
       const fssai = document.getElementById('outlet-fssai')?.value.trim() || '';
       const note = document.getElementById('outlet-invoice-note')?.value.trim() || '';
@@ -4919,16 +4920,16 @@
       const bldg = document.getElementById('outlet-addr-building')?.value.trim() || '';
       const street = document.getElementById('outlet-addr-street')?.value.trim() || '';
       const area = document.getElementById('outlet-addr-area')?.value.trim() || '';
-      const city = document.getElementById('outlet-addr-city')?.value.trim() || 'Bangalore';
-      const pin = document.getElementById('outlet-addr-pincode')?.value.trim() || '560102';
-      const state = document.getElementById('outlet-addr-state')?.value.trim() || 'Karnataka';
+      const city = document.getElementById('outlet-addr-city')?.value.trim() || '';
+      const pin = document.getElementById('outlet-addr-pincode')?.value.trim() || '';
+      const state = document.getElementById('outlet-addr-state')?.value.trim() || '';
       const landmark = document.getElementById('outlet-addr-landmark')?.value.trim() || '';
-      const fullAddress = document.getElementById('outlet-full-address-preview')?.value.trim() || `${shop}, ${street}, ${area}, ${city} - ${pin}`;
+      const fullAddress = document.getElementById('outlet-full-address-preview')?.value.trim() || [shop, bldg, street, area, city, pin].filter(Boolean).join(', ');
 
       const maxRadius = parseFloat(document.getElementById('outlet-max-radius')?.value || document.getElementById('op-max-radius')?.value || '5.0') || 5.0;
-      const storeLat = parseFloat(document.getElementById('outlet-store-lat')?.value || '12.9116') || 12.9116;
-      const storeLng = parseFloat(document.getElementById('outlet-store-lng')?.value || '77.6389') || 77.6389;
-      const strictBoundary = document.getElementById('outlet-strict-boundary') ? document.getElementById('outlet-strict-boundary').checked : true;
+      const storeLat = parseFloat(document.getElementById('outlet-store-lat')?.value || '0') || 0;
+      const storeLng = parseFloat(document.getElementById('outlet-store-lng')?.value || '0') || 0;
+      const strictBoundary = document.getElementById('outlet-strict-boundary') ? document.getElementById('outlet-strict-boundary').checked : false;
 
       const logoUrlInput = document.getElementById('outlet-logo-url-input')?.value.trim() || '';
       const finalLogoUrl = currentUploadedLogoDataUrl || logoUrlInput;
@@ -4941,7 +4942,7 @@
         deliveryTimeEstimate: eta,
         tagline,
         logoUrl: finalLogoUrl,
-        logoEmoji: currentConfig.logoEmoji || '⚡',
+        logoEmoji: currentConfig.logoEmoji || '🛒',
         storeAddress: fullAddress,
         city,
         pincode: pin,
@@ -4962,7 +4963,7 @@
             lng: storeLng
           },
           strictBoundary: strictBoundary,
-          allowedPincodes: currentConfig.deliveryZone?.allowedPincodes || ["560102", "560034", "560068", "560095", "560103", "560076", "560100"]
+          allowedPincodes: currentConfig.deliveryZone?.allowedPincodes || []
         },
         gstin,
         fssaiNumber: fssai,

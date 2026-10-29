@@ -59,8 +59,10 @@ function normalizeCustomerData(raw) {
 
   const name = raw.name || raw.customerName || (raw.customer && raw.customer.name) || '';
   const instructions = raw.instructions || raw.notes || (raw.deliveryAddress && raw.deliveryAddress.instructions) || 'Leave at door & ring bell';
-  const city = raw.city || (raw.address && typeof raw.address === 'object' ? raw.address.city : '') || 'Bangalore';
-  const pincode = raw.pincode || (raw.address && typeof raw.address === 'object' ? raw.address.pincode : '') || '560102';
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+  const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
+  const city = raw.city || (raw.address && typeof raw.address === 'object' ? raw.address.city : '') || defaultCity;
+  const pincode = raw.pincode || (raw.address && typeof raw.address === 'object' ? raw.address.pincode : '') || defaultPin;
 
   return {
     id: raw.id || ('usr_' + (cleanPhone ? cleanPhone.slice(-4) : 'guest')),
@@ -248,6 +250,24 @@ function loadConfigAndData() {
           landmark: state.currentUser.landmark || '',
           instructions: state.currentUser.instructions || 'Leave at door & ring bell'
         };
+
+        // Cross-device cart sync: pull cloud cart for logged-in user
+        if (state.currentUser.phone && typeof fetchCartFromCloud === 'function') {
+          fetchCartFromCloud(state.currentUser.phone).then(cloudCart => {
+            if (cloudCart && typeof cloudCart === 'object') {
+              const localCart = state.cart || {};
+              const merged = { ...cloudCart };
+              for (const [k, v] of Object.entries(localCart)) {
+                merged[k] = Math.max(merged[k] || 0, v);
+              }
+              state.cart = merged;
+              localStorage.setItem('Rasoee_cart', JSON.stringify(state.cart));
+              refreshAllCartButtons();
+              updateCartUI();
+              syncCartToCloud(state.currentUser.phone, state.cart);
+            }
+          }).catch(() => {});
+        }
       }
     }
   } catch (e) {
@@ -378,10 +398,10 @@ function applyBranding() {
   companyNameEls.forEach(el => el.textContent = cfg.companyName || cfg.storeName || 'Rasoee Fresh Retail Pvt Ltd');
 
   const outletNameEls = document.querySelectorAll('.js-outlet-name');
-  outletNameEls.forEach(el => el.textContent = cfg.outletName || 'Main Dark Store');
+  outletNameEls.forEach(el => el.textContent = cfg.outletName || 'Main Store Outlet');
 
   const outletAddrEls = document.querySelectorAll('.js-outlet-address');
-  outletAddrEls.forEach(el => el.textContent = cfg.storeAddress || 'HSR Layout, Bangalore');
+  outletAddrEls.forEach(el => el.textContent = cfg.storeAddress || (cfg.outletName || 'Store Outlet'));
 
   const gstinEls = document.querySelectorAll('.js-store-gstin');
   gstinEls.forEach(el => el.textContent = cfg.gstin || '29ABCDE1234F1Z5');
@@ -393,7 +413,7 @@ function applyBranding() {
   taglineEls.forEach(el => el.textContent = cfg.tagline || 'Farm Fresh Groceries Delivered to Your Doorstep');
 
   const outletCodeEls = document.querySelectorAll('.js-outlet-code');
-  outletCodeEls.forEach(el => el.textContent = cfg.outletCode || 'RF-BLR-01');
+  outletCodeEls.forEach(el => el.textContent = cfg.outletCode || 'RF-STORE-01');
 
   const emailEls = document.querySelectorAll('.js-store-email');
   emailEls.forEach(el => el.textContent = cfg.email || 'support@Rasoeefresh.com');
@@ -698,6 +718,10 @@ function updateCartItem(productId, delta) {
 
   localStorage.setItem('Rasoee_cart', JSON.stringify(state.cart));
 
+  if (state.currentUser && state.currentUser.phone && typeof syncCartToCloud === 'function') {
+    syncCartToCloud(state.currentUser.phone, state.cart);
+  }
+
   const btnContainer = document.getElementById(`btn-container-${productId}`);
   if (btnContainer) {
     btnContainer.innerHTML = renderCartButton(productId, newQty);
@@ -812,11 +836,11 @@ function selectPaymentMethod(method = 'cod') {
 function validateDeliveryZone() {
   const cfg = state.config?.deliveryZone || { 
     maxRadiusKm: 5.0, 
-    storeCoordinates: { lat: 12.9116, lng: 77.6389 },
-    allowedPincodes: ["560102", "560034", "560068", "560095", "560103", "560076", "560100"]
+    storeCoordinates: { lat: 0, lng: 0 },
+    allowedPincodes: []
   };
-  const storeLat = cfg.storeCoordinates?.lat || 12.9116;
-  const storeLng = cfg.storeCoordinates?.lng || 77.6389;
+  const storeLat = cfg.storeCoordinates?.lat || 0;
+  const storeLng = cfg.storeCoordinates?.lng || 0;
   const maxRadius = cfg.maxRadiusKm || 5.0;
 
   // 1. Direct GPS Location check if detected
@@ -839,10 +863,11 @@ function validateDeliveryZone() {
   // 2. Check 6-digit Pincode from input or saved address
   const pincodeInput = document.getElementById('addr-pincode')?.value?.trim();
   const addressObj = state.deliveryAddress || {};
-  const currentPin = pincodeInput || addressObj.pincode || (typeof addressObj.street === 'string' && addressObj.street.match(/\b560\d{3}\b/)?.[0]) || '';
-  const allowedPins = cfg.allowedPincodes || ["560102", "560034", "560068", "560095", "560103", "560076", "560100"];
+  const currentPin = pincodeInput || addressObj.pincode || (typeof addressObj.street === 'string' && addressObj.street.match(/\b\d{6}\b/)?.[0]) || '';
+  const allowedPins = (cfg.allowedPincodes && Array.isArray(cfg.allowedPincodes) && cfg.allowedPincodes.length > 0) ? cfg.allowedPincodes : null;
+  const storeLabel = cfg.outletName || cfg.storeName || 'our store';
 
-  if (currentPin && currentPin.length === 6) {
+  if (currentPin && currentPin.length === 6 && allowedPins) {
     if (allowedPins.includes(currentPin)) {
       return {
         isWithin: true,
@@ -857,21 +882,9 @@ function validateDeliveryZone() {
         distanceKm: 8.5,
         maxRadius,
         method: 'pincode',
-        message: `🚫 Delivery unavailable for pincode ${currentPin}. We deliver strictly within ${maxRadius} km of HSR Hub.`
+        message: `🚫 Delivery unavailable for pincode ${currentPin}. We deliver strictly within ${maxRadius} km of ${storeLabel}.`
       };
     }
-  }
-
-  // 3. Fallback: locality boundary verification
-  const combinedAddr = `${addressObj.flat || ''} ${addressObj.street || ''} ${addressObj.landmark || ''}`.toLowerCase();
-  if (combinedAddr.includes('whitefield') || combinedAddr.includes('electronic city') || combinedAddr.includes('hebbal') || combinedAddr.includes('yelahanka') || combinedAddr.includes('malleswaram') || combinedAddr.includes('indiranagar') || combinedAddr.includes('jayanagar')) {
-    return {
-      isWithin: false,
-      distanceKm: 12.0,
-      maxRadius,
-      method: 'area',
-      message: `🚫 Address is outside our ${maxRadius} km service boundary. We deliver strictly in HSR Layout and immediate surroundings.`
-    };
   }
 
   return {
@@ -879,7 +892,7 @@ function validateDeliveryZone() {
     distanceKm: null,
     maxRadius,
     method: 'default',
-    message: `📍 Outlet Delivery Zone: Limited to 5.0 km from HSR Layout Outlet.`
+    message: `📍 Outlet Delivery Zone: Limited to ${maxRadius} km from ${storeLabel}.`
   };
 }
 
@@ -1369,6 +1382,10 @@ function processOrderCompletion(orderId, summary, customer, paymentDetails) {
   // Clear cart and close drawer
   state.cart = {};
   localStorage.removeItem('Rasoee_cart');
+  if (customer && customer.phone && typeof syncCartToCloud === 'function') {
+    syncCartToCloud(customer.phone, {});
+  }
+  refreshAllCartButtons();
   updateCartUI();
   toggleCartDrawer(false);
 
@@ -1685,9 +1702,10 @@ async function handleModalVerifyOtp() {
 function handleModalSaveProfile() {
   const name = document.getElementById('modal-profile-name')?.value.trim();
   const flat = document.getElementById('modal-profile-flat')?.value.trim();
-  const street = document.getElementById('modal-profile-street')?.value.trim() || 'HSR Layout';
+  const street = document.getElementById('modal-profile-street')?.value.trim() || '';
   const landmark = document.getElementById('modal-profile-landmark')?.value.trim() || '';
   const tag = document.getElementById('modal-profile-tag')?.value || 'Home';
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
 
   if (!name || !flat) {
     alert("Please enter your name and flat/house number.");
@@ -1706,11 +1724,11 @@ function handleModalSaveProfile() {
       flat: flat,
       street: street,
       landmark: landmark,
-      city: 'Bangalore - 560102',
+      city: defaultCity,
       tag: tag
     },
     savedAddresses: [
-      { type: tag, flat: flat, street: street, landmark: landmark, city: 'Bangalore - 560102', isDefault: true }
+      { type: tag, flat: flat, street: street, landmark: landmark, city: defaultCity, isDefault: true }
     ],
     createdAt: new Date().toISOString(),
     orderCount: 0
@@ -1738,18 +1756,19 @@ function handleModalSaveProfile() {
 }
 
 function quickModalLogin(name, phone, flat) {
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
   const user = normalizeCustomerData({
     id: 'usr_' + phone.slice(-4),
     name: name,
     phone: phone,
     flat: flat,
-    street: 'Bangalore',
+    street: '',
     landmark: '',
     instructions: 'Leave at door & ring bell',
-    address: { flat: flat, street: 'Bangalore', landmark: '', city: 'Bangalore - 560102', tag: 'Home' },
-    savedAddresses: [{ type: 'Home', flat: flat, street: 'Bangalore', landmark: '', city: 'Bangalore - 560102', isDefault: true }],
+    address: { flat: flat, street: '', landmark: '', city: defaultCity, tag: 'Home' },
+    savedAddresses: [{ type: 'Home', flat: flat, street: '', landmark: '', city: defaultCity, isDefault: true }],
     createdAt: new Date().toISOString(),
-    orderCount: 2
+    orderCount: 0
   });
 
   let users = [];
@@ -1801,6 +1820,24 @@ function setCustomerSession(user) {
   // Push to cloud sync
   if (typeof syncCustomerToCloud === 'function') {
     syncCustomerToCloud(normalized);
+  }
+
+  // Cross-device cart sync: pull cloud cart and merge
+  if (normalized.phone && typeof fetchCartFromCloud === 'function') {
+    fetchCartFromCloud(normalized.phone).then(cloudCart => {
+      if (cloudCart && typeof cloudCart === 'object') {
+        const localCart = state.cart || {};
+        const merged = { ...cloudCart };
+        for (const [k, v] of Object.entries(localCart)) {
+          merged[k] = Math.max(merged[k] || 0, v);
+        }
+        state.cart = merged;
+        localStorage.setItem('Rasoee_cart', JSON.stringify(state.cart));
+        refreshAllCartButtons();
+        updateCartUI();
+        syncCartToCloud(normalized.phone, state.cart);
+      }
+    }).catch(() => {});
   }
 }
 
@@ -1953,7 +1990,8 @@ function populateCustomerSettingsForm() {
   if (bldgInput) bldgInput.value = addr.building || '';
   if (streetInput) streetInput.value = addr.street || '';
   if (lmarkInput) lmarkInput.value = addr.landmark || '';
-  if (cityInput) cityInput.value = addr.city || 'Bangalore - 560102';
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+  if (cityInput) cityInput.value = addr.city || defaultCity;
   if (instSelect && user.instruction) instSelect.value = user.instruction;
 
   setCustomerAddressTag(addr.tag || 'Home');
@@ -1964,6 +2002,7 @@ function renderSavedAddressesList() {
   const container = document.getElementById('cust-saved-addresses-list');
   if (!container) return;
 
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
   const user = state.currentUser;
   let saved = (user && Array.isArray(user.savedAddresses) && user.savedAddresses.length > 0)
     ? user.savedAddresses
@@ -1976,7 +2015,7 @@ function renderSavedAddressesList() {
       building: user.address.building || '',
       street: user.address.street || '',
       landmark: user.address.landmark || '',
-      city: user.address.city || 'Bangalore - 560102',
+      city: user.address.city || defaultCity,
       isDefault: true
     }];
     user.savedAddresses = saved;
@@ -2041,7 +2080,8 @@ function setPrimarySavedAddress(index) {
   if (bldgInput) bldgInput.value = chosen.building || '';
   if (streetInput) streetInput.value = chosen.street || '';
   if (lmarkInput) lmarkInput.value = chosen.landmark || '';
-  if (cityInput) cityInput.value = chosen.city || 'Bangalore - 560102';
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+  if (cityInput) cityInput.value = chosen.city || defaultCity;
 
   setCustomerAddressTag(chosen.type || 'Home');
   saveCustomerProfileSettings();
@@ -2058,7 +2098,7 @@ function deleteSavedAddress(index) {
 function addNewAddressSlot() {
   const flat = prompt("Enter Flat / House / Floor number:");
   if (!flat) return;
-  const street = prompt("Enter Street / Building / Locality:", "HSR Layout, Bangalore");
+  const street = prompt("Enter Street / Building / Locality:", "");
   if (!street) return;
   const typePrompt = prompt("Address Tag (Home, Work, or Other):", "Work");
   const type = (typePrompt && ['Home', 'Work', 'Other'].includes(typePrompt.trim())) ? typePrompt.trim() : 'Other';
@@ -2073,13 +2113,14 @@ function addNewAddressSlot() {
     state.currentUser.savedAddresses = [];
   }
 
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
   state.currentUser.savedAddresses.push({
     type: type,
     flat: flat.trim(),
     building: '',
     street: street.trim(),
     landmark: '',
-    city: 'Bangalore - 560102',
+    city: defaultCity,
     isDefault: false
   });
 
@@ -2097,13 +2138,14 @@ function saveCustomerProfileSettings() {
   const cityInput = document.getElementById('cust-setting-city');
   const instSelect = document.getElementById('cust-setting-instruction');
 
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
   const name = nameInput ? nameInput.value.trim() : '';
   const email = emailInput ? emailInput.value.trim() : '';
   const flat = flatInput ? flatInput.value.trim() : '';
   const building = bldgInput ? bldgInput.value.trim() : '';
   const street = streetInput ? streetInput.value.trim() : '';
   const landmark = lmarkInput ? lmarkInput.value.trim() : '';
-  const city = cityInput ? cityInput.value.trim() : 'Bangalore - 560102';
+  const city = cityInput ? cityInput.value.trim() : defaultCity;
   const instruction = instSelect ? instSelect.value : 'Leave at door & ring bell';
   const tag = currentSelectedAddressTag || 'Home';
 
@@ -2335,6 +2377,10 @@ function reorderOrder(orderId) {
   });
 
   localStorage.setItem('Rasoee_cart', JSON.stringify(state.cart));
+  if (state.currentUser && state.currentUser.phone && typeof syncCartToCloud === 'function') {
+    syncCartToCloud(state.currentUser.phone, state.cart);
+  }
+  refreshAllCartButtons();
   updateCartUI();
   closeAccountDrawer();
   toggleCartDrawer(true);
@@ -2371,10 +2417,10 @@ function openOrderReceipt(orderId) {
   if (receiptCompanyEl) receiptCompanyEl.textContent = cfg.companyName || cfg.storeName || 'Rasoee Fresh Retail Pvt Ltd';
 
   const receiptOutletNameEl = document.getElementById('receipt-outlet-name');
-  if (receiptOutletNameEl) receiptOutletNameEl.textContent = cfg.outletName || 'Main Dark Store - HSR Layout Hub #01';
+  if (receiptOutletNameEl) receiptOutletNameEl.textContent = cfg.outletName || 'Rasoee Fresh - Main Store Outlet';
 
   const receiptOutletAddrEl = document.getElementById('receipt-outlet-address');
-  if (receiptOutletAddrEl) receiptOutletAddrEl.textContent = cfg.storeAddress || 'Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102';
+  if (receiptOutletAddrEl) receiptOutletAddrEl.textContent = cfg.storeAddress || (cfg.outletName || 'Rasoee Fresh Supermarket');
 
   const receiptGstinEl = document.getElementById('receipt-gstin');
   if (receiptGstinEl) receiptGstinEl.textContent = cfg.gstin || '29ABCDE1234F1Z5';
@@ -2984,3 +3030,48 @@ function escapeHtml(str) {
     "'": '&#39;'
   }[m]));
 }
+
+// ================= MULTI-DEVICE LIVE CART SYNCHRONIZATION =================
+function refreshAllCartButtons() {
+  if (!state.products || !Array.isArray(state.products)) return;
+  state.products.forEach(p => {
+    const btn = document.getElementById(`btn-container-${p.id}`);
+    if (btn) {
+      btn.innerHTML = renderCartButton(p.id, state.cart[p.id] || 0);
+    }
+  });
+}
+
+let isSyncingCartFromCloud = false;
+async function pullCloudCartAndRefresh() {
+  if (isSyncingCartFromCloud) return;
+  if (!state.currentUser || !state.currentUser.phone || typeof fetchCartFromCloud !== 'function') return;
+  isSyncingCartFromCloud = true;
+  try {
+    const cloudCart = await fetchCartFromCloud(state.currentUser.phone);
+    if (cloudCart && typeof cloudCart === 'object') {
+      const currentCartStr = JSON.stringify(state.cart || {});
+      const cloudCartStr = JSON.stringify(cloudCart);
+      if (currentCartStr !== cloudCartStr) {
+        state.cart = cloudCart;
+        localStorage.setItem('Rasoee_cart', JSON.stringify(state.cart));
+        refreshAllCartButtons();
+        updateCartUI();
+      }
+    }
+  } catch (e) {
+  } finally {
+    isSyncingCartFromCloud = false;
+  }
+}
+
+// Window focus & tab visibility change: sync immediately
+window.addEventListener('focus', pullCloudCartAndRefresh);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    pullCloudCartAndRefresh();
+  }
+});
+
+// Periodic background check every 15 seconds for multi-device sync
+setInterval(pullCloudCartAndRefresh, 15000);

@@ -176,7 +176,7 @@
                 🏪
               </div>
               <span class="text-xs font-black text-gray-900 mt-1.5 truncate max-w-[110px]" id="track-store-name">Rasoee Store</span>
-              <span class="text-[10px] text-gray-500 font-semibold truncate max-w-[110px]" id="track-store-hub">Sector 2 Hub</span>
+              <span class="text-[10px] text-gray-500 font-semibold truncate max-w-[110px]" id="track-store-hub">Main Outlet</span>
             </div>
 
             <!-- Route Track & Moving Scooter -->
@@ -278,7 +278,7 @@
           <span class="text-[11px] font-bold text-blinkit-green bg-green-50 px-2 py-0.5 rounded-full">Doorstep Handover</span>
         </div>
         <div class="text-sm font-black text-gray-900" id="delivery-customer-name">Valued Customer</div>
-        <div class="text-xs text-gray-600 font-medium" id="delivery-address-full">Flat 402, Green Glen Layout, HSR Sector 2, Bangalore</div>
+        <div class="text-xs text-gray-600 font-medium" id="delivery-address-full">Customer Delivery Address</div>
         <div class="text-xs text-gray-500 pt-1" id="delivery-instructions-box">
           🔔 <em>"Ring the doorbell and leave at door"</em>
         </div>
@@ -383,7 +383,7 @@
 
       const storeHubEl = document.getElementById('track-store-hub');
       if (storeHubEl) {
-        storeHubEl.textContent = cfg.outletAddress?.area || (cfg.storeAddress ? cfg.storeAddress.split(',')[0].trim() : 'Hub #01');
+        storeHubEl.textContent = cfg.outletAddress?.area || (cfg.storeAddress ? cfg.storeAddress.split(',')[0].trim() : 'Main Outlet');
       }
     }
 
@@ -518,7 +518,7 @@
           }
         }
         const landmark = order.customer.landmark ? ` (Near ${order.customer.landmark})` : '';
-        const fullAddr = `${flat}${street ? ', ' + street : ''}${landmark}`.trim() || 'HSR Layout, Sector 2, Bangalore';
+        const fullAddr = `${flat}${street ? ', ' + street : ''}${landmark}`.trim() || 'Customer Delivery Address';
         document.getElementById('delivery-address-full').textContent = fullAddr;
         document.getElementById('display-map-flat').textContent = flat || 'Home';
         

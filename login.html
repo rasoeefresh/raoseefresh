@@ -122,30 +122,6 @@
               <span>Continue with OTP</span>
               <span>➔</span>
             </button>
-
-            <!-- Quick Demo Accounts -->
-            <div class="pt-4 border-t border-gray-100">
-              <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider block text-center mb-3">
-                ⚡ Or 1-Click Instant Demo Login:
-              </span>
-              <div class="grid grid-cols-2 gap-2 text-xs">
-                <button 
-                  onclick="quickLogin('Rahul Sharma', '9876543210', 'Flat 402, Green Glen Layout, HSR Sector 2')"
-                  class="p-2.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-xl text-left transition-all group"
-                >
-                  <div class="font-bold text-gray-800 group-hover:text-blinkit-green">👤 Rahul Sharma</div>
-                  <div class="text-[10px] text-gray-500 truncate">HSR Layout (Bangalore)</div>
-                </button>
-
-                <button 
-                  onclick="quickLogin('Priya Patel', '9898989898', 'Villa 12, Palm Meadows, Koramangala')"
-                  class="p-2.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300 rounded-xl text-left transition-all group"
-                >
-                  <div class="font-bold text-gray-800 group-hover:text-blinkit-green">👤 Priya Patel</div>
-                  <div class="text-[10px] text-gray-500 truncate">Koramangala 4th Block</div>
-                </button>
-              </div>
-            </div>
           </div>
 
           <!-- STEP 2: OTP VERIFICATION FORM -->
@@ -223,12 +199,12 @@
 
               <div>
                 <label class="block font-bold text-gray-700 mb-1">Street / Locality / Sector *</label>
-                <input type="text" id="profile-street-input" placeholder="e.g. 19th Main, Sector 2, HSR Layout" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-medium" />
+                <input type="text" id="profile-street-input" placeholder="e.g. Street name, Building, Locality" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-medium" />
               </div>
 
               <div>
                 <label class="block font-bold text-gray-700 mb-1">Landmark (Optional)</label>
-                <input type="text" id="profile-landmark-input" placeholder="e.g. Near BDA Complex" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-medium" />
+                <input type="text" id="profile-landmark-input" placeholder="e.g. Near Market / Landmark" class="w-full p-3 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-medium" />
               </div>
             </div>
 
@@ -568,6 +544,8 @@
         const landmark = cloudCustomer.landmark || (cloudCustomer.address && cloudCustomer.address.landmark) || '';
         const name = cloudCustomer.name || (existing ? existing.name : 'Valued Customer');
 
+        const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+        const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
         existing = {
           id: cloudCustomer.id || (existing ? existing.id : ('usr_' + cleanPhone.slice(-4))),
           name: name,
@@ -580,11 +558,11 @@
             flat: flat,
             street: street,
             landmark: landmark,
-            city: cloudCustomer.city || 'Bangalore',
-            pincode: cloudCustomer.pincode || '560102'
+            city: cloudCustomer.city || defaultCity,
+            pincode: cloudCustomer.pincode || defaultPin
           },
           savedAddresses: [
-            { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
+            { type: 'Home', flat: flat, street: street, landmark: landmark, city: cloudCustomer.city || defaultCity, isDefault: true }
           ],
           createdAt: cloudCustomer.createdAt || (existing ? existing.createdAt : new Date().toISOString()),
           orderCount: cloudCustomer.orderCount || (existing ? existing.orderCount : 1)
@@ -627,6 +605,9 @@
         return;
       }
 
+      const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+      const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
+
       const newUser = {
         id: 'usr_' + Date.now().toString().slice(-6),
         name: name,
@@ -639,11 +620,11 @@
           flat: flat,
           street: street,
           landmark: landmark,
-          city: 'Bangalore',
-          pincode: '560102'
+          city: defaultCity,
+          pincode: defaultPin
         },
         savedAddresses: [
-          { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
+          { type: 'Home', flat: flat, street: street, landmark: landmark, city: defaultCity, isDefault: true }
         ],
         createdAt: new Date().toISOString(),
         orderCount: 0
@@ -680,6 +661,9 @@
       const street = parts[1]?.trim() || '';
       const landmark = parts[2]?.trim() || '';
 
+      const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+      const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
+
       const user = {
         id: 'usr_' + phone.slice(-4),
         name: name,
@@ -692,13 +676,14 @@
           flat: flat,
           street: street,
           landmark: landmark,
-          city: 'Bangalore'
+          city: defaultCity,
+          pincode: defaultPin
         },
         savedAddresses: [
-          { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
+          { type: 'Home', flat: flat, street: street, landmark: landmark, city: defaultCity, isDefault: true }
         ],
         createdAt: new Date().toISOString(),
-        orderCount: 3
+        orderCount: 1
       };
 
       // Add to users registry if not present
@@ -732,6 +717,9 @@
       const phone = user.phone || activePhone;
       const instructions = user.instructions || 'Leave at door & ring bell';
 
+      const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+      const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
+
       const normalized = {
         id: user.id || ('usr_' + phone.slice(-4)),
         name: name,
@@ -744,15 +732,34 @@
           flat: flat,
           street: street,
           landmark: landmark,
-          city: user.address?.city || 'Bangalore'
+          city: user.address?.city || defaultCity,
+          pincode: user.address?.pincode || defaultPin
         },
         savedAddresses: [
-          { type: 'Home', flat: flat, street: street, landmark: landmark, isDefault: true }
+          { type: 'Home', flat: flat, street: street, landmark: landmark, city: user.address?.city || defaultCity, isDefault: true }
         ],
         createdAt: user.createdAt || new Date().toISOString()
       };
 
       localStorage.setItem('Rasoee_current_user', JSON.stringify(normalized));
+
+      // Cross-device cart pull on login
+      const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+      if (cleanPhone && typeof fetchCartFromCloud === 'function') {
+        fetchCartFromCloud(cleanPhone).then(cloudCart => {
+          if (cloudCart && typeof cloudCart === 'object') {
+            const localCart = JSON.parse(localStorage.getItem('Rasoee_cart') || '{}');
+            const merged = { ...cloudCart };
+            for (const [k, v] of Object.entries(localCart)) {
+              merged[k] = Math.max(merged[k] || 0, v);
+            }
+            localStorage.setItem('Rasoee_cart', JSON.stringify(merged));
+            if (typeof syncCartToCloud === 'function') {
+              syncCartToCloud(cleanPhone, merged);
+            }
+          }
+        }).catch(() => {});
+      }
 
       // Always update delivery address for immediate checkout
       const addr = {

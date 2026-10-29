@@ -307,9 +307,9 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div class="space-y-1">
           <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">🏢 Outlet & Dark Store Address</span>
-          <div class="font-bold text-gray-800 js-outlet-name">Main Dark Store - HSR Layout Hub #01</div>
-          <p class="text-gray-500 js-outlet-address">Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102</p>
-          <div class="text-[10px] font-mono text-gray-400">Outlet Code: <span class="font-bold text-gray-700 js-outlet-code">RF-BLR-01</span></div>
+          <div class="font-bold text-gray-800 js-outlet-name">Rasoee Fresh - Main Store Outlet</div>
+          <p class="text-gray-500 js-outlet-address">Central Market Complex, Station Road</p>
+          <div class="text-[10px] font-mono text-gray-400">Outlet Code: <span class="font-bold text-gray-700 js-outlet-code">RF-MAIN-01</span></div>
         </div>
 
         <div class="space-y-1">
@@ -478,7 +478,7 @@
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Your Name *</label>
-                <input type="text" id="addr-name" placeholder="e.g. Rahul Sharma" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
+                <input type="text" id="addr-name" placeholder="Enter your full name" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
               </div>
               <div>
                 <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Phone / WhatsApp *</label>
@@ -500,7 +500,7 @@
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Pincode (Max 5 km) *</label>
-                <input type="text" id="addr-pincode" maxlength="6" placeholder="e.g. 560102" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" oninput="updateCheckoutButtonText()" />
+                <input type="text" id="addr-pincode" maxlength="6" placeholder="e.g. Pincode" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" oninput="updateCheckoutButtonText()" />
               </div>
               <div>
                 <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Outlet Distance</label>
@@ -512,7 +512,7 @@
 
             <div>
               <label class="block text-[10px] font-bold uppercase text-gray-500 mb-1">Landmark (Optional)</label>
-              <input type="text" id="addr-landmark" placeholder="e.g. Near HSR BDA Complex" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
+              <input type="text" id="addr-landmark" placeholder="e.g. Near Market / Landmark" class="w-full text-xs p-2 rounded-lg border border-gray-200 focus:border-blinkit-green outline-none" />
             </div>
 
             <div>
@@ -927,29 +927,6 @@
           >
             Continue with OTP ➔
           </button>
-
-          <!-- 1-Click Demo Accounts -->
-          <div class="pt-3 border-t">
-            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block text-center mb-2">
-              ⚡ 1-Click Instant Demo Login:
-            </span>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <button 
-                onclick="quickModalLogin('Rahul Sharma', '9876543210', 'Flat 402, Green Glen, HSR Sector 2')"
-                class="p-2 bg-gray-50 hover:bg-green-50 border rounded-xl text-left"
-              >
-                <div class="font-bold text-gray-900">👤 Rahul S.</div>
-                <div class="text-[9px] text-gray-500 truncate">HSR Layout</div>
-              </button>
-              <button 
-                onclick="quickModalLogin('Priya Patel', '9898989898', 'Villa 12, Palm Meadows, Koramangala')"
-                class="p-2 bg-gray-50 hover:bg-green-50 border rounded-xl text-left"
-              >
-                <div class="font-bold text-gray-900">👤 Priya P.</div>
-                <div class="text-[9px] text-gray-500 truncate">Koramangala</div>
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- STEP 2: OTP INPUT -->
@@ -1027,12 +1004,12 @@
 
           <div>
             <label class="block font-bold text-gray-700 mb-1">Street / Building / Area *</label>
-            <input type="text" id="modal-profile-street" placeholder="e.g. Green Glen Layout, HSR Sector 2" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-medium" />
+            <input type="text" id="modal-profile-street" placeholder="e.g. Street name, Building, Area" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-medium" />
           </div>
 
           <div>
             <label class="block font-bold text-gray-700 mb-1">Landmark (Optional)</label>
-            <input type="text" id="modal-profile-landmark" placeholder="e.g. Near BDA Complex" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-medium" />
+            <input type="text" id="modal-profile-landmark" placeholder="e.g. Near Market / Landmark" class="w-full p-2.5 border rounded-xl outline-none focus:border-blinkit-green font-medium" />
           </div>
 
           <button 
@@ -1102,7 +1079,7 @@
                 ✏️ Edit Settings
               </button>
             </div>
-            <div class="font-black text-gray-900" id="account-user-address">HSR Layout, Sector 2, Bangalore</div>
+            <div class="font-black text-gray-900" id="account-user-address">-</div>
           </div>
 
           <!-- Orders Section -->
@@ -1144,7 +1121,7 @@
               <input 
                 type="text" 
                 id="cust-setting-name" 
-                placeholder="e.g. Rahul Sharma" 
+                placeholder="Enter your full name" 
                 class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-semibold text-sm outline-none"
               />
             </div>
@@ -1213,7 +1190,7 @@
               <input 
                 type="text" 
                 id="cust-setting-street" 
-                placeholder="e.g. 19th Main Road, HSR Sector 2" 
+                placeholder="e.g. Street name, Colony, Sector" 
                 class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-semibold outline-none"
               />
             </div>
@@ -1224,7 +1201,7 @@
                 <input 
                   type="text" 
                   id="cust-setting-landmark" 
-                  placeholder="e.g. Near BDA Complex" 
+                  placeholder="e.g. Near Market / Landmark" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium outline-none"
                 />
               </div>
@@ -1233,7 +1210,7 @@
                 <input 
                   type="text" 
                   id="cust-setting-city" 
-                  placeholder="e.g. Bangalore - 560102" 
+                  placeholder="e.g. City - Pincode" 
                   class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium outline-none"
                 />
               </div>
@@ -1310,7 +1287,7 @@
           <div>
             <span class="text-[10px] font-black text-green-700 bg-green-100 px-2 py-0.5 rounded-full uppercase tracking-wider">Official Tax Invoice</span>
             <h4 class="font-black text-base text-gray-900 mt-0.5 js-company-name" id="receipt-company-name">Rasoee Fresh Retail Private Limited</h4>
-            <div class="text-[11px] font-bold text-gray-600 js-outlet-name" id="receipt-outlet-name">Main Dark Store - HSR Layout Hub #01</div>
+            <div class="text-[11px] font-bold text-gray-600 js-outlet-name" id="receipt-outlet-name">Rasoee Fresh - Main Store Outlet</div>
             <p class="text-xs text-gray-500 mt-0.5">Order ID: <strong id="receipt-order-id" class="text-gray-800 font-mono">#RF-000000</strong></p>
           </div>
         </div>
@@ -1336,11 +1313,11 @@
         <!-- Outlet Physical Address & Tax/FSSAI Compliance Box -->
         <div class="bg-gray-50 rounded-2xl p-3 border border-gray-200 text-[11px] space-y-1">
           <div class="text-gray-500 font-bold uppercase tracking-wider text-[10px] flex items-center justify-between">
-            <span>🏢 Dark Store Dispatch Location</span>
-            <span class="text-blinkit-green font-mono font-bold js-outlet-code">RF-BLR-01</span>
+            <span>🏢 Store Dispatch Outlet</span>
+            <span class="text-blinkit-green font-mono font-bold js-outlet-code">RF-STORE-01</span>
           </div>
           <div class="text-gray-800 font-semibold leading-relaxed" id="receipt-outlet-address">
-            Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore - 560102
+            Rasoee Fresh Supermarket, Central Market Complex, Station Road
           </div>
           <div class="flex items-center justify-between pt-1.5 text-[10px] text-gray-600 border-t border-gray-200/70 font-mono">
             <span>GSTIN: <strong id="receipt-gstin" class="text-gray-800">29ABCDE1234F1Z5</strong></span>
@@ -1485,7 +1462,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block font-bold text-gray-700 mb-1">Outlet / Branch Name</label>
-            <input type="text" id="cfg-outlet-name" class="w-full p-2.5 border rounded-xl text-xs focus:border-blinkit-green outline-none font-semibold" placeholder="e.g. HSR Layout Hub #01" />
+            <input type="text" id="cfg-outlet-name" class="w-full p-2.5 border rounded-xl text-xs focus:border-blinkit-green outline-none font-semibold" placeholder="e.g. Main Store Outlet #01" />
           </div>
           <div>
             <label class="block font-bold text-gray-700 mb-1">Store Tagline / Slogan</label>
@@ -1535,24 +1512,20 @@
     <div onclick="closeLocationModal()" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
     <div class="relative bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-gray-200">
       <h4 class="font-black text-gray-900 text-base mb-2">Select Delivery Area</h4>
-      <p class="text-xs text-gray-500 mb-4">Fresh grocery delivery is currently active in these localities:</p>
+      <p class="text-xs text-gray-500 mb-4">Express grocery delivery is active within our 5 km store radius:</p>
       
       <div class="space-y-2 text-xs">
-        <button onclick="setDeliveryLocation('HSR Layout, Sector 1-7, Bangalore')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
-          <span>📍 HSR Layout (Sectors 1-7)</span>
-          <span class="text-green-700 font-bold">Available</span>
+        <button onclick="setDeliveryLocation('Central Market & Surrounding Areas')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
+          <span>📍 Zone 1: Main Market &amp; Vicinity (0 - 2 km)</span>
+          <span class="text-green-700 font-bold">Active</span>
         </button>
-        <button onclick="setDeliveryLocation('Koramangala 3rd to 6th Block, Bangalore')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
-          <span>📍 Koramangala (Blocks 3-6)</span>
-          <span class="text-green-700 font-bold">Available</span>
+        <button onclick="setDeliveryLocation('Town North & Residential Colonies')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
+          <span>📍 Zone 2: Residential Blocks (2 - 3.5 km)</span>
+          <span class="text-green-700 font-bold">Active</span>
         </button>
-        <button onclick="setDeliveryLocation('Bellandur & Green Glen Layout, Bangalore')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
-          <span>📍 Bellandur & Green Glen</span>
-          <span class="text-green-700 font-bold">Available</span>
-        </button>
-        <button onclick="setDeliveryLocation('Sarjapur Road / Haralur, Bangalore')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
-          <span>📍 Sarjapur Road / Haralur</span>
-          <span class="text-green-700 font-bold">Available</span>
+        <button onclick="setDeliveryLocation('Town South & Extension Layouts')" class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blinkit-green hover:bg-green-50 font-semibold flex items-center justify-between">
+          <span>📍 Zone 3: Extension Colonies (3.5 - 5 km)</span>
+          <span class="text-green-700 font-bold">Active</span>
         </button>
       </div>
 
@@ -1594,7 +1567,7 @@
       const compEl = document.getElementById('cfg-company-name');
       if (compEl) compEl.value = cfg.companyName || 'Rasoee Fresh Retail Private Limited';
       const outEl = document.getElementById('cfg-outlet-name');
-      if (outEl) outEl.value = cfg.outletName || 'Main Dark Store - HSR Layout Hub #01';
+      if (outEl) outEl.value = cfg.outletName || 'Rasoee Fresh - Main Store Outlet';
       const tagEl = document.getElementById('cfg-tagline');
       if (tagEl) tagEl.value = cfg.tagline || 'Farm Fresh Groceries Delivered to Your Doorstep';
       const gstEl = document.getElementById('cfg-gstin');
@@ -1629,7 +1602,7 @@
           supportPhone: '+' + waNum,
           storeName: storeName || 'Rasoee Fresh Supermarket',
           companyName: compName || 'Rasoee Fresh Retail Private Limited',
-          outletName: outletName || 'Main Dark Store - HSR Layout Hub #01',
+          outletName: outletName || 'Rasoee Fresh - Main Store Outlet',
           tagline: tagline || 'Farm Fresh Groceries Delivered to Your Doorstep',
           gstin: gstin || '29ABCDE1234F1Z5',
           fssaiNumber: fssai || '11223344000123',

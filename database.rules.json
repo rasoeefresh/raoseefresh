@@ -20,6 +20,11 @@
         ".write": true
       },
 
+      "carts": {
+        ".read": true,
+        ".write": true
+      },
+
       "orders": {
         ".read": true,
         ".write": true

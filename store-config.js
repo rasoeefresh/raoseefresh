@@ -59,24 +59,24 @@ const DEFAULT_CONFIG = {
   // Company & Outlet Identity
   companyName: "Rasoee Fresh Retail Private Limited",
   storeName: "Rasoee Fresh Supermarket",
-  outletName: "Main Dark Store - HSR Layout Hub #01",
-  outletCode: "RF-BLR-01",
+  outletName: "Rasoee Fresh - Main Store Outlet",
+  outletCode: "RF-STORE-01",
   logoUrl: "logo.svg", // URL or Base64 uploaded logo image
   logoEmoji: "🛒",
   tagline: "Farm Fresh Groceries Delivered to Your Doorstep",
 
   // Outlet Address Structure
   outletAddress: {
-    shopNo: "Shop #12, Ground Floor",
+    shopNo: "Main Store",
     building: "Central Market Complex",
-    street: "19th Main Road",
-    area: "HSR Layout Sector 2",
-    city: "Bangalore",
-    state: "Karnataka",
-    pincode: "560102",
-    landmark: "Near BDA Complex & City Garden"
+    street: "Station Road",
+    area: "Main Market",
+    city: "",
+    state: "",
+    pincode: "",
+    landmark: "Near Market Gate"
   },
-  storeAddress: "Shop #12, Ground Floor, Central Market Complex, 19th Main, HSR Layout Sector 2, Bangalore, Karnataka - 560102",
+  storeAddress: "Central Market Complex, Station Road",
 
   // Tax & Food Safety Compliance (Printed on Customer Receipts)
   gstin: "29ABCDE1234F1Z5",
@@ -87,8 +87,8 @@ const DEFAULT_CONFIG = {
   whatsappNumber: "919876543210", // Default Indian WhatsApp number without '+'
   supportPhone: "+91 98765 43210",
   email: "support@RasoeeFresh.com",
-  city: "Bangalore",
-  pincode: "560102",
+  city: "",
+  pincode: "",
   openingTime: "06:00 AM",
   closingTime: "11:30 PM",
   deliveryTimeEstimate: "Standard Delivery",
@@ -105,12 +105,12 @@ const DEFAULT_CONFIG = {
   deliveryZone: {
     maxRadiusKm: 5.0,
     storeCoordinates: {
-      lat: 12.9116,
-      lng: 77.6389
+      lat: 0,
+      lng: 0
     },
-    storeName: "Main Dark Store - HSR Layout Hub",
-    strictBoundaryCheck: true,
-    allowedPincodes: ["560102", "560034", "560068", "560095", "560103", "560076", "560100"]
+    storeName: "Rasoee Fresh Supermarket",
+    strictBoundaryCheck: false,
+    allowedPincodes: []
   },
 
   // Payment Gateway Configuration
@@ -953,29 +953,10 @@ function saveBanners(banners) {
   }
 }
 
-// Initial Demo Data Helper for Instant Testing
+// Initial Data Helper (Clean Store Mode)
 function initDemoDataIfEmpty() {
-  try {
-    if (!(localStorage.getItem("rasoee_users") || localStorage.getItem("raosee_users"))) {
-      const demoUsers = [
-        {
-          id: 'usr_3210',
-          name: 'Rahul Sharma',
-          phone: '9876543210',
-          address: { flat: 'Flat 402, Green Glen Layout', street: 'HSR Layout, Sector 2', landmark: 'Near Club House', city: 'Bangalore' },
-          savedAddresses: [
-            { type: 'Home', flat: 'Flat 402, Green Glen', street: 'HSR Layout, Sector 2' },
-            { type: 'Work', flat: 'Tech Park B, 3rd Floor', street: 'Bellandur' }
-          ],
-          createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-          lastOrderDate: new Date(Date.now() - 3600000).toISOString(),
-          orderCount: 4,
-          totalSpend: 1420
-        }
-      ];
-      localStorage.setItem('raosee_users', JSON.stringify(demoUsers));
-    }
-  } catch (e) {}
+  // Production Mode: Do not seed mock demo users or mock sample orders.
+  return;
 }
 
 // Admin Security Helpers
@@ -1057,132 +1038,10 @@ function downloadJsonFile(filename, data) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Initial Demo Data Helper for Instant Testing
+// Initial Data Helper (Clean Store Mode: No mock/sample data)
 function initDemoDataIfEmpty() {
-  try {
-    if (!(localStorage.getItem("rasoee_users") || localStorage.getItem("raosee_users"))) {
-      const demoUsers = [
-        {
-          id: 'usr_3210',
-          name: 'Rahul Sharma',
-          phone: '9876543210',
-          address: { flat: 'Flat 402, Green Glen Layout', street: 'HSR Layout, Sector 2', landmark: 'Near Club House', city: 'Bangalore' },
-          savedAddresses: [
-            { type: 'Home', flat: 'Flat 402, Green Glen', street: 'HSR Layout, Sector 2' },
-            { type: 'Work', flat: 'Tech Park B, 3rd Floor', street: 'Bellandur' }
-          ],
-          createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-          lastOrderDate: new Date(Date.now() - 3600000).toISOString(),
-          orderCount: 4,
-          totalSpend: 1420
-        },
-        {
-          id: 'usr_9898',
-          name: 'Priya Patel',
-          phone: '9898989898',
-          address: { flat: 'Villa 12, Palm Meadows', street: 'Koramangala 4th Block', landmark: 'Opposite Park', city: 'Bangalore' },
-          savedAddresses: [{ type: 'Home', flat: 'Villa 12, Palm Meadows', street: 'Koramangala 4th Block' }],
-          createdAt: new Date(Date.now() - 86400000 * 14).toISOString(),
-          lastOrderDate: new Date(Date.now() - 7200000).toISOString(),
-          orderCount: 6,
-          totalSpend: 2850
-        },
-        {
-          id: 'usr_3344',
-          name: 'Amit Kumar',
-          phone: '9911223344',
-          address: { flat: 'House 18, 5th Cross', street: 'Sarjapur Road', landmark: 'Near Wipro Gate', city: 'Bangalore' },
-          savedAddresses: [{ type: 'Home', flat: 'House 18, 5th Cross', street: 'Sarjapur Road' }],
-          createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-          lastOrderDate: new Date(Date.now() - 86400000).toISOString(),
-          orderCount: 2,
-          totalSpend: 615
-        }
-      ];
-      localStorage.setItem('raosee_users', JSON.stringify(demoUsers));
-    }
-
-    const existingOrders = (localStorage.getItem("rasoee_orders") || localStorage.getItem("raosee_orders"));
-    if (!existingOrders || existingOrders === '[]' || existingOrders === 'null') {
-      const demoOrders = [
-        {
-          id: 'RF-948210',
-          timestamp: new Date(Date.now() - 10 * 60000).toISOString(),
-          customer: {
-            name: 'Rahul Sharma',
-            phone: '9876543210',
-            flat: 'Flat 402, Green Glen Layout',
-            street: 'HSR Layout, Sector 2, Bangalore',
-            landmark: 'Near Club House',
-            instructions: 'Ring doorbell and leave at door'
-          },
-          items: [
-            { product: { id: 'veg-tomato', name: 'Farm Fresh Tomatoes (Hybrid)', price: 34, mrp: 45, unit: '1 kg', image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=200&auto=format&fit=crop&q=80' }, qty: 1, total: 34 },
-            { product: { id: 'dairy-milk-amul', name: 'Amul Taaza Homogenised Toned Milk', price: 27, mrp: 28, unit: '500 ml', image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=200&auto=format&fit=crop&q=80' }, qty: 2, total: 54 },
-            { product: { id: 'fruit-apple-shimla', name: 'Crisp Shimla Royal Apples', price: 119, mrp: 160, unit: '500 g', image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=200&auto=format&fit=crop&q=80' }, qty: 1, total: 119 }
-          ],
-          total: 234,
-          payment: {
-            method: 'Direct UPI QR (GPay / PhonePe / Paytm)',
-            status: 'PAID ONLINE (Verified ✅)',
-            paymentId: 'UPI-8492019482'
-          },
-          status: 'Confirmed',
-          rider: null
-        },
-        {
-          id: 'RF-837192',
-          timestamp: new Date(Date.now() - 25 * 60000).toISOString(),
-          customer: {
-            name: 'Priya Patel',
-            phone: '9898989898',
-            flat: 'Villa 12, Palm Meadows',
-            street: 'Koramangala 4th Block, Bangalore',
-            landmark: 'Opposite Park',
-            instructions: 'Handover to security guard if not answering'
-          },
-          items: [
-            { product: { id: 'staple-aashirvaad-atta', name: 'Aashirvaad Superior MP Sharbati Atta', price: 245, mrp: 290, unit: '5 kg', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200&auto=format&fit=crop&q=80' }, qty: 1, total: 245 },
-            { product: { id: 'staple-fortune-oil', name: 'Fortune Sunlite Refined Sunflower Oil', price: 135, mrp: 165, unit: '1 Litre Pouch', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=200&auto=format&fit=crop&q=80' }, qty: 1, total: 135 }
-          ],
-          total: 407,
-          payment: {
-            method: 'Direct UPI (Google Pay / PhonePe)',
-            status: 'PAID VIA UPI (Ref: 4829104820)',
-            paymentId: 'UPI-4829104820'
-          },
-          status: 'Packing',
-          rider: null
-        },
-        {
-          id: 'RF-716492',
-          timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
-          customer: {
-            name: 'Amit Kumar',
-            phone: '9911223344',
-            flat: 'House 18, 5th Cross',
-            street: 'Sarjapur Road, Bangalore',
-            landmark: 'Near Wipro Gate',
-            instructions: 'Leave at front porch'
-          },
-          items: [
-            { product: { id: 'snack-maggi', name: 'Maggi 2-Minute Masala Instant Noodles', price: 54, mrp: 60, unit: 'Pack of 4 (280g)', image: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?w=200&auto=format&fit=crop&q=80' }, qty: 2, total: 108 }
-          ],
-          total: 135,
-          payment: {
-            method: 'Cash / UPI on Delivery (COD)',
-            status: 'Cash Collected at Doorstep',
-            paymentId: 'COD-RF-716492'
-          },
-          status: 'Delivered',
-          rider: { name: 'Ramesh Kumar', phone: '9876543210', vehicle: 'Hero Electric (KA-01-EQ-4021)', rating: 4.9 }
-        }
-      ];
-      localStorage.setItem('raosee_orders', JSON.stringify(demoOrders));
-    }
-  } catch (e) {
-    console.warn("Could not seed demo orders/users", e);
-  }
+  // Production Mode: Do not seed mock demo users or mock sample orders.
+  return;
 }
 
 // ================= GOOGLE DRIVE & CLOUD IMAGE NORMALIZER =================
@@ -1308,8 +1167,10 @@ async function syncCustomerToCloud(customer) {
   const landmark = customer.landmark || (customer.address && typeof customer.address === 'object' ? customer.address.landmark : '') || (customer.savedAddresses && customer.savedAddresses[0] ? customer.savedAddresses[0].landmark : '') || '';
   const name = customer.name || customer.customerName || 'Customer';
   const instructions = customer.instructions || customer.notes || 'Leave at door & ring bell';
-  const city = customer.city || (customer.address && typeof customer.address === 'object' ? customer.address.city : '') || 'Bangalore';
-  const pincode = customer.pincode || (customer.address && typeof customer.address === 'object' ? customer.address.pincode : '') || '560102';
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+  const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
+  const city = customer.city || (customer.address && typeof customer.address === 'object' ? customer.address.city : '') || defaultCity;
+  const pincode = customer.pincode || (customer.address && typeof customer.address === 'object' ? customer.address.pincode : '') || defaultPin;
 
   const payload = {
     id: customer.id || ('usr_' + cleanPhone.slice(-4)),
@@ -1362,8 +1223,10 @@ async function fetchCustomerFromCloud(phone) {
         const landmark = data.landmark || (data.address && typeof data.address === 'object' ? data.address.landmark : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].landmark : '') || '';
         const name = data.name || data.customerName || 'Valued Customer';
         const instructions = data.instructions || data.notes || 'Leave at door & ring bell';
-        const city = data.city || (data.address && typeof data.address === 'object' ? data.address.city : '') || 'Bangalore';
-        const pincode = data.pincode || (data.address && typeof data.address === 'object' ? data.address.pincode : '') || '560102';
+        const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+        const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
+        const city = data.city || (data.address && typeof data.address === 'object' ? data.address.city : '') || defaultCity;
+        const pincode = data.pincode || (data.address && typeof data.address === 'object' ? data.address.pincode : '') || defaultPin;
 
         return {
           id: data.id || ('usr_' + cleanPhone.slice(-4)),
@@ -1399,6 +1262,8 @@ async function fetchCustomerFromCloud(phone) {
           const landmark = c.landmark || (c.address && typeof c.address === 'object' ? c.address.landmark : '') || '';
           const name = c.name || 'Valued Customer';
           const instructions = c.instructions || 'Leave at door & ring bell';
+          const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+          const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
           const restored = {
             id: 'usr_' + cleanPhone.slice(-4),
             phone: cleanPhone,
@@ -1407,8 +1272,8 @@ async function fetchCustomerFromCloud(phone) {
             street: street,
             landmark: landmark,
             instructions: instructions,
-            address: { flat, street, landmark, city: 'Bangalore', pincode: '560102' },
-            savedAddresses: [{ type: 'Home', flat, street, landmark, city: 'Bangalore', isDefault: true }],
+            address: { flat, street, landmark, city: defaultCity, pincode: defaultPin },
+            savedAddresses: [{ type: 'Home', flat, street, landmark, city: defaultCity, isDefault: true }],
             updatedAt: new Date().toISOString()
           };
           syncCustomerToCloud(restored);
@@ -1428,6 +1293,9 @@ function findCustomerLocally(phone) {
   const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
   if (!cleanPhone || cleanPhone.length !== 10) return null;
 
+  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
+  const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
+
   // 1. Check Rasoee_users
   try {
     const users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
@@ -1444,7 +1312,7 @@ function findCustomerLocally(phone) {
         street: match.street || (match.address && typeof match.address === 'object' ? match.address.street : '') || '',
         landmark: match.landmark || '',
         instructions: match.instructions || 'Leave at door & ring bell',
-        address: match.address || { flat: match.flat || '', street: match.street || '', landmark: match.landmark || '', city: 'Bangalore', pincode: '560102' }
+        address: match.address || { flat: match.flat || '', street: match.street || '', landmark: match.landmark || '', city: defaultCity, pincode: defaultPin }
       };
     }
   } catch (e) {}
@@ -1471,7 +1339,7 @@ function findCustomerLocally(phone) {
         street: street,
         landmark: landmark,
         instructions: instructions,
-        address: { flat, street, landmark, city: 'Bangalore', pincode: '560102' },
+        address: { flat, street, landmark, city: defaultCity, pincode: defaultPin },
         savedAddresses: [{ type: 'Home', flat, street, landmark, isDefault: true }]
       };
     }
@@ -1502,7 +1370,7 @@ function findCustomerLocally(phone) {
           street: addr.street || '',
           landmark: addr.landmark || '',
           instructions: addr.instructions || 'Leave at door & ring bell',
-          address: { flat: addr.flat || '', street: addr.street || '', landmark: addr.landmark || '', city: 'Bangalore', pincode: '560102' }
+          address: { flat: addr.flat || '', street: addr.street || '', landmark: addr.landmark || '', city: defaultCity, pincode: defaultPin }
         };
       }
     }
@@ -1629,6 +1497,42 @@ async function fetchSecurityCredentialsFromCloud() {
   return null;
 }
 
+// ================= CROSS-DEVICE CLOUD CART SYNC =================
+async function syncCartToCloud(phone, cart) {
+  if (!phone) return false;
+  const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+  if (!cleanPhone || cleanPhone.length !== 10) return false;
+  const url = `${CLOUD_RTDB_BASE}/carts/${cleanPhone}.json`;
+  try {
+    const payload = cart && typeof cart === 'object' ? cart : {};
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("[CartSync] syncCartToCloud error:", err);
+    return false;
+  }
+}
+
+async function fetchCartFromCloud(phone) {
+  if (!phone) return null;
+  const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+  if (!cleanPhone || cleanPhone.length !== 10) return null;
+  const url = `${CLOUD_RTDB_BASE}/carts/${cleanPhone}.json?_t=${Date.now()}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && typeof data === 'object' ? data : {};
+  } catch (err) {
+    console.warn("[CartSync] fetchCartFromCloud error:", err);
+    return null;
+  }
+}
+
 // Auto-run initialization and global exports
 if (typeof window !== "undefined") {
   window.calculateDistanceKm = calculateDistanceKm;
@@ -1646,6 +1550,8 @@ if (typeof window !== "undefined") {
   window.syncSecurityCredentialsToCloud = syncSecurityCredentialsToCloud;
   window.fetchSecurityCredentialsFromCloud = fetchSecurityCredentialsFromCloud;
   window.verifyAdminCredentialsWithCloud = verifyAdminCredentialsWithCloud;
+  window.syncCartToCloud = syncCartToCloud;
+  window.fetchCartFromCloud = fetchCartFromCloud;
   initDemoDataIfEmpty();
 }
 
@@ -1679,7 +1585,9 @@ if (typeof module !== "undefined" && module.exports) {
     fetchCustomerFromCloud,
     fetchAllCustomersFromCloud,
     findCustomerLocally,
-    syncAllLocalCustomersToCloud
+    syncAllLocalCustomersToCloud,
+    syncCartToCloud,
+    fetchCartFromCloud
   };
 }
 
