@@ -1024,6 +1024,11 @@
 
     // Live Sync with Storage & Firebase
     function setupLiveSync() {
+      // Pull latest store config from cloud on startup
+      if (typeof fetchConfigFromCloud === 'function') {
+        fetchConfigFromCloud().catch(() => {});
+      }
+
       // Listen to cross-tab storage changes
       window.addEventListener('storage', (e) => {
         if (e.key === 'Rasoee_orders') {
@@ -1191,12 +1196,16 @@
 
         const formattedTime = formatOrderTime(order.timestamp);
         const itemCount = (order.items || []).reduce((sum, i) => sum + (i.qty || 1), 0);
-        const customerName = order.customer?.name || 'Walk-in Customer';
-        const customerPhone = order.customer?.phone || '-';
+        const isFriend = !!(order.customer?.isFriendOrder || order.customer?.tag === 'Friend');
+        const customerName = order.customer?.receiverName || order.customer?.name || 'Walk-in Customer';
+        const customerPhone = order.customer?.receiverPhone || order.customer?.phone || '-';
         
-        const addressStr = typeof order.customer?.address === 'object'
+        let addressStr = typeof order.customer?.address === 'object'
           ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
-          : (order.customer?.address || 'Pickup at Store');
+          : (order.customer?.flat ? `${order.customer.flat}, ${order.customer.street || ''}${order.customer.landmark ? ' (Near ' + order.customer.landmark + ')' : ''}` : (order.customer?.address || 'Pickup at Store'));
+        if (order.customer?.distanceKm != null) {
+          addressStr += ` (${order.customer.distanceKm} km)`;
+        }
 
         const isOnlinePaid = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').toLowerCase().includes('upi');
 
@@ -1215,9 +1224,13 @@
             <!-- Customer & Address Block -->
             <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100 text-xs space-y-1">
               <div class="flex items-center justify-between">
-                <span class="font-black text-slate-900">${customerName}</span>
-                <span class="font-mono text-slate-600 font-bold text-[11px]">+91 ${customerPhone}</span>
+                <div class="flex items-center gap-1 flex-wrap">
+                  <span class="font-black text-slate-900">${escapeHtml(customerName)}</span>
+                  ${isFriend ? '<span class="text-[9px] bg-amber-100 text-amber-900 font-black px-1.5 py-0.5 rounded border border-amber-300">🎁 Friend</span>' : ''}
+                </div>
+                <a href="tel:+91${customerPhone.replace(/\D/g,'')}" class="font-mono text-emerald-700 hover:underline font-bold text-[11px] flex items-center gap-0.5">📞 +91 ${customerPhone}</a>
               </div>
+              ${isFriend && order.customer?.placedByName ? `<div class="text-[10px] text-slate-500">Ordered By: ${escapeHtml(order.customer.placedByName)} (${order.customer.placedByPhone || ''})</div>` : ''}
               <p class="text-slate-600 text-[11px] font-medium line-clamp-2 leading-relaxed">
                 📍 ${addressStr}
               </p>
@@ -1345,18 +1358,43 @@
       badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase " + getStatusBadgeClass(order.status);
 
       // Populate Customer Info
-      document.getElementById('modal-customer-name').textContent = order.customer?.name || 'Walk-in Customer';
-      document.getElementById('modal-customer-phone').textContent = `+91 ${order.customer?.phone || '-'}`;
-      
-      const addressStr = typeof order.customer?.address === 'object'
-        ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
-        : (order.customer?.address || 'Pickup at Dark Store');
-      document.getElementById('modal-customer-address').textContent = addressStr;
+      const isFriend = !!(order.customer?.isFriendOrder || order.customer?.tag === 'Friend');
+      const recipientName = order.customer?.receiverName || order.customer?.name || 'Walk-in Customer';
+      const recipientPhone = order.customer?.receiverPhone || order.customer?.phone || '-';
 
-      // Contact Buttons
+      if (isFriend) {
+        document.getElementById('modal-customer-name').innerHTML = `
+          <span>${escapeHtml(recipientName)}</span>
+          <span class="text-[9px] bg-amber-100 text-amber-900 font-black px-1.5 py-0.5 rounded border border-amber-300 ml-1">🎁 Deliver to Friend</span>
+          <div class="text-[10px] text-slate-500 font-normal">Ordered By: ${escapeHtml(order.customer?.placedByName || 'Customer')} (${order.customer?.placedByPhone || ''})</div>
+        `;
+        document.getElementById('modal-customer-phone').innerHTML = `
+          <span>+91 ${recipientPhone}</span>
+          <span class="text-[10px] text-slate-500 block">(Friend's Mobile for Delivery Rider)</span>
+        `;
+      } else {
+        document.getElementById('modal-customer-name').textContent = recipientName;
+        document.getElementById('modal-customer-phone').textContent = `+91 ${recipientPhone}`;
+      }
+      
+      let addressStr = typeof order.customer?.address === 'object'
+        ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
+        : (order.customer?.flat ? `${order.customer.flat}, ${order.customer.street || ''}${order.customer.landmark ? ' (Near ' + order.customer.landmark + ')' : ''}` : (order.customer?.address || 'Pickup at Dark Store'));
+      if (order.customer?.distanceKm != null) {
+        addressStr += ` • ${order.customer.distanceKm} km from dark store`;
+      }
+      if (order.customer?.mapUrl) {
+        addressStr += ` • <a href="${order.customer.mapUrl}" target="_blank" class="text-blue-600 underline font-bold ml-1">📍 View GPS Pin on Google Maps</a>`;
+        document.getElementById('modal-customer-address').innerHTML = addressStr;
+      } else {
+        document.getElementById('modal-customer-address').textContent = addressStr;
+      }
+
+      // Contact Buttons: Call recipient directly!
       const callBtn = document.getElementById('modal-customer-call-btn');
-      if (order.customer?.phone) {
-        callBtn.href = `tel:+91${order.customer.phone}`;
+      const rawPhone = String(recipientPhone).replace(/\D/g, '');
+      if (rawPhone && rawPhone.length >= 10) {
+        callBtn.href = `tel:+91${rawPhone.slice(-10)}`;
         callBtn.classList.remove('hidden');
       } else {
         callBtn.classList.add('hidden');
@@ -1635,18 +1673,23 @@
 
     function sendCustomerWhatsApp() {
       const order = allOrders.find(o => o.id === activeModalOrderId);
-      if (!order || !order.customer?.phone) {
+      const recipientPhone = order?.customer?.receiverPhone || order?.customer?.phone;
+      if (!order || !recipientPhone) {
         alert("Customer phone number not available.");
         return;
       }
 
-      const cleanPhone = order.customer.phone.replace(/\D/g, '');
+      const cleanPhone = recipientPhone.replace(/\D/g, '').slice(-10);
       const status = order.status || 'Confirmed';
       const riderInfo = order.rider?.name ? `with rider *${order.rider.name}* (${order.rider.phone || ''})` : '';
+      const recipientName = order.customer?.receiverName || order.customer?.name || 'Customer';
 
-      let text = `Namaste ${order.customer.name || 'Customer'}! 🙏\n\n`;
-      text += `Your *Rasoee Fresh Supermarket* order *${order.id}* is currently: *${status.toUpperCase()}* ${riderInfo}\n\n`;
-      text += `📍 *Delivery Address:* ${typeof order.customer.address === 'object' ? order.customer.address.flat + ', ' + order.customer.address.street : order.customer.address}\n`;
+      let text = `Namaste ${recipientName}! 🙏\n\n`;
+      text += `Your *${typeof getStoreConfig === 'function' ? (getStoreConfig().storeName || 'Rasoee Fresh Supermarket') : 'Rasoee Fresh Supermarket'}* order *${order.id}* is currently: *${status.toUpperCase()}* ${riderInfo}\n\n`;
+      if (order.customer?.isFriendOrder && order.customer?.placedByName) {
+        text += `🎁 *Gift Order from:* ${order.customer.placedByName}\n`;
+      }
+      text += `📍 *Delivery Address:* ${typeof order.customer.address === 'object' ? order.customer.address.flat + ', ' + order.customer.address.street : (order.customer?.flat ? order.customer.flat + ', ' + (order.customer.street || '') : order.customer.address)}\n`;
       text += `💰 *Total Amount:* ₹${order.total} (${(order.payment?.status || '').includes('PAID') ? 'Paid Online' : 'Cash on Delivery'})\n\n`;
       text += `📦 Track live order: ${window.location.origin}/track.html\n\n`;
       text += `Thank you for choosing Rasoee Fresh! 🥬`;
@@ -1673,12 +1716,19 @@
       const isOnline = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').toLowerCase().includes('upi');
       document.getElementById('print-payment').textContent = isOnline ? 'ONLINE PAID (DIRECT UPI QR)' : 'CASH ON DELIVERY (COLLECT CASH)';
       
-      document.getElementById('print-customer-name').textContent = order.customer?.name || 'Walk-in Customer';
-      document.getElementById('print-customer-phone').textContent = `+91 ${order.customer?.phone || '-'}`;
+      const isFriend = !!(order.customer?.isFriendOrder || order.customer?.tag === 'Friend');
+      const recName = order.customer?.receiverName || order.customer?.name || 'Walk-in Customer';
+      const recPhone = order.customer?.receiverPhone || order.customer?.phone || '-';
+
+      document.getElementById('print-customer-name').textContent = isFriend ? `${recName} (Friend Order - By ${order.customer?.placedByName || 'Customer'})` : recName;
+      document.getElementById('print-customer-phone').textContent = `+91 ${recPhone}`;
       
-      const addressStr = typeof order.customer?.address === 'object'
+      let addressStr = typeof order.customer?.address === 'object'
         ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
-        : (order.customer?.address || 'Pickup at Store');
+        : (order.customer?.flat ? `${order.customer.flat}, ${order.customer.street || ''}${order.customer.landmark ? ' (Near ' + order.customer.landmark + ')' : ''}` : (order.customer?.address || 'Pickup at Store'));
+      if (order.customer?.distanceKm != null) {
+        addressStr += ` (${order.customer.distanceKm} km from dark store)`;
+      }
       document.getElementById('print-customer-address').textContent = addressStr;
 
       const instrRow = document.getElementById('print-instructions-row');

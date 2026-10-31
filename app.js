@@ -282,6 +282,9 @@ function loadConfigAndData() {
       if (parsedAddr) {
         state.deliveryAddress = { ...state.deliveryAddress, ...parsedAddr };
       }
+    } else if (state.currentUser && Array.isArray(state.currentUser.savedAddresses) && state.currentUser.savedAddresses.length > 0) {
+      state.deliveryAddress = state.currentUser.savedAddresses.find(a => a.isDefault) || state.currentUser.savedAddresses[0];
+      state.selectedAddressId = state.deliveryAddress.id;
     }
   } catch (e) {
     // defaults
@@ -289,18 +292,30 @@ function loadConfigAndData() {
 
   updateHeaderUserUI();
   populateAddressFormInputs();
+  renderSelectedAddressInDrawer();
+  updateCheckoutButtonText();
 
   // Multi-device Cloud lookup: if logged-in customer is missing address or name, pull from Cloud RTDB
   if (state.currentUser && state.currentUser.phone && typeof fetchCustomerFromCloud === 'function') {
     fetchCustomerFromCloud(state.currentUser.phone).then(cloudCust => {
-      if (cloudCust && (cloudCust.flat || cloudCust.street || cloudCust.name)) {
+      if (cloudCust && (cloudCust.flat || cloudCust.street || cloudCust.name || cloudCust.savedAddresses)) {
         const normalized = normalizeCustomerData(cloudCust);
         if (normalized) {
           state.currentUser = { ...state.currentUser, ...normalized };
+          if (Array.isArray(normalized.savedAddresses) && normalized.savedAddresses.length > 0) {
+            state.currentUser.savedAddresses = normalized.savedAddresses;
+            if (!state.deliveryAddress || (!state.deliveryAddress.flat && !state.deliveryAddress.street)) {
+              state.deliveryAddress = normalized.savedAddresses.find(a => a.isDefault) || normalized.savedAddresses[0];
+              state.selectedAddressId = state.deliveryAddress.id;
+            }
+          }
           localStorage.setItem('Rasoee_current_user', JSON.stringify(state.currentUser));
-          state.deliveryAddress = { ...state.deliveryAddress, ...normalized };
-          localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
+          if (state.deliveryAddress) {
+            localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
+          }
           populateAddressFormInputs(normalized);
+          renderSelectedAddressInDrawer();
+          updateCheckoutButtonText();
           updateHeaderUserUI();
         }
       }
@@ -317,7 +332,23 @@ function loadConfigAndData() {
   renderBanners();
   renderAnnouncement();
 
-  // Async cloud sync pull if enabled
+  // Async direct cloud sync pull for config, banners and catalog
+  if (typeof fetchConfigFromCloud === 'function') {
+    fetchConfigFromCloud().then(cfg => {
+      if (cfg) {
+        state.config = cfg;
+        applyBranding();
+        renderAnnouncement();
+        renderBanners();
+        updateCheckoutButtonText();
+      }
+    }).catch(() => {});
+  }
+  if (typeof fetchBannersFromCloud === 'function') {
+    fetchBannersFromCloud().then(() => {
+      renderBanners();
+    }).catch(() => {});
+  }
   if (typeof syncFromCloud === 'function') {
     syncFromCloud().then(() => {
       state.config = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
@@ -334,9 +365,26 @@ function loadConfigAndData() {
   startLiveCatalogSync();
 }
 
-// Continuous Multi-Device Realtime Catalog & Image Sync
+// Continuous Multi-Device Realtime Catalog, Config & Image Sync
 function startLiveCatalogSync() {
   const syncCatalog = async () => {
+    try {
+      // 1. Check live config and banners
+      if (typeof fetchConfigFromCloud === 'function') {
+        const cloudCfg = await fetchConfigFromCloud();
+        if (cloudCfg) {
+          state.config = cloudCfg;
+          renderBanners();
+          renderAnnouncement();
+          applyBranding();
+        }
+      }
+      if (typeof fetchBannersFromCloud === 'function') {
+        await fetchBannersFromCloud();
+        renderBanners();
+      }
+    } catch (err) {}
+
     try {
       const res = await fetch("https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json?_t=" + Date.now(), { 
         cache: "no-store",
@@ -456,6 +504,11 @@ function renderAnnouncement() {
 function renderBanners() {
   const container = document.getElementById('promo-banners-grid');
   if (!container) return;
+
+  if (state.config && state.config.showBanners === false) {
+    container.classList.add('hidden');
+    return;
+  }
 
   const banners = typeof getStoredBanners === 'function' ? getStoredBanners() : [];
   const activeBanners = banners.filter(b => b.enabled !== false);
@@ -836,12 +889,23 @@ function selectPaymentMethod(method = 'cod') {
 function validateDeliveryZone() {
   const cfg = state.config?.deliveryZone || { 
     maxRadiusKm: 5.0, 
-    storeCoordinates: { lat: 0, lng: 0 },
-    allowedPincodes: []
+    storeCoordinates: { lat: 0, lng: 0 }
   };
-  const storeLat = cfg.storeCoordinates?.lat || 0;
-  const storeLng = cfg.storeCoordinates?.lng || 0;
-  const maxRadius = cfg.maxRadiusKm || 5.0;
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 0;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 0;
+  const maxRadius = parseFloat(cfg.maxRadiusKm) || 5.0;
+  const storeLabel = cfg.outletName || cfg.storeName || 'our store';
+
+  // If store coordinates not configured yet, allow delivery with default notice
+  if (storeLat === 0 && storeLng === 0) {
+    return {
+      isWithin: true,
+      distanceKm: null,
+      maxRadius,
+      method: 'default',
+      message: `📍 Outlet Delivery Zone: Limited to ${maxRadius} km from ${storeLabel}.`
+    };
+  }
 
   // 1. Direct GPS Location check if detected
   if (state.userGpsCoords && state.userGpsCoords.lat && state.userGpsCoords.lng) {
@@ -855,41 +919,32 @@ function validateDeliveryZone() {
       maxRadius,
       method: 'gps',
       message: isWithin 
-        ? `📍 GPS Verified: ${dist} km away (Within ${maxRadius} km delivery zone)`
-        : `🚫 GPS Location is ${dist} km away. We deliver strictly within ${maxRadius} km of our outlet.`
+        ? `📍 GPS Location: ${dist} km away (Within ${maxRadius} km delivery zone)`
+        : `🚫 GPS Location is ${dist} km away. We deliver strictly within ${maxRadius} km of ${storeLabel}.`
     };
   }
 
-  // 2. Check 6-digit Pincode from input or saved address
-  const pincodeInput = document.getElementById('addr-pincode')?.value?.trim();
+  // 2. Check selected delivery address coordinates
   const addressObj = state.deliveryAddress || {};
-  const currentPin = pincodeInput || addressObj.pincode || (typeof addressObj.street === 'string' && addressObj.street.match(/\b\d{6}\b/)?.[0]) || '';
-  const allowedPins = (cfg.allowedPincodes && Array.isArray(cfg.allowedPincodes) && cfg.allowedPincodes.length > 0) ? cfg.allowedPincodes : null;
-  const storeLabel = cfg.outletName || cfg.storeName || 'our store';
-
-  if (currentPin && currentPin.length === 6 && allowedPins) {
-    if (allowedPins.includes(currentPin)) {
-      return {
-        isWithin: true,
-        distanceKm: 2.5,
-        maxRadius,
-        method: 'pincode',
-        message: `🟢 Pincode ${currentPin} is inside our ${maxRadius} km delivery zone.`
-      };
-    } else {
-      return {
-        isWithin: false,
-        distanceKm: 8.5,
-        maxRadius,
-        method: 'pincode',
-        message: `🚫 Delivery unavailable for pincode ${currentPin}. We deliver strictly within ${maxRadius} km of ${storeLabel}.`
-      };
-    }
+  if (addressObj.lat && addressObj.lng) {
+    const dist = typeof calculateDistanceKm === 'function'
+      ? calculateDistanceKm(storeLat, storeLng, addressObj.lat, addressObj.lng)
+      : 0;
+    const isWithin = dist <= maxRadius;
+    return {
+      isWithin,
+      distanceKm: dist,
+      maxRadius,
+      method: 'address_coords',
+      message: isWithin 
+        ? `📍 Delivery Location: ${dist} km away (Within ${maxRadius} km delivery zone)`
+        : `🚫 Delivery Location is ${dist} km away. We deliver strictly within ${maxRadius} km of ${storeLabel}.`
+    };
   }
 
   return {
     isWithin: true,
-    distanceKm: null,
+    distanceKm: addressObj.distanceKm || null,
     maxRadius,
     method: 'default',
     message: `📍 Outlet Delivery Zone: Limited to ${maxRadius} km from ${storeLabel}.`
@@ -913,15 +968,17 @@ function detectUserGpsLocation() {
       const lng = position.coords.longitude;
       state.userGpsCoords = { lat, lng };
 
-      const cfg = state.config?.deliveryZone || { maxRadiusKm: 5.0, storeCoordinates: { lat: 12.9116, lng: 77.6389 } };
-      const storeLat = cfg.storeCoordinates?.lat || 12.9116;
-      const storeLng = cfg.storeCoordinates?.lng || 77.6389;
-      const dist = typeof calculateDistanceKm === 'function' 
+      const cfg = state.config?.deliveryZone || { maxRadiusKm: 5.0, storeCoordinates: { lat: 0, lng: 0 } };
+      const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 0;
+      const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 0;
+      const dist = (storeLat !== 0 && storeLng !== 0 && typeof calculateDistanceKm === 'function')
         ? calculateDistanceKm(storeLat, storeLng, lat, lng)
         : 0;
 
       if (btn) {
-        if (dist <= (cfg.maxRadiusKm || 5.0)) {
+        if (storeLat === 0 && storeLng === 0) {
+          btn.innerHTML = `<span class="text-emerald-700 font-bold">✓ Location Set</span>`;
+        } else if (dist <= (cfg.maxRadiusKm || 5.0)) {
           btn.innerHTML = `<span class="text-emerald-700 font-bold">✓ ${dist} km (In Zone)</span>`;
         } else {
           btn.innerHTML = `<span class="text-rose-700 font-bold">✕ ${dist} km (Out of Zone)</span>`;
@@ -932,11 +989,628 @@ function detectUserGpsLocation() {
     },
     (err) => {
       console.warn("GPS detection error:", err);
-      alert("Unable to detect GPS position. Please check browser location permissions or enter your 6-digit Pincode.");
+      alert("Unable to detect GPS position. Please check browser location permissions or drop a pin on the map.");
       if (btn) btn.innerHTML = `<span>📍 Auto-Detect</span>`;
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
   );
+}
+
+// ================= INTERACTIVE LEAFLET MAP & BLINKIT/ZEPTO ADDRESS PICKER =================
+let deliveryMap = null;
+let deliveryMarker = null;
+let deliveryCircle = null;
+let currentMapCoords = { lat: 0, lng: 0 };
+let currentRecipientType = 'self';
+let currentAddressTag = 'Home';
+
+function initDeliveryMap(targetLat, targetLng) {
+  const container = document.getElementById('delivery-map-picker');
+  if (!container) return;
+
+  const cfg = state.config?.deliveryZone || {};
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 0;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 0;
+  const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
+
+  // Default coordinate selection
+  let initLat = targetLat || (storeLat !== 0 ? storeLat : 25.5941);
+  let initLng = targetLng || (storeLng !== 0 ? storeLng : 85.1376);
+
+  if (typeof L === 'undefined') {
+    container.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center p-4 text-center space-y-2 bg-gray-50 text-gray-500">
+        <span class="text-3xl">🗺️</span>
+        <p class="font-bold text-xs text-gray-800">Map loading...</p>
+        <p class="text-[11px]">If offline, you can use the GPS button or enter your address details below.</p>
+      </div>
+    `;
+    return;
+  }
+
+  try {
+    if (deliveryMap) {
+      deliveryMap.remove();
+      deliveryMap = null;
+    }
+
+    deliveryMap = L.map('delivery-map-picker', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([initLat, initLng], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(deliveryMap);
+
+    // Draw store hub & 5km circle if store coordinates exist
+    if (storeLat !== 0 && storeLng !== 0) {
+      const storeIcon = L.divIcon({
+        className: 'store-map-icon',
+        html: '<div style="background:#0C831F;color:white;padding:3px 8px;border-radius:10px;font-weight:900;font-size:10px;box-shadow:0 2px 6px rgba(0,0,0,0.3);white-space:nowrap;display:flex;align-items:center;gap:3px;border:1.5px solid white;">🏪 Store Hub</div>',
+        iconSize: [80, 22],
+        iconAnchor: [40, 11]
+      });
+      L.marker([storeLat, storeLng], { icon: storeIcon, interactive: false }).addTo(deliveryMap);
+
+      // Translucent 5 km Delivery Zone boundary
+      deliveryCircle = L.circle([storeLat, storeLng], {
+        radius: maxRadiusKm * 1000,
+        color: '#0C831F',
+        fillColor: '#10b981',
+        fillOpacity: 0.12,
+        weight: 2,
+        dashArray: '5, 5'
+      }).addTo(deliveryMap);
+    }
+
+    // Draggable customer pin
+    const pinIcon = L.divIcon({
+      className: 'customer-pin-icon',
+      html: '<div style="font-size:32px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.45));cursor:grab;line-height:1;">📍</div>',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32]
+    });
+
+    deliveryMarker = L.marker([initLat, initLng], {
+      draggable: true,
+      icon: pinIcon
+    }).addTo(deliveryMap);
+
+    currentMapCoords = { lat: initLat, lng: initLng };
+    updateMapDistanceBadge(initLat, initLng);
+
+    deliveryMarker.on('drag', function (e) {
+      const pos = e.target.getLatLng();
+      currentMapCoords = { lat: pos.lat, lng: pos.lng };
+      updateMapDistanceBadge(pos.lat, pos.lng);
+    });
+
+    deliveryMarker.on('dragend', function (e) {
+      const pos = e.target.getLatLng();
+      currentMapCoords = { lat: pos.lat, lng: pos.lng };
+      updateMapDistanceBadge(pos.lat, pos.lng);
+      reverseGeocode(pos.lat, pos.lng);
+    });
+
+    deliveryMap.on('click', function (e) {
+      deliveryMarker.setLatLng(e.latlng);
+      currentMapCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
+      updateMapDistanceBadge(e.latlng.lat, e.latlng.lng);
+      reverseGeocode(e.latlng.lat, e.latlng.lng);
+    });
+
+    setTimeout(() => {
+      if (deliveryMap) deliveryMap.invalidateSize();
+    }, 250);
+  } catch (err) {
+    console.warn("Leaflet map initialization error:", err);
+  }
+}
+
+function updateMapDistanceBadge(lat, lng) {
+  const pill = document.getElementById('map-live-pill');
+  const btnSave = document.getElementById('btn-confirm-address-selection');
+  const errBox = document.getElementById('modal-address-error');
+  const cfg = state.config?.deliveryZone || {};
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 0;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 0;
+  const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
+
+  if (storeLat === 0 && storeLng === 0) {
+    if (pill) {
+      pill.className = "absolute top-2.5 left-2.5 z-[500] bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-full shadow-md border border-emerald-300 text-[11px] font-black flex items-center gap-1.5";
+      pill.innerHTML = `<span>🟢</span> <span>Location Pin Placed</span>`;
+    }
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.className = "w-full bg-[#0C831F] hover:bg-emerald-800 active:scale-98 text-white py-3.5 rounded-2xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer";
+      btnSave.innerHTML = `<span>✓ Confirm & Deliver to This Location</span>`;
+    }
+    if (errBox) errBox.classList.add('hidden');
+    return { isWithin: true, distanceKm: 0 };
+  }
+
+  const dist = typeof calculateDistanceKm === 'function' ? calculateDistanceKm(storeLat, storeLng, lat, lng) : 0;
+  const isWithin = dist <= maxRadiusKm;
+
+  if (pill) {
+    if (isWithin) {
+      pill.className = "absolute top-2.5 left-2.5 z-[500] bg-emerald-50 text-emerald-900 px-3 py-1.5 rounded-full shadow-md border border-emerald-300 text-[11px] font-black flex items-center gap-1.5";
+      pill.innerHTML = `<span>🟢</span> <span>${dist} km from store (Within 5 km Zone)</span>`;
+    } else {
+      pill.className = "absolute top-2.5 left-2.5 z-[500] bg-rose-50 text-rose-900 px-3 py-1.5 rounded-full shadow-md border border-rose-300 text-[11px] font-black flex items-center gap-1.5";
+      pill.innerHTML = `<span>🚫</span> <span>${dist} km from store (Outside 5 km Limit)</span>`;
+    }
+  }
+
+  if (btnSave) {
+    if (isWithin) {
+      btnSave.disabled = false;
+      btnSave.className = "w-full bg-[#0C831F] hover:bg-emerald-800 active:scale-98 text-white py-3.5 rounded-2xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer";
+      btnSave.innerHTML = `<span>✓ Confirm & Deliver to This Location (${dist} km)</span>`;
+      if (errBox) errBox.classList.add('hidden');
+    } else {
+      btnSave.disabled = true;
+      btnSave.className = "w-full bg-slate-300 text-slate-500 py-3.5 rounded-2xl font-black text-sm shadow-none transition-all flex items-center justify-center gap-2 cursor-not-allowed opacity-80";
+      btnSave.innerHTML = `<span>🚫 Location is ${dist} km Away (Limit is ${maxRadiusKm} km)</span>`;
+      if (errBox) {
+        errBox.textContent = `This dropped pin is ${dist} km away. We deliver strictly within ${maxRadiusKm} km of our outlet. Please move the pin closer.`;
+        errBox.classList.remove('hidden');
+      }
+    }
+  }
+
+  return { isWithin, distanceKm: dist };
+}
+
+function locateUserOnMap() {
+  const btn = document.getElementById('btn-map-locate-gps');
+  if (btn) btn.innerHTML = `<span>⏳ Locating...</span>`;
+
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser or device.");
+    if (btn) btn.innerHTML = `<span>🎯 Locate Me</span>`;
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      state.userGpsCoords = { lat, lng };
+      currentMapCoords = { lat, lng };
+
+      if (deliveryMap) {
+        deliveryMap.setView([lat, lng], 15);
+        if (deliveryMarker) deliveryMarker.setLatLng([lat, lng]);
+      }
+      updateMapDistanceBadge(lat, lng);
+      reverseGeocode(lat, lng);
+      if (btn) btn.innerHTML = `<span>✓ Found</span>`;
+      setTimeout(() => { if (btn) btn.innerHTML = `<span>🎯 Locate Me</span>`; }, 2000);
+    },
+    (err) => {
+      console.warn("Geolocation error:", err);
+      alert("Unable to detect GPS position. Please drag the pin on the map to your location.");
+      if (btn) btn.innerHTML = `<span>🎯 Locate Me</span>`;
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+      headers: { 'Accept-Language': 'en' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.address) {
+        const road = data.address.road || data.address.pedestrian || data.address.suburb || data.address.neighbourhood || '';
+        const suburb = data.address.suburb || data.address.neighbourhood || data.address.city_district || '';
+        const streetInput = document.getElementById('map-input-street');
+        if (streetInput && (!streetInput.value || streetInput.value.trim().length < 3)) {
+          const combined = [road, suburb].filter(Boolean).join(', ');
+          if (combined) streetInput.value = combined;
+        }
+        const pinInput = document.getElementById('map-input-pincode');
+        if (pinInput && data.address.postcode && !pinInput.value) {
+          pinInput.value = data.address.postcode;
+        }
+      }
+    }
+  } catch (e) {}
+}
+
+function setRecipientType(type) {
+  currentRecipientType = type;
+  const btnSelf = document.getElementById('btn-recipient-self');
+  const btnFriend = document.getElementById('btn-recipient-friend');
+  const friendFields = document.getElementById('friend-contact-fields');
+  const selfFields = document.getElementById('self-contact-fields');
+
+  if (type === 'friend') {
+    if (btnFriend) {
+      btnFriend.className = "py-2 px-3 rounded-xl border-2 border-blinkit-green bg-green-50/80 font-bold text-gray-900 text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer";
+    }
+    if (btnSelf) {
+      btnSelf.className = "py-2 px-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 font-bold text-gray-600 text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer";
+    }
+    if (friendFields) friendFields.classList.remove('hidden');
+    if (selfFields) selfFields.classList.add('hidden');
+    setMapAddressTag('Friend');
+  } else {
+    if (btnSelf) {
+      btnSelf.className = "py-2 px-3 rounded-xl border-2 border-blinkit-green bg-green-50/80 font-bold text-gray-900 text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer";
+    }
+    if (btnFriend) {
+      btnFriend.className = "py-2 px-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 font-bold text-gray-600 text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer";
+    }
+    if (friendFields) friendFields.classList.add('hidden');
+    if (selfFields) selfFields.classList.remove('hidden');
+    setMapAddressTag('Home');
+  }
+}
+
+function setMapAddressTag(tag) {
+  currentAddressTag = tag;
+  const tags = ['Home', 'Work', 'Friend', 'Other'];
+  tags.forEach(t => {
+    const btn = document.getElementById(`tag-opt-${t.toLowerCase()}`);
+    if (btn) {
+      if (t === tag) {
+        btn.className = "map-tag-btn px-3 py-1.5 rounded-xl border-2 border-blinkit-green bg-green-50 font-bold text-gray-900 cursor-pointer text-xs";
+      } else {
+        btn.className = "map-tag-btn px-3 py-1.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer text-xs";
+      }
+    }
+  });
+}
+
+function openAddressPickerModal() {
+  const modal = document.getElementById('address-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  const selfNameInput = document.getElementById('map-self-name');
+  const selfPhoneInput = document.getElementById('map-self-phone');
+  if (selfNameInput) selfNameInput.value = state.currentUser?.name || '';
+  if (selfPhoneInput) selfPhoneInput.value = state.currentUser?.phone || '';
+
+  const hasSaved = state.currentUser && Array.isArray(state.currentUser.savedAddresses) && state.currentUser.savedAddresses.length > 0;
+  if (hasSaved) {
+    switchAddressModalTab('saved');
+    renderSavedAddressesModalList();
+  } else {
+    switchAddressModalTab('map');
+  }
+}
+
+function closeAddressPickerModal() {
+  const modal = document.getElementById('address-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function switchAddressModalTab(tab, forceNew = false) {
+  const tabMap = document.getElementById('tab-btn-map');
+  const tabSaved = document.getElementById('tab-btn-saved');
+  const viewMap = document.getElementById('addr-view-map');
+  const viewSaved = document.getElementById('addr-view-saved');
+
+  if (tab === 'saved' && !forceNew) {
+    if (tabSaved) {
+      tabSaved.className = "pb-2 px-3 border-b-2 border-blinkit-green text-blinkit-green flex items-center gap-1.5 transition-colors cursor-pointer";
+    }
+    if (tabMap) {
+      tabMap.className = "pb-2 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1.5 transition-colors cursor-pointer";
+    }
+    if (viewSaved) viewSaved.classList.remove('hidden');
+    if (viewMap) viewMap.classList.add('hidden');
+    renderSavedAddressesModalList();
+  } else {
+    if (tabMap) {
+      tabMap.className = "pb-2 px-3 border-b-2 border-blinkit-green text-blinkit-green flex items-center gap-1.5 transition-colors cursor-pointer";
+    }
+    if (tabSaved) {
+      tabSaved.className = "pb-2 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1.5 transition-colors cursor-pointer";
+    }
+    if (viewMap) viewMap.classList.remove('hidden');
+    if (viewSaved) viewSaved.classList.add('hidden');
+
+    const initLat = state.deliveryAddress?.lat || state.userGpsCoords?.lat || 0;
+    const initLng = state.deliveryAddress?.lng || state.userGpsCoords?.lng || 0;
+    setTimeout(() => {
+      initDeliveryMap(initLat, initLng);
+    }, 150);
+  }
+}
+
+function renderSavedAddressesModalList() {
+  const container = document.getElementById('saved-addresses-modal-list');
+  const countBadge = document.getElementById('saved-addr-count-badge');
+  if (!container) return;
+
+  const addresses = (state.currentUser && Array.isArray(state.currentUser.savedAddresses)) ? state.currentUser.savedAddresses : [];
+  if (countBadge) countBadge.textContent = addresses.length;
+
+  if (addresses.length === 0) {
+    container.innerHTML = `
+      <div class="p-6 text-center text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl space-y-1">
+        <span class="text-3xl block mb-1">📍</span>
+        <p class="font-bold text-gray-700 text-xs">No saved addresses yet</p>
+        <p class="text-[11px]">Drop a pin on the map to add your first delivery location!</p>
+      </div>
+    `;
+    return;
+  }
+
+  const cfg = state.config?.deliveryZone || {};
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 0;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 0;
+  const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
+
+  container.innerHTML = addresses.map(addr => {
+    let dist = addr.distanceKm;
+    if (dist == null && storeLat !== 0 && storeLng !== 0 && addr.lat && addr.lng) {
+      dist = calculateDistanceKm(storeLat, storeLng, addr.lat, addr.lng);
+      addr.distanceKm = dist;
+    }
+    const isWithin = (storeLat === 0 && storeLng === 0) ? true : (dist != null ? (dist <= maxRadiusKm) : true);
+    const isSelected = state.selectedAddressId === addr.id || (state.deliveryAddress && state.deliveryAddress.id === addr.id);
+    const tagIcons = { Home: '🏠', Work: '🏢', Friend: '🎁', Other: '📍' };
+    const tagIcon = tagIcons[addr.tag] || '📍';
+
+    return `
+      <div class="p-3.5 rounded-2xl border-2 ${isSelected ? 'border-blinkit-green bg-green-50/70' : 'border-gray-200 bg-white hover:border-gray-300'} transition-all flex items-start justify-between gap-3">
+        <div class="flex-1 space-y-1 cursor-pointer" onclick="selectSavedAddress('${addr.id}')">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-xs font-black uppercase text-gray-900">${tagIcon} ${addr.tag || 'Home'}</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isWithin ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+              ${dist != null ? `${dist} km away` : 'In Zone'}
+            </span>
+            ${addr.isFriendOrder ? '<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">🎁 Friend Order</span>' : ''}
+          </div>
+          <div class="text-xs font-bold text-gray-900">
+            ${escapeHtml(addr.receiverName || 'Recipient')} (${addr.receiverPhone || ''})
+          </div>
+          <div class="text-[11px] text-gray-600">
+            ${escapeHtml(addr.flat ? addr.flat + ', ' : '')}${escapeHtml(addr.street || '')}${addr.landmark ? ', Near ' + escapeHtml(addr.landmark) : ''}
+          </div>
+        </div>
+        <div class="flex flex-col items-end gap-1.5">
+          <button type="button" onclick="selectSavedAddress('${addr.id}')" class="px-3 py-1.5 rounded-xl font-bold text-[11px] ${isSelected ? 'bg-blinkit-green text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'} cursor-pointer">
+            ${isSelected ? '✓ Selected' : 'Deliver Here'}
+          </button>
+          <button type="button" onclick="deleteSavedAddress('${addr.id}')" class="text-[10px] text-gray-400 hover:text-red-600 transition-colors cursor-pointer">
+            Delete
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectSavedAddress(id) {
+  const addresses = (state.currentUser && Array.isArray(state.currentUser.savedAddresses)) ? state.currentUser.savedAddresses : [];
+  const found = addresses.find(a => a.id === id);
+  if (!found) return;
+
+  const cfg = state.config?.deliveryZone || {};
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 0;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 0;
+  const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
+
+  if (storeLat !== 0 && storeLng !== 0 && found.lat && found.lng) {
+    const dist = calculateDistanceKm(storeLat, storeLng, found.lat, found.lng);
+    found.distanceKm = dist;
+    if (dist > maxRadiusKm) {
+      alert(`🚫 Cannot deliver to this address!\n\nThis address is ${dist} km away, which exceeds our ${maxRadiusKm} km delivery limit.\nPlease choose an address within 5.0 km.`);
+      return;
+    }
+  }
+
+  state.deliveryAddress = found;
+  state.selectedAddressId = id;
+  localStorage.setItem('Rasoee_address', JSON.stringify(found));
+  closeAddressPickerModal();
+  renderSelectedAddressInDrawer();
+  updateCheckoutButtonText();
+}
+
+function deleteSavedAddress(id) {
+  if (!state.currentUser || !Array.isArray(state.currentUser.savedAddresses)) return;
+  state.currentUser.savedAddresses = state.currentUser.savedAddresses.filter(a => a.id !== id);
+  try {
+    localStorage.setItem('Rasoee_current_user', JSON.stringify(state.currentUser));
+    if (state.currentUser.phone && typeof syncCustomerToCloud === 'function') {
+      syncCustomerToCloud(state.currentUser);
+    }
+  } catch (e) {}
+  renderSavedAddressesModalList();
+  if (state.selectedAddressId === id) {
+    state.deliveryAddress = state.currentUser.savedAddresses[0] || null;
+    state.selectedAddressId = state.deliveryAddress ? state.deliveryAddress.id : null;
+    renderSelectedAddressInDrawer();
+    updateCheckoutButtonText();
+  }
+}
+
+async function confirmAndSaveAddressFromMap() {
+  const isFriend = currentRecipientType === 'friend';
+  const friendName = document.getElementById('map-friend-name')?.value.trim();
+  const friendPhone = document.getElementById('map-friend-phone')?.value.trim().replace(/\D/g, '').slice(-10);
+  const selfName = document.getElementById('map-self-name')?.value.trim();
+  const userPhone = state.currentUser?.phone ? String(state.currentUser.phone).replace(/\D/g, '').slice(-10) : '';
+
+  const receiverName = isFriend ? friendName : (selfName || state.currentUser?.name || 'Customer');
+  const receiverPhone = isFriend ? friendPhone : (userPhone || document.getElementById('map-self-phone')?.value.trim());
+
+  const flat = document.getElementById('map-input-flat')?.value.trim();
+  const street = document.getElementById('map-input-street')?.value.trim();
+  const landmark = document.getElementById('map-input-landmark')?.value.trim();
+  const pincode = document.getElementById('map-input-pincode')?.value.trim();
+
+  const errBox = document.getElementById('modal-address-error');
+
+  if (isFriend && (!friendName || !friendPhone || friendPhone.length !== 10)) {
+    if (errBox) {
+      errBox.textContent = "Please provide your friend's full name and 10-digit mobile number so our delivery boy can contact them.";
+      errBox.classList.remove('hidden');
+    } else {
+      alert("Please provide your friend's name and 10-digit mobile number.");
+    }
+    return;
+  }
+
+  if (!isFriend && !receiverName) {
+    if (errBox) {
+      errBox.textContent = "Please enter your name.";
+      errBox.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (!flat || !street) {
+    if (errBox) {
+      errBox.textContent = "Please fill your Flat / House number and Street / Locality.";
+      errBox.classList.remove('hidden');
+    } else {
+      alert("Please fill your Flat/House number and Street/Locality.");
+    }
+    return;
+  }
+
+  // Distance verification
+  const cfg = state.config?.deliveryZone || {};
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 0;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 0;
+  const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
+
+  let distanceKm = 0;
+  if (storeLat !== 0 && storeLng !== 0 && currentMapCoords.lat !== 0 && currentMapCoords.lng !== 0) {
+    distanceKm = calculateDistanceKm(storeLat, storeLng, currentMapCoords.lat, currentMapCoords.lng);
+    if (distanceKm > maxRadiusKm) {
+      if (errBox) {
+        errBox.textContent = `🚫 Cannot deliver: Location is ${distanceKm} km away (Limit is ${maxRadiusKm} km). Please move pin closer.`;
+        errBox.classList.remove('hidden');
+      }
+      return;
+    }
+  }
+
+  const addressId = 'addr_' + Date.now();
+  const newAddress = {
+    id: addressId,
+    tag: currentAddressTag || (isFriend ? 'Friend' : 'Home'),
+    receiverName,
+    receiverPhone,
+    placedByName: state.currentUser?.name || receiverName,
+    placedByPhone: userPhone || receiverPhone,
+    isFriendOrder: isFriend,
+    flat,
+    street,
+    landmark,
+    pincode,
+    lat: currentMapCoords.lat,
+    lng: currentMapCoords.lng,
+    distanceKm,
+    isWithinZone: true,
+    isDefault: true,
+    createdAt: new Date().toISOString()
+  };
+
+  if (!state.currentUser) {
+    state.currentUser = {
+      id: 'usr_' + (userPhone ? userPhone.slice(-4) : Date.now().toString().slice(-4)),
+      name: receiverName,
+      phone: userPhone || receiverPhone,
+      savedAddresses: []
+    };
+  }
+  if (!Array.isArray(state.currentUser.savedAddresses)) {
+    state.currentUser.savedAddresses = [];
+  }
+
+  state.currentUser.savedAddresses.forEach(a => a.isDefault = false);
+  state.currentUser.savedAddresses.unshift(newAddress);
+
+  state.deliveryAddress = newAddress;
+  state.selectedAddressId = addressId;
+
+  try {
+    localStorage.setItem('Rasoee_address', JSON.stringify(newAddress));
+    localStorage.setItem('Rasoee_current_user', JSON.stringify(state.currentUser));
+    let users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
+    const uIdx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === userPhone);
+    if (uIdx >= 0) {
+      users[uIdx].savedAddresses = state.currentUser.savedAddresses;
+      users[uIdx].name = users[uIdx].name || state.currentUser.name;
+    } else {
+      users.push(state.currentUser);
+    }
+    localStorage.setItem('Rasoee_users', JSON.stringify(users));
+  } catch (e) {}
+
+  if (userPhone && typeof syncCustomerToCloud === 'function') {
+    syncCustomerToCloud(state.currentUser);
+  }
+
+  closeAddressPickerModal();
+  renderSelectedAddressInDrawer();
+  updateCheckoutButtonText();
+}
+
+function renderSelectedAddressInDrawer() {
+  const container = document.getElementById('drawer-selected-address-card');
+  if (!container) return;
+
+  const addr = state.deliveryAddress;
+  if (!addr || (!addr.flat && !addr.street)) {
+    container.innerHTML = `
+      <button type="button" onclick="openAddressPickerModal()" class="w-full bg-emerald-50/80 hover:bg-emerald-100/80 border-2 border-dashed border-emerald-400 rounded-2xl p-4 text-center cursor-pointer transition-all group">
+        <span class="text-2xl block mb-1 group-hover:scale-110 transition-transform">📍</span>
+        <div class="text-xs font-black text-emerald-900">Add Delivery Location (Within 5 km)</div>
+        <div class="text-[11px] text-emerald-700">Drop pin on map or select saved address</div>
+      </button>
+    `;
+    return;
+  }
+
+  const isFriend = addr.isFriendOrder || addr.tag === 'Friend';
+  const tagIcons = { Home: '🏠', Work: '🏢', Friend: '🎁', Other: '📍' };
+  const tagIcon = tagIcons[addr.tag] || '📍';
+  const distText = addr.distanceKm != null ? `${addr.distanceKm} km from store` : 'Inside 5 km';
+
+  container.innerHTML = `
+    <div class="bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border border-emerald-200 rounded-2xl p-3.5 space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-200 text-emerald-950 uppercase flex items-center gap-1">
+            <span>${tagIcon}</span> <span>${addr.tag || 'Home'}</span>
+          </span>
+          <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${addr.isWithinZone !== false ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}">
+            🟢 ${distText}
+          </span>
+          ${isFriend ? '<span class="text-[10px] font-black bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">🎁 Friend Order</span>' : ''}
+        </div>
+        <button type="button" onclick="openAddressPickerModal()" class="text-xs font-bold text-blinkit-green hover:underline cursor-pointer">
+          Change ✏️
+        </button>
+      </div>
+
+      <div class="space-y-0.5">
+        <div class="text-xs font-black text-gray-900 flex items-center gap-1">
+          <span>Deliver To:</span>
+          <span>${escapeHtml(addr.receiverName || state.currentUser?.name || 'Customer')}</span>
+          <span class="text-gray-500 font-mono font-normal">(${addr.receiverPhone || state.currentUser?.phone || ''})</span>
+        </div>
+        <div class="text-[11px] text-gray-600 leading-tight">
+          ${escapeHtml(addr.flat ? addr.flat + ', ' : '')}${escapeHtml(addr.street || '')}${addr.landmark ? ', Near ' + escapeHtml(addr.landmark) : ''}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function updateCheckoutButtonText() {
@@ -948,6 +1622,20 @@ function updateCheckoutButtonText() {
   const zoneBadge = document.getElementById('delivery-zone-live-badge');
 
   if (!btn || !btnLabel) return;
+
+  const addr = state.deliveryAddress;
+  const hasAddress = addr && (addr.flat || addr.street);
+
+  // If no address selected yet, prompt user to add address
+  if (!hasAddress) {
+    if (zoneBadge) zoneBadge.classList.add('hidden');
+    btn.disabled = false;
+    btn.className = "w-full bg-[#0C831F] hover:bg-emerald-800 text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all cursor-pointer";
+    if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">📍</span>`;
+    btnLabel.textContent = `Select Delivery Address (Within 5 km)`;
+    if (btnSub) btnSub.textContent = `Drop pin on map to verify delivery zone`;
+    return;
+  }
 
   const zoneCheck = validateDeliveryZone();
 
@@ -977,6 +1665,12 @@ function updateCheckoutButtonText() {
     if (btnSub) btnSub.textContent = `Address is beyond 5.0 km outlet boundary`;
     return;
   }
+
+  btn.disabled = false;
+  btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all cursor-pointer";
+  if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">🛵</span>`;
+  btnLabel.textContent = `Place Order (Pay ₹${summary.grandTotal} on Delivery)`;
+  if (btnSub) btnSub.textContent = `Cash or UPI to Rider at Doorstep`;
 
   btn.disabled = false;
   btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all cursor-pointer";
@@ -1128,6 +1822,48 @@ function setTip(amount) {
 
 // Extract customer and address details from drawer
 function extractAddressForm() {
+  // If modern Blinkit/Zepto delivery address is already selected
+  if (state.deliveryAddress && (state.deliveryAddress.flat || state.deliveryAddress.street)) {
+    const da = state.deliveryAddress;
+    const isFriend = !!(da.isFriendOrder || da.tag === 'Friend');
+    const userPhone = state.currentUser?.phone ? String(state.currentUser.phone).replace(/\D/g, '').slice(-10) : '';
+    const userName = state.currentUser?.name || 'Valued Customer';
+
+    const recName = da.receiverName || userName;
+    const recPhone = da.receiverPhone || userPhone;
+
+    if (!recPhone) {
+      if (typeof openLoginModal === 'function') openLoginModal();
+      return null;
+    }
+
+    const payload = {
+      name: recName,
+      phone: recPhone,
+      receiverName: recName,
+      receiverPhone: recPhone,
+      placedByName: da.placedByName || userName,
+      placedByPhone: da.placedByPhone || userPhone,
+      isFriendOrder: isFriend,
+      tag: da.tag || 'Home',
+      flat: da.flat || '',
+      street: da.street || 'Store Area',
+      landmark: da.landmark || '',
+      pincode: da.pincode || '',
+      lat: da.lat || null,
+      lng: da.lng || null,
+      distanceKm: da.distanceKm != null ? da.distanceKm : null,
+      mapUrl: da.lat && da.lng ? `https://www.google.com/maps?q=${da.lat},${da.lng}` : '',
+      instructions: da.instructions || 'Leave at door & ring bell'
+    };
+
+    if (typeof syncCustomerToCloud === 'function' && userPhone) {
+      syncCustomerToCloud({ ...state.currentUser, ...payload });
+    }
+    return payload;
+  }
+
+  // Fallback if legacy input fields exist
   const nameInput = document.getElementById('addr-name');
   const phoneInput = document.getElementById('addr-phone');
   const flatInput = document.getElementById('addr-flat');
@@ -1135,7 +1871,6 @@ function extractAddressForm() {
   const landmarkInput = document.getElementById('addr-landmark');
   const notesInput = document.getElementById('addr-notes');
 
-  // 1. Pull directly from DOM input values
   let customerName = nameInput ? nameInput.value.trim() : '';
   let customerPhone = phoneInput ? phoneInput.value.trim().replace(/\D/g, '').slice(-10) : '';
   let flat = flatInput ? flatInput.value.trim() : '';
@@ -1143,7 +1878,6 @@ function extractAddressForm() {
   let landmark = landmarkInput ? landmarkInput.value.trim() : '';
   let notes = notesInput ? notesInput.value.trim() : '';
 
-  // 2. Proactive fallback chain: if any critical field is missing, recover from state.deliveryAddress or state.currentUser
   const fallback = normalizeCustomerData(state.deliveryAddress) || normalizeCustomerData(state.currentUser);
   if (!customerName && fallback?.name) customerName = fallback.name;
   if (!customerPhone && fallback?.phone) customerPhone = fallback.phone;
@@ -1162,55 +1896,33 @@ function extractAddressForm() {
     if (!customerName && normUser?.name) customerName = normUser.name;
   }
 
-  // 3. Fallback to localStorage Rasoee_users or Rasoee_orders
   if (!customerPhone || !flat) {
-    try {
-      const users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
-      const match = users.find(u => (customerPhone && u.phone === customerPhone) || (state.currentUser && u.phone === state.currentUser.phone));
-      if (match) {
-        const norm = normalizeCustomerData(match);
-        if (!customerName && norm?.name) customerName = norm.name;
-        if (!customerPhone && norm?.phone) customerPhone = norm.phone;
-        if (!flat && norm?.flat) flat = norm.flat;
-        if (!street && norm?.street) street = norm.street;
-      }
-    } catch (e) {}
-  }
-
-  const pincodeInput = document.getElementById('addr-pincode');
-  let pincode = pincodeInput ? pincodeInput.value.trim() : (state.deliveryAddress?.pincode || '');
-
-  // 4. Fill values back into DOM inputs so the customer sees them
-  if (nameInput && customerName && !nameInput.value) nameInput.value = customerName;
-  if (phoneInput && customerPhone && !phoneInput.value) phoneInput.value = customerPhone;
-  if (flatInput && flat && !flatInput.value) flatInput.value = flat;
-  if (streetInput && street && !streetInput.value) streetInput.value = street;
-  if (landmarkInput && landmark && !landmarkInput.value) landmarkInput.value = landmark;
-  if (notesInput && notes && !notesInput.value) notesInput.value = notes;
-  if (pincodeInput && pincode && !pincodeInput.value) pincodeInput.value = pincode;
-
-  if (!customerPhone || !flat) {
-    const addrSection = document.getElementById('address-section-drawer');
-    if (addrSection) {
-      addrSection.scrollIntoView({ behavior: 'smooth' });
+    if (typeof openAddressPickerModal === 'function') {
+      openAddressPickerModal();
+    } else {
+      alert("Please select or enter your delivery address!");
     }
-    alert("Please fill your mobile number and house/flat address for grocery delivery!");
     return null;
   }
 
   state.deliveryAddress = {
     name: customerName || 'Valued Customer',
     phone: customerPhone,
+    receiverName: customerName || 'Valued Customer',
+    receiverPhone: customerPhone,
+    placedByName: customerName || 'Valued Customer',
+    placedByPhone: customerPhone,
+    isFriendOrder: false,
+    tag: 'Home',
     flat,
     street: street || 'Main Road',
     landmark,
-    pincode,
+    pincode: '',
     gpsCoords: state.userGpsCoords || null,
     instructions: notes || 'Leave at door & ring bell'
   };
   localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
 
-  // Sync to Cloud RTDB and local users
   if (typeof syncCustomerToCloud === 'function') {
     syncCustomerToCloud(state.deliveryAddress);
   }
@@ -1226,10 +1938,23 @@ function handleUnifiedCheckout() {
     return;
   }
 
+  // Check login
+  if (!state.currentUser) {
+    openLoginModal();
+    return;
+  }
+
+  // Check address presence
+  if (!state.deliveryAddress || (!state.deliveryAddress.flat && !state.deliveryAddress.street)) {
+    openAddressPickerModal();
+    return;
+  }
+
   // Strict 5 km Outlet Delivery Boundary Enforcement
   const zoneCheck = validateDeliveryZone();
   if (!zoneCheck.isWithin) {
     alert(`🚫 Delivery Restricted Outside 5 KM Boundary!\n\n${zoneCheck.message}\n\nPlease choose an address within 5.0 km of our dark store.`);
+    openAddressPickerModal();
     return;
   }
 
@@ -1331,7 +2056,7 @@ function processOrderCompletion(orderId, summary, customer, paymentDetails) {
   const dateStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   // Build clean, professional WhatsApp Message
-  let message = `🛒 *NEW ORDER: Rasoee Fresh SUPERMARKET*\n`;
+  let message = `🛒 *NEW ORDER: ${state.config.storeName || 'Rasoee Fresh Supermarket'}*\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   message += `🔖 *Order ID:* #${orderId}\n`;
   message += `⏰ *Time:* ${dateStr} \n\n`;
@@ -1341,11 +2066,21 @@ function processOrderCompletion(orderId, summary, customer, paymentDetails) {
   message += `• Method: ${paymentDetails.method}\n`;
   if (paymentDetails.paymentId) message += `• Transaction/Ref ID: \`${paymentDetails.paymentId}\`\n\n`;
 
-  message += `👤 *CUSTOMER DETAILS:*\n`;
-  message += `• Name: *${customer.name}*\n`;
-  if (customer.phone) message += `• Phone: *${customer.phone}*\n`;
+  message += `📍 *DELIVERY & CONTACT DETAILS:*\n`;
+  if (customer.isFriendOrder) {
+    message += `• 🎁 *ORDER TYPE: DELIVER TO FRIEND*\n`;
+    message += `• Deliver To (Recipient): *${customer.receiverName || customer.name}*\n`;
+    message += `• Recipient Phone: *${customer.receiverPhone || customer.phone}* (📞 Call on Arrival)\n`;
+    message += `• Placed By: ${customer.placedByName || 'Customer'} (${customer.placedByPhone || ''})\n`;
+  } else {
+    message += `• Customer Name: *${customer.name}*\n`;
+    if (customer.phone) message += `• Phone: *${customer.phone}*\n`;
+  }
+  message += `• Address Type: *${customer.tag || 'Home'}*\n`;
   message += `• Address: ${customer.flat ? customer.flat + ', ' : ''}${customer.street ? customer.street : 'Store Area'}\n`;
   if (customer.landmark) message += `• Landmark: ${customer.landmark}\n`;
+  if (customer.distanceKm != null) message += `• Distance: *${customer.distanceKm} km from dark store* (Inside 5 km zone)\n`;
+  if (customer.mapUrl) message += `• 📍 GPS Pin: ${customer.mapUrl}\n`;
   if (customer.instructions) message += `• Instructions: ${customer.instructions}\n\n`;
 
   message += `🛍️ *ITEMS ORDERED:*\n`;
@@ -1701,35 +2436,22 @@ async function handleModalVerifyOtp() {
 
 function handleModalSaveProfile() {
   const name = document.getElementById('modal-profile-name')?.value.trim();
-  const flat = document.getElementById('modal-profile-flat')?.value.trim();
-  const street = document.getElementById('modal-profile-street')?.value.trim() || '';
-  const landmark = document.getElementById('modal-profile-landmark')?.value.trim() || '';
-  const tag = document.getElementById('modal-profile-tag')?.value || 'Home';
-  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
-
-  if (!name || !flat) {
-    alert("Please enter your name and flat/house number.");
+  if (!name) {
+    alert("Please enter your name to start shopping.");
+    document.getElementById('modal-profile-name')?.focus();
     return;
   }
+  const cleanPhone = String(modalActivePhone || '').replace(/\D/g, '').slice(-10);
 
   const newUser = normalizeCustomerData({
     id: 'usr_' + Date.now().toString().slice(-6),
     name: name,
-    phone: modalActivePhone,
-    flat: flat,
-    street: street,
-    landmark: landmark,
+    phone: cleanPhone,
+    flat: '',
+    street: '',
+    landmark: '',
     instructions: 'Leave at door & ring bell',
-    address: {
-      flat: flat,
-      street: street,
-      landmark: landmark,
-      city: defaultCity,
-      tag: tag
-    },
-    savedAddresses: [
-      { type: tag, flat: flat, street: street, landmark: landmark, city: defaultCity, isDefault: true }
-    ],
+    savedAddresses: [],
     createdAt: new Date().toISOString(),
     orderCount: 0
   });
@@ -1740,8 +2462,8 @@ function handleModalSaveProfile() {
   } catch (e) {
     users = [];
   }
-  const idx = users.findIndex(u => u.phone === modalActivePhone);
-  if (idx >= 0) users[idx] = newUser;
+  const idx = users.findIndex(u => u.phone === cleanPhone);
+  if (idx >= 0) users[idx] = { ...users[idx], ...newUser };
   else users.push(newUser);
   localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
@@ -1752,7 +2474,7 @@ function handleModalSaveProfile() {
 
   setCustomerSession(newUser);
   closeLoginModal();
-  alert(`Welcome to Rasoee Fresh Supermarket, ${newUser.name}! 🛒`);
+  alert(`Welcome to ${state.config?.storeName || 'Rasoee Fresh Supermarket'}, ${newUser.name}! 🛒`);
 }
 
 function quickModalLogin(name, phone, flat) {
@@ -1792,16 +2514,32 @@ function setCustomerSession(user) {
 
   state.currentUser = normalized;
   localStorage.setItem('Rasoee_current_user', JSON.stringify(normalized));
-  
-  state.deliveryAddress = {
-    name: normalized.name || '',
-    phone: normalized.phone || '',
-    flat: normalized.flat || '',
-    street: normalized.street || '',
-    landmark: normalized.landmark || '',
-    instructions: normalized.instructions || 'Leave at door & ring bell'
-  };
-  localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
+
+  // Blinkit/Zepto multiple address support: select default or first saved address
+  if (Array.isArray(normalized.savedAddresses) && normalized.savedAddresses.length > 0) {
+    const active = normalized.savedAddresses.find(a => a.isDefault) || normalized.savedAddresses[0];
+    state.deliveryAddress = { ...active };
+    state.selectedAddressId = active.id;
+  } else if (normalized.flat || normalized.street) {
+    state.deliveryAddress = {
+      name: normalized.name || '',
+      phone: normalized.phone || '',
+      flat: normalized.flat || '',
+      street: normalized.street || '',
+      landmark: normalized.landmark || '',
+      instructions: normalized.instructions || 'Leave at door & ring bell'
+    };
+    state.selectedAddressId = null;
+  } else {
+    state.deliveryAddress = null;
+    state.selectedAddressId = null;
+  }
+
+  if (state.deliveryAddress) {
+    localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
+  } else {
+    localStorage.removeItem('Rasoee_address');
+  }
 
   // Update in Rasoee_users directory
   let users = [];
@@ -1813,6 +2551,8 @@ function setCustomerSession(user) {
 
   // Auto-populate cart drawer delivery fields immediately
   populateAddressFormInputs(normalized);
+  renderSelectedAddressInDrawer();
+  updateCheckoutButtonText();
 
   updateHeaderUserUI();
   populateCustomerSettingsForm();

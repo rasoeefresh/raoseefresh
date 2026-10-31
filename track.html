@@ -506,7 +506,17 @@
 
       // Customer Address
       if (order.customer) {
-        document.getElementById('delivery-customer-name').textContent = order.customer.name || 'Valued Customer';
+        const isFriend = !!(order.customer.isFriendOrder || order.customer.tag === 'Friend');
+        const recName = order.customer.receiverName || order.customer.name || 'Valued Customer';
+        if (isFriend) {
+          document.getElementById('delivery-customer-name').innerHTML = `
+            <span>${escapeHtml(recName)}</span>
+            <span class="text-[10px] bg-amber-100 text-amber-900 font-extrabold px-2 py-0.5 rounded-full border border-amber-300 ml-1">🎁 Friend Delivery</span>
+            <div class="text-[11px] text-gray-500 font-normal">Ordered with ❤️ by ${escapeHtml(order.customer.placedByName || 'Friend')}</div>
+          `;
+        } else {
+          document.getElementById('delivery-customer-name').textContent = recName;
+        }
         let flat = order.customer.flat || '';
         let street = order.customer.street || '';
         if (!flat && order.customer.address) {
@@ -518,9 +528,10 @@
           }
         }
         const landmark = order.customer.landmark ? ` (Near ${order.customer.landmark})` : '';
-        const fullAddr = `${flat}${street ? ', ' + street : ''}${landmark}`.trim() || 'Customer Delivery Address';
+        const dist = order.customer.distanceKm != null ? ` • ${order.customer.distanceKm} km from dark store` : '';
+        const fullAddr = `${flat}${street ? ', ' + street : ''}${landmark}${dist}`.trim() || 'Customer Delivery Address';
         document.getElementById('delivery-address-full').textContent = fullAddr;
-        document.getElementById('display-map-flat').textContent = flat || 'Home';
+        document.getElementById('display-map-flat').textContent = flat || (isFriend ? 'Friend' : 'Home');
         
         if (order.customer.instructions) {
           document.getElementById('delivery-instructions-box').innerHTML = `🔔 <em>"${escapeHtml(order.customer.instructions)}"</em>`;

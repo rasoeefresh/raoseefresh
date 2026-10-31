@@ -616,7 +616,7 @@
 
       <!-- Promotional Hero Banners -->
       <div class="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm space-y-4">
-        <div class="flex items-center justify-between border-b pb-3">
+        <div class="flex items-center justify-between border-b pb-3 flex-wrap gap-3">
           <div>
             <h3 class="font-black text-base text-gray-900 flex items-center gap-2">
               <span>🎨</span>
@@ -624,9 +624,15 @@
             </h3>
             <p class="text-xs text-gray-500">Edit titles, taglines, gradients and actions of promotional banners</p>
           </div>
-          <button onclick="openBannerModal()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-sm flex items-center gap-1">
-            <span>+ Add Banner</span>
-          </button>
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-2 cursor-pointer bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-xl hover:bg-gray-100 transition-colors">
+              <input type="checkbox" id="master-banners-toggle" onchange="toggleMasterBanners(this.checked)" class="w-4 h-4 rounded text-blinkit-green focus:ring-green-400 accent-emerald-600">
+              <span class="text-xs font-bold text-gray-800">Show Banners on Storefront</span>
+            </label>
+            <button onclick="openBannerModal()" class="bg-blinkit-green hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-sm flex items-center gap-1 cursor-pointer">
+              <span>+ Add Banner</span>
+            </button>
+          </div>
         </div>
 
         <div class="space-y-4" id="banners-editor-list">
@@ -1254,27 +1260,31 @@
                 <p class="text-[10px] text-gray-400 mt-1">Orders beyond this exact distance will be automatically restricted.</p>
               </div>
 
+              <div class="flex items-center justify-between">
+                <label class="block font-bold text-gray-700">Store GPS Coordinates *</label>
+                <button type="button" onclick="detectStoreGpsLocation()" class="text-[11px] font-extrabold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer">
+                  <span>📍</span> <span>Detect Current GPS</span>
+                </button>
+              </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block font-bold text-gray-700 mb-1">Store GPS Latitude *</label>
+                  <label class="block text-[11px] font-bold text-gray-600 mb-1">Latitude</label>
                   <input 
                     type="number" 
                     id="outlet-store-lat" 
-                    step="0.0001"
-                    value="12.9116"
+                    step="0.000001"
                     class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-semibold"
-                    placeholder="12.9116"
+                    placeholder="e.g. 12.9116"
                   />
                 </div>
                 <div>
-                  <label class="block font-bold text-gray-700 mb-1">Store GPS Longitude *</label>
+                  <label class="block text-[11px] font-bold text-gray-600 mb-1">Longitude</label>
                   <input 
                     type="number" 
                     id="outlet-store-lng" 
-                    step="0.0001"
-                    value="77.6389"
+                    step="0.000001"
                     class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono font-semibold"
-                    placeholder="77.6389"
+                    placeholder="e.g. 77.6389"
                   />
                 </div>
               </div>
@@ -2766,6 +2776,27 @@
       productsList = typeof getStoredProducts === 'function' ? getStoredProducts() : [];
       categoriesList = typeof getStoredCategories === 'function' ? getStoredCategories() : [];
       bannersList = typeof getStoredBanners === 'function' ? getStoredBanners() : [];
+
+      // Async cloud sync for store config & banners
+      if (typeof fetchConfigFromCloud === 'function') {
+        fetchConfigFromCloud().then(cfg => {
+          if (cfg) {
+            currentConfig = cfg;
+            populateOutletSettings();
+            const bannerMasterToggle = document.getElementById('master-banners-toggle');
+            if (bannerMasterToggle) bannerMasterToggle.checked = currentConfig.showBanners !== false;
+          }
+        }).catch(() => {});
+      }
+      if (typeof fetchBannersFromCloud === 'function') {
+        fetchBannersFromCloud().then(cloudBanners => {
+          if (Array.isArray(cloudBanners)) {
+            bannersList = cloudBanners;
+            renderBannersList();
+          }
+        }).catch(() => {});
+      }
+
       if (typeof fetchProductsFromCloud === 'function') {
         fetchProductsFromCloud().then(cloudProds => {
           if (cloudProds && cloudProds.length > 0) {
@@ -2813,11 +2844,13 @@
       const opMaxRad = document.getElementById('op-max-radius');
       if (opMaxRad) opMaxRad.value = currentConfig.deliveryZone?.maxRadiusKm || 5.0;
 
-      // Populate Announcement
+      // Populate Announcement & Banners
       const annInput = document.getElementById('announcement-text-input');
       const annToggle = document.getElementById('announcement-toggle');
       if (annInput) annInput.value = currentConfig.storeNotice || '';
       if (annToggle) annToggle.checked = currentConfig.showAnnouncementBar !== false;
+      const bannerMasterToggle = document.getElementById('master-banners-toggle');
+      if (bannerMasterToggle) bannerMasterToggle.checked = currentConfig.showBanners !== false;
 
       // Populate Payment Fields
       document.getElementById('pay-upi-id').value = currentConfig.payment?.upiId || 'Rasoeefresh@upi';
@@ -3968,6 +4001,42 @@
       updateStoreConfig({ showAnnouncementBar: checked });
     }
 
+    function toggleMasterBanners(enabled) {
+      currentConfig.showBanners = enabled;
+      updateStoreConfig({ showBanners: enabled });
+      if (typeof syncConfigToCloud === 'function') {
+        syncConfigToCloud(currentConfig);
+      }
+      alert(enabled ? "✅ Promotional banners are now VISIBLE on storefront across all devices!" : "🚫 Promotional banners are now HIDDEN on storefront across all devices!");
+    }
+
+    function detectStoreGpsLocation() {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+      const latEl = document.getElementById('outlet-store-lat');
+      const lngEl = document.getElementById('outlet-store-lng');
+      if (latEl) latEl.placeholder = "Detecting...";
+      if (lngEl) lngEl.placeholder = "Detecting...";
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = parseFloat(pos.coords.latitude.toFixed(6));
+          const lng = parseFloat(pos.coords.longitude.toFixed(6));
+          if (latEl) latEl.value = lat;
+          if (lngEl) lngEl.value = lng;
+          alert(`📍 Store coordinates captured!\nLatitude: ${lat}\nLongitude: ${lng}\nRemember to click 'Save Outlet & Store Settings' to apply.`);
+        },
+        (err) => {
+          alert(`Could not detect GPS location: ${err.message}. Please enter manually or check location permissions.`);
+          if (latEl) latEl.placeholder = "e.g. 12.9116";
+          if (lngEl) lngEl.placeholder = "e.g. 77.6389";
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
     // ================= OPERATIONS & DELIVERY SETTINGS =================
     function saveOperationsSettings() {
       const status = document.getElementById('op-store-status').value;
@@ -4170,11 +4239,18 @@
                 </button>
               </td>
               <td class="p-3">
-                <div class="font-bold text-gray-900">${escapeHtml(order.customer?.name || 'Customer')}</div>
-                <div class="text-[11px] text-gray-500 font-mono">${order.customer?.phone || 'No phone'}</div>
+                <div class="flex items-center gap-1 flex-wrap">
+                  <span class="font-bold text-gray-900">${escapeHtml(order.customer?.receiverName || order.customer?.name || 'Customer')}</span>
+                  ${order.customer?.isFriendOrder ? '<span class="text-[9px] bg-amber-100 text-amber-900 font-extrabold px-1.5 py-0.5 rounded border border-amber-300">🎁 Friend</span>' : ''}
+                </div>
+                <div class="text-[11px] text-gray-500 font-mono">
+                  <a href="tel:${order.customer?.receiverPhone || order.customer?.phone || ''}" class="hover:text-blinkit-green hover:underline">📞 ${order.customer?.receiverPhone || order.customer?.phone || 'No phone'}</a>
+                </div>
+                ${order.customer?.isFriendOrder && order.customer?.placedByName ? `<div class="text-[10px] text-gray-400">By: ${escapeHtml(order.customer.placedByName)} (${order.customer.placedByPhone || ''})</div>` : ''}
               </td>
               <td class="p-3 max-w-[150px] truncate text-gray-600" title="${escapeHtml(order.customer?.flat || '')} ${escapeHtml(order.customer?.street || '')}">
-                ${escapeHtml(order.customer?.flat || '')} ${escapeHtml(order.customer?.street || '')}
+                <div>${escapeHtml(order.customer?.flat || '')} ${escapeHtml(order.customer?.street || '')}</div>
+                ${order.customer?.distanceKm != null ? `<div class="text-[10px] text-emerald-700 font-bold">${order.customer.distanceKm} km from store</div>` : ''}
               </td>
               <td class="p-3 max-w-[180px] truncate" title="${escapeHtml(itemsText)}">
                 <span class="font-medium text-gray-800">${escapeHtml(itemsText)}</span>
@@ -4428,8 +4504,22 @@
       }
 
       // Customer info
-      document.getElementById('admin-modal-cust-name').textContent = order.customer?.name || 'Customer';
-      document.getElementById('admin-modal-cust-phone').textContent = order.customer?.phone ? '+91 ' + order.customer.phone : 'Not provided';
+      if (order.customer?.isFriendOrder) {
+        document.getElementById('admin-modal-cust-name').innerHTML = `
+          <span>${escapeHtml(order.customer.receiverName || order.customer.name)}</span>
+          <span class="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300 font-extrabold ml-1">🎁 Deliver to Friend</span>
+          <div class="text-[11px] text-gray-500 font-normal">Ordered By: ${escapeHtml(order.customer.placedByName || 'Customer')} (${order.customer.placedByPhone || ''})</div>
+        `;
+        document.getElementById('admin-modal-cust-phone').innerHTML = `
+          <a href="tel:${order.customer.receiverPhone || order.customer.phone}" class="text-blinkit-green hover:underline font-bold">
+            📞 +91 ${order.customer.receiverPhone || order.customer.phone}
+          </a>
+          <span class="text-[10px] text-gray-500 block">(Friend's Contact Number for Delivery Rider)</span>
+        `;
+      } else {
+        document.getElementById('admin-modal-cust-name').textContent = order.customer?.name || 'Customer';
+        document.getElementById('admin-modal-cust-phone').innerHTML = order.customer?.phone ? `<a href="tel:${order.customer.phone}" class="text-blinkit-green hover:underline">📞 +91 ${order.customer.phone}</a>` : 'Not provided';
+      }
       
       let addrStr = '';
       if (order.customer) {
@@ -4441,8 +4531,14 @@
           addrStr = `${order.customer.flat || ''}, ${order.customer.street || ''}`;
         }
         if (order.customer.landmark) addrStr += ` (Landmark: ${order.customer.landmark})`;
+        if (order.customer.distanceKm != null) addrStr += ` • ${order.customer.distanceKm} km from dark store`;
       }
-      document.getElementById('admin-modal-cust-address').textContent = addrStr || 'Standard Dark Store Service Area';
+      if (order.customer?.mapUrl) {
+        addrStr += ` • <a href="${order.customer.mapUrl}" target="_blank" class="text-blue-600 underline font-bold ml-1">📍 View GPS Pin on Google Maps</a>`;
+        document.getElementById('admin-modal-cust-address').innerHTML = addrStr || 'Standard Dark Store Service Area';
+      } else {
+        document.getElementById('admin-modal-cust-address').textContent = addrStr || 'Standard Dark Store Service Area';
+      }
 
       const instrBox = document.getElementById('admin-modal-instructions-container');
       const instrText = document.getElementById('admin-modal-instructions');
@@ -4456,7 +4552,8 @@
       // Phone call button
       const callBtn = document.getElementById('admin-modal-call-btn');
       if (callBtn) {
-        callBtn.href = order.customer?.phone ? `tel:+91${order.customer.phone.replace(/\D/g,'')}` : '#';
+        const ph = order.customer?.receiverPhone || order.customer?.phone;
+        callBtn.href = ph ? `tel:+91${ph.replace(/\D/g,'')}` : '#';
       }
 
       // Rider details (no hardcoded demo rider)

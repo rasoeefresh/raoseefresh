@@ -93,6 +93,7 @@ const DEFAULT_CONFIG = {
   closingTime: "11:30 PM",
   deliveryTimeEstimate: "Standard Delivery",
   isStoreOpen: true, // Emergency store toggle
+  showBanners: true, // Master Promotional Banners visibility toggle
   storeNotice: "⚡ Farm fresh morning vegetables harvested & in stock! Delivered fresh to your doorstep.",
   showAnnouncementBar: false,
   minOrderValue: 99,
@@ -212,6 +213,9 @@ function updateStoreConfig(newConfig) {
     }
     if (typeof saveToIndexedDB === "function") {
       saveToIndexedDB("raosee_fresh_config", merged);
+    }
+    if (typeof syncConfigToCloud === "function") {
+      syncConfigToCloud(merged);
     }
     if (typeof syncToCloud === "function") {
       syncToCloud();
@@ -333,6 +337,9 @@ function saveCategories(categories) {
     if (typeof saveToIndexedDB === "function") {
       saveToIndexedDB("raosee_categories", categories);
     }
+    if (typeof syncConfigToCloud === "function") {
+      syncConfigToCloud(merged);
+    }
     if (typeof syncToCloud === "function") {
       syncToCloud();
     }
@@ -347,10 +354,10 @@ function saveCategories(categories) {
 // Banners storage
 function getStoredBanners() {
   try {
-    const saved = (localStorage.getItem("rasoee_banners") || localStorage.getItem("raosee_banners"));
-    if (saved) {
+    const saved = (localStorage.getItem("rasoee_banners") || localStorage.getItem("raosee_banners") || localStorage.getItem("Rasoee_banners"));
+    if (saved !== null && saved !== undefined) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
     console.warn("Could not load banners", e);
@@ -360,9 +367,16 @@ function getStoredBanners() {
 
 function saveBanners(banners) {
   try {
-    localStorage.setItem("rasoee_banners", JSON.stringify(banners)); localStorage.setItem("raosee_banners", JSON.stringify(banners));
+    const list = Array.isArray(banners) ? banners : [];
+    localStorage.setItem("rasoee_banners", JSON.stringify(list)); 
+    localStorage.setItem("raosee_banners", JSON.stringify(list));
+    localStorage.setItem("Rasoee_banners", JSON.stringify(list));
     if (typeof saveToIndexedDB === "function") {
-      saveToIndexedDB("raosee_banners", banners);
+      saveToIndexedDB("raosee_banners", list);
+      saveToIndexedDB("rasoee_banners", list);
+    }
+    if (typeof syncBannersToCloud === "function") {
+      syncBannersToCloud(list);
     }
     if (typeof syncToCloud === "function") {
       syncToCloud();
@@ -622,6 +636,103 @@ async function fetchProductsFromCloud() {
   return null;
 }
 
+async function syncConfigToCloud(config) {
+  try {
+    const rawCfg = config || (typeof getStoreConfig === "function" ? getStoreConfig() : DEFAULT_CONFIG);
+    const safeConfig = JSON.parse(JSON.stringify(rawCfg));
+    if (safeConfig.security) {
+      delete safeConfig.security.adminPassword;
+      delete safeConfig.security.adminPin;
+      delete safeConfig.security.operatorPassword;
+      delete safeConfig.security.operatorPin;
+    }
+    if (safeConfig.smsGateway) {
+      delete safeConfig.smsGateway.fast2smsApiKey;
+      delete safeConfig.smsGateway.twoFactorApiKey;
+      delete safeConfig.smsGateway.customGatewayUrl;
+    }
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/config.json";
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(safeConfig)
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("Direct config cloud sync error:", e);
+    return false;
+  }
+}
+
+async function fetchConfigFromCloud() {
+  try {
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/config.json?_t=" + Date.now();
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        let currentCfg = {};
+        try {
+          currentCfg = JSON.parse(localStorage.getItem("raosee_fresh_config") || localStorage.getItem("rasoee_fresh_config") || '{}');
+        } catch(e) {}
+        const mergedConfig = {
+          ...DEFAULT_CONFIG,
+          ...data,
+          deliveryZone: { ...DEFAULT_CONFIG.deliveryZone, ...(data.deliveryZone || {}) },
+          payment: { ...DEFAULT_CONFIG.payment, ...(data.payment || {}) },
+          outletAddress: { ...DEFAULT_CONFIG.outletAddress, ...(data.outletAddress || {}) },
+          cloudSync: { ...DEFAULT_CONFIG.cloudSync, ...(data.cloudSync || {}) },
+          security: (currentCfg && currentCfg.security) ? currentCfg.security : (DEFAULT_CONFIG.security || {}),
+          smsGateway: (currentCfg && currentCfg.smsGateway) ? currentCfg.smsGateway : (DEFAULT_CONFIG.smsGateway || {})
+        };
+        localStorage.setItem("raosee_fresh_config", JSON.stringify(mergedConfig));
+        localStorage.setItem("rasoee_fresh_config", JSON.stringify(mergedConfig));
+        try { window.dispatchEvent(new Event("storage")); } catch (e) {}
+        return mergedConfig;
+      }
+    }
+  } catch (e) {
+    console.warn("Direct config cloud fetch error:", e);
+  }
+  return null;
+}
+
+async function syncBannersToCloud(banners) {
+  try {
+    const list = Array.isArray(banners) ? banners : (typeof getStoredBanners === 'function' ? getStoredBanners() : []);
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/banners.json";
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list)
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("Direct banners cloud sync error:", e);
+    return false;
+  }
+}
+
+async function fetchBannersFromCloud() {
+  try {
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/banners.json?_t=" + Date.now();
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        localStorage.setItem("raosee_banners", JSON.stringify(data));
+        localStorage.setItem("rasoee_banners", JSON.stringify(data));
+        localStorage.setItem("Rasoee_banners", JSON.stringify(data));
+        try { window.dispatchEvent(new Event("storage")); } catch (e) {}
+        return data;
+      }
+    }
+  } catch (e) {
+    console.warn("Direct banners cloud fetch error:", e);
+  }
+  return null;
+}
+
 async function syncFromCloud() {
   const syncCfg = getCloudSyncConfig();
   if (!syncCfg || !syncCfg.enabled) return false;
@@ -681,7 +792,7 @@ async function syncFromCloud() {
         localStorage.setItem("rasoee_categories", JSON.stringify(data.categories));
         hasChanges = true;
       }
-      if (Array.isArray(data.banners) && data.banners.length > 0) {
+      if (Array.isArray(data.banners)) {
         localStorage.setItem("raosee_banners", JSON.stringify(data.banners));
         localStorage.setItem("rasoee_banners", JSON.stringify(data.banners));
         localStorage.setItem("Rasoee_banners", JSON.stringify(data.banners));
@@ -793,6 +904,9 @@ function saveProducts(products) {
       saveToIndexedDB("rasoee_fresh_products", products);
       saveToIndexedDB("raosee_fresh_products", products);
     }
+    if (typeof syncConfigToCloud === "function") {
+      syncConfigToCloud(merged);
+    }
     if (typeof syncToCloud === "function") {
       syncToCloud();
     }
@@ -878,6 +992,9 @@ function updateStoreConfig(newConfig) {
     if (typeof saveToIndexedDB === "function") {
       saveToIndexedDB("raosee_fresh_config", merged);
     }
+    if (typeof syncConfigToCloud === "function") {
+      syncConfigToCloud(merged);
+    }
     if (typeof syncToCloud === "function") {
       syncToCloud();
     }
@@ -907,9 +1024,11 @@ function getStoredCategories() {
 
 function saveCategories(categories) {
   try {
-    localStorage.setItem("rasoee_categories", JSON.stringify(categories)); localStorage.setItem("raosee_categories", JSON.stringify(categories));
+    const list = Array.isArray(categories) ? categories : [];
+    localStorage.setItem("rasoee_categories", JSON.stringify(list)); 
+    localStorage.setItem("raosee_categories", JSON.stringify(list));
     if (typeof saveToIndexedDB === "function") {
-      saveToIndexedDB("raosee_categories", categories);
+      saveToIndexedDB("raosee_categories", list);
     }
     if (typeof syncToCloud === "function") {
       syncToCloud();
@@ -923,9 +1042,9 @@ function saveCategories(categories) {
 function getStoredBanners() {
   try {
     const saved = (localStorage.getItem("rasoee_banners") || localStorage.getItem("raosee_banners") || localStorage.getItem("Rasoee_banners"));
-    if (saved) {
+    if (saved !== null && saved !== undefined) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
     console.warn("Could not load banners", e);
@@ -935,12 +1054,16 @@ function getStoredBanners() {
 
 function saveBanners(banners) {
   try {
-    localStorage.setItem("rasoee_banners", JSON.stringify(banners));
-    localStorage.setItem("raosee_banners", JSON.stringify(banners));
-    localStorage.setItem("Rasoee_banners", JSON.stringify(banners));
+    const list = Array.isArray(banners) ? banners : [];
+    localStorage.setItem("rasoee_banners", JSON.stringify(list));
+    localStorage.setItem("raosee_banners", JSON.stringify(list));
+    localStorage.setItem("Rasoee_banners", JSON.stringify(list));
     if (typeof saveToIndexedDB === "function") {
-      saveToIndexedDB("raosee_banners", banners);
-      saveToIndexedDB("rasoee_banners", banners);
+      saveToIndexedDB("raosee_banners", list);
+      saveToIndexedDB("rasoee_banners", list);
+    }
+    if (typeof syncBannersToCloud === "function") {
+      syncBannersToCloud(list);
     }
     if (typeof syncToCloud === "function") {
       syncToCloud();
@@ -1189,9 +1312,9 @@ async function syncCustomerToCloud(customer) {
       city: city,
       pincode: pincode
     },
-    savedAddresses: [
-      { type: 'Home', flat: flat, street: street, landmark: landmark, city: city, isDefault: true }
-    ],
+    savedAddresses: Array.isArray(customerObj.savedAddresses) && customerObj.savedAddresses.length > 0
+      ? customerObj.savedAddresses
+      : (flat ? [{ type: 'Home', tag: 'Home', receiverName: name, receiverPhone: cleanPhone, flat, street, landmark, city, isDefault: true }] : []),
     updatedAt: new Date().toISOString()
   };
 
@@ -1217,7 +1340,7 @@ async function fetchCustomerFromCloud(phone) {
     const res = await fetch(`${CLOUD_RTDB_BASE}/customers/${cleanPhone}.json?_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      if (data && typeof data === 'object' && (data.name || data.flat || (data.address && (data.address.flat || data.address.street)))) {
+      if (data && typeof data === 'object' && (data.name || data.flat || (data.address && (data.address.flat || data.address.street)) || (Array.isArray(data.savedAddresses) && data.savedAddresses.length > 0))) {
         const flat = data.flat || (data.address && typeof data.address === 'object' ? data.address.flat : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].flat : '') || (typeof data.address === 'string' ? data.address.split(',')[0].trim() : '') || '';
         const street = data.street || (data.address && typeof data.address === 'object' ? data.address.street : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].street : '') || (typeof data.address === 'string' ? data.address.split(',').slice(1).join(',').trim() : '') || '';
         const landmark = data.landmark || (data.address && typeof data.address === 'object' ? data.address.landmark : '') || (data.savedAddresses && data.savedAddresses[0] ? data.savedAddresses[0].landmark : '') || '';
@@ -1227,6 +1350,9 @@ async function fetchCustomerFromCloud(phone) {
         const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
         const city = data.city || (data.address && typeof data.address === 'object' ? data.address.city : '') || defaultCity;
         const pincode = data.pincode || (data.address && typeof data.address === 'object' ? data.address.pincode : '') || defaultPin;
+        const savedAddresses = Array.isArray(data.savedAddresses) && data.savedAddresses.length > 0
+          ? data.savedAddresses
+          : (flat ? [{ type: 'Home', tag: 'Home', receiverName: name, receiverPhone: cleanPhone, flat, street, landmark, city, isDefault: true }] : []);
 
         return {
           id: data.id || ('usr_' + cleanPhone.slice(-4)),
@@ -1239,7 +1365,7 @@ async function fetchCustomerFromCloud(phone) {
           city: city,
           pincode: pincode,
           address: { flat, street, landmark, city, pincode },
-          savedAddresses: [{ type: 'Home', flat, street, landmark, city, isDefault: true }],
+          savedAddresses: savedAddresses,
           updatedAt: data.updatedAt || new Date().toISOString()
         };
       }
@@ -1552,6 +1678,10 @@ if (typeof window !== "undefined") {
   window.verifyAdminCredentialsWithCloud = verifyAdminCredentialsWithCloud;
   window.syncCartToCloud = syncCartToCloud;
   window.fetchCartFromCloud = fetchCartFromCloud;
+  window.syncConfigToCloud = syncConfigToCloud;
+  window.fetchConfigFromCloud = fetchConfigFromCloud;
+  window.syncBannersToCloud = syncBannersToCloud;
+  window.fetchBannersFromCloud = fetchBannersFromCloud;
   initDemoDataIfEmpty();
 }
 
@@ -1566,6 +1696,10 @@ if (typeof module !== "undefined" && module.exports) {
     saveCategories,
     getStoredBanners,
     saveBanners,
+    syncConfigToCloud,
+    fetchConfigFromCloud,
+    syncBannersToCloud,
+    fetchBannersFromCloud,
     initDemoDataIfEmpty,
     getAdminSecurityConfig,
     verifyAdminCredentials,
