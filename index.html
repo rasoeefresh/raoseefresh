@@ -1517,6 +1517,59 @@
 
         <!-- TAB 1: DROP PIN ON MAP & ADDRESS DETAILS -->
         <div id="addr-view-map" class="space-y-3.5">
+
+          <!-- Step 1: Type Address to Guide Map Pin -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-black uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
+                <span class="bg-[#0C831F] text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-black">1</span>
+                <span>Type Area or Building to Guide Pin</span>
+              </label>
+              <span class="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                ⚡ Guided Drop Pin
+              </span>
+            </div>
+
+            <!-- Search Input with Live Autocomplete -->
+            <div class="relative">
+              <div class="flex items-center gap-2 bg-white border-2 border-emerald-500 rounded-2xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-emerald-400 focus-within:border-emerald-600 transition-all">
+                <span class="text-base pl-1 text-emerald-600">🔍</span>
+                <input 
+                  type="text" 
+                  id="map-search-input" 
+                  placeholder="Type locality, colony, society or landmark (e.g. Kondhwa, Bibwewadi)..." 
+                  autocomplete="off"
+                  class="flex-1 outline-none text-xs font-semibold text-gray-900 placeholder-gray-400 bg-transparent"
+                  oninput="handleAddressSearchInput(this.value)"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();searchAndGuideMapPin(this.value);}"
+                />
+                <button 
+                  type="button" 
+                  id="btn-map-search-guide"
+                  onclick="searchAndGuideMapPin(document.getElementById('map-search-input').value)" 
+                  class="px-3.5 py-1.5 bg-[#0C831F] hover:bg-emerald-800 active:scale-95 text-white font-black text-xs rounded-xl transition-all cursor-pointer shadow-xs flex-shrink-0 flex items-center gap-1"
+                >
+                  <span>Guide Pin 📍</span>
+                </button>
+              </div>
+
+              <!-- Autocomplete Suggestions Dropdown -->
+              <div id="map-search-suggestions" class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[1000] max-h-56 overflow-y-auto hidden divide-y divide-gray-100">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 Header -->
+          <div class="flex items-center justify-between text-[11px] font-bold text-gray-700 pt-0.5">
+            <div class="flex items-center gap-1.5">
+              <span class="bg-blue-600 text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-black">2</span>
+              <span>After approaching area, drag pin 📍 to exact house / gate</span>
+            </div>
+            <span class="text-[10px] text-emerald-700 font-extrabold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              Must be within 5 km
+            </span>
+          </div>
           
           <!-- Leaflet Interactive Map Container -->
           <div class="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden border-2 border-gray-200 shadow-inner bg-slate-100">
@@ -1640,7 +1693,10 @@
               />
             </div>
             <div>
-              <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1">Street / Colony / Locality *</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-[10px] font-bold uppercase text-gray-600">Street / Colony / Locality *</label>
+                <button type="button" onclick="searchAndGuideMapPin(document.getElementById('map-input-street').value)" class="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer">Guide Pin 📍</button>
+              </div>
               <input 
                 type="text" 
                 id="map-input-street" 

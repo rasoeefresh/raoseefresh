@@ -1021,8 +1021,8 @@ function initDeliveryMap(targetLat, targetLng) {
   const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
 
   // Default coordinate selection
-  let initLat = targetLat || (storeLat !== 0 ? storeLat : 25.5941);
-  let initLng = targetLng || (storeLng !== 0 ? storeLng : 85.1376);
+  let initLat = targetLat || (storeLat !== 0 ? storeLat : 18.455585);
+  let initLng = targetLng || (storeLng !== 0 ? storeLng : 73.873529);
 
   if (typeof L === 'undefined') {
     container.innerHTML = `
@@ -1096,15 +1096,21 @@ function initDeliveryMap(targetLat, targetLng) {
     deliveryMarker.on('dragend', function (e) {
       const pos = e.target.getLatLng();
       currentMapCoords = { lat: pos.lat, lng: pos.lng };
-      updateMapDistanceBadge(pos.lat, pos.lng);
+      const check = updateMapDistanceBadge(pos.lat, pos.lng);
       reverseGeocode(pos.lat, pos.lng);
+      if (check.isWithin) {
+        showNotificationToast(`📍 Exact pin location locked (${check.distanceKm} km from store) ✓`);
+      }
     });
 
     deliveryMap.on('click', function (e) {
       deliveryMarker.setLatLng(e.latlng);
       currentMapCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
-      updateMapDistanceBadge(e.latlng.lat, e.latlng.lng);
+      const check = updateMapDistanceBadge(e.latlng.lat, e.latlng.lng);
       reverseGeocode(e.latlng.lat, e.latlng.lng);
+      if (check.isWithin) {
+        showNotificationToast(`📍 Pin placed at location (${check.distanceKm} km) ✓`);
+      }
     });
 
     setTimeout(() => {
@@ -1113,6 +1119,252 @@ function initDeliveryMap(targetLat, targetLng) {
   } catch (err) {
     console.warn("Leaflet map initialization error:", err);
   }
+}
+
+// ================= BLINKIT/ZEPTO GUIDED ADDRESS SEARCH & DROP PIN GUIDER =================
+let addressSearchDebounceTimer = null;
+
+function handleAddressSearchInput(query) {
+  const suggestionsBox = document.getElementById('map-search-suggestions');
+  if (!suggestionsBox) return;
+
+  if (addressSearchDebounceTimer) {
+    clearTimeout(addressSearchDebounceTimer);
+  }
+
+  const q = (query || '').trim();
+  if (q.length < 2) {
+    suggestionsBox.innerHTML = '';
+    suggestionsBox.classList.add('hidden');
+    return;
+  }
+
+  suggestionsBox.innerHTML = `
+    <div class="p-3 text-center text-gray-400 font-medium text-xs flex items-center justify-center gap-2">
+      <svg class="animate-spin h-3.5 w-3.5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+      </svg>
+      <span>Searching nearby places for "${escapeHtml(q)}"...</span>
+    </div>
+  `;
+  suggestionsBox.classList.remove('hidden');
+
+  addressSearchDebounceTimer = setTimeout(async () => {
+    try {
+      const cfg = state.config?.deliveryZone || {};
+      const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
+      const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
+      const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
+
+      // Viewbox around store: ~0.15 deg (~16 km)
+      const minLon = (storeLng - 0.15).toFixed(4);
+      const maxLat = (storeLat + 0.15).toFixed(4);
+      const maxLon = (storeLng + 0.15).toFixed(4);
+      const minLat = (storeLat - 0.15).toFixed(4);
+
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${minLon},${maxLat},${maxLon},${minLat}&bounded=0&limit=5&addressdetails=1`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+
+      if (!res.ok) {
+        suggestionsBox.classList.add('hidden');
+        return;
+      }
+
+      let data = await res.json();
+      
+      // If viewbox returned 0 results, fall back to city-level search
+      if (!Array.isArray(data) || data.length === 0) {
+        const city = state.config?.outletAddress?.city || 'Pune';
+        const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', ' + city)}&limit=5&addressdetails=1`;
+        const fallbackRes = await fetch(fallbackUrl, { headers: { 'Accept-Language': 'en' } });
+        if (fallbackRes.ok) {
+          data = await fallbackRes.json();
+        }
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        suggestionsBox.innerHTML = `
+          <div class="p-3 text-center text-gray-500 text-xs">
+            <span class="block text-gray-700 font-semibold mb-0.5">No exact area found for "${escapeHtml(q)}"</span>
+            <span class="text-[10px] text-gray-400">Click "Guide Pin" or drag the pin directly on the map.</span>
+          </div>
+        `;
+        return;
+      }
+
+      suggestionsBox.innerHTML = data.map(item => {
+        const lat = parseFloat(item.lat);
+        const lon = parseFloat(item.lon);
+        let dist = 0;
+        if (storeLat !== 0 && storeLng !== 0) {
+          dist = calculateDistanceKm(storeLat, storeLng, lat, lon);
+        }
+        const isWithin = dist <= maxRadiusKm;
+        
+        const nameParts = (item.display_name || '').split(',');
+        const primaryName = nameParts[0] || q;
+        const secondaryName = nameParts.slice(1, 4).join(',').trim();
+
+        const road = item.address?.road || item.address?.pedestrian || item.address?.suburb || primaryName;
+        const suburb = item.address?.suburb || item.address?.neighbourhood || item.address?.city_district || '';
+        const postcode = item.address?.postcode || '';
+
+        const safePrimary = primaryName.replace(/'/g, "\\'");
+        const safeRoad = road.replace(/'/g, "\\'");
+        const safeSuburb = suburb.replace(/'/g, "\\'");
+        const safePostcode = postcode.replace(/'/g, "\\'");
+
+        return `
+          <div 
+            onclick="selectGuidedAddressSuggestion(${lat}, ${lon}, '${safePrimary}', '${safeRoad}', '${safeSuburb}', '${safePostcode}')"
+            class="p-2.5 hover:bg-emerald-50 cursor-pointer flex items-start justify-between gap-2 transition-colors"
+          >
+            <div class="flex items-start gap-2 flex-1 min-w-0">
+              <span class="text-base flex-shrink-0 mt-0.5">📍</span>
+              <div class="min-w-0">
+                <div class="font-bold text-gray-900 text-xs truncate">${escapeHtml(primaryName)}</div>
+                <div class="text-[10px] text-gray-500 truncate">${escapeHtml(secondaryName)}</div>
+              </div>
+            </div>
+            <div class="flex-shrink-0 text-right">
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isWithin ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                ${dist > 0 ? `${dist} km` : 'In Zone'}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      suggestionsBox.classList.remove('hidden');
+    } catch (err) {
+      console.warn("Geocoding suggestions error:", err);
+      suggestionsBox.classList.add('hidden');
+    }
+  }, 300);
+}
+
+function selectGuidedAddressSuggestion(lat, lng, primaryName, road, suburb, postcode) {
+  const suggestionsBox = document.getElementById('map-search-suggestions');
+  if (suggestionsBox) suggestionsBox.classList.add('hidden');
+
+  const searchInput = document.getElementById('map-search-input');
+  if (searchInput) searchInput.value = primaryName || '';
+
+  const streetInput = document.getElementById('map-input-street');
+  if (streetInput) {
+    const combined = [road, suburb].filter(Boolean).join(', ');
+    streetInput.value = combined || primaryName || '';
+  }
+
+  const pinInput = document.getElementById('map-input-pincode');
+  if (pinInput && postcode && !pinInput.value) {
+    pinInput.value = postcode;
+  }
+
+  currentMapCoords = { lat, lng };
+
+  if (deliveryMap) {
+    deliveryMap.flyTo([lat, lng], 17, { animate: true, duration: 1.2 });
+  }
+  if (deliveryMarker) {
+    deliveryMarker.setLatLng([lat, lng]);
+    
+    // Guided popup prompting customer to fine-tune pin onto exact building / gate
+    deliveryMarker.bindPopup(`
+      <div class="p-1 text-center" style="min-width:160px;">
+        <div class="font-black text-xs text-emerald-800">📍 Guided to Nearby Area!</div>
+        <div class="text-[11px] text-gray-700 font-semibold mt-1">Now drag this pin to your exact building or gate 👇</div>
+      </div>
+    `).openPopup();
+
+    setTimeout(() => {
+      if (deliveryMarker && deliveryMarker.closePopup) {
+        deliveryMarker.closePopup();
+      }
+    }, 4000);
+  }
+
+  updateMapDistanceBadge(lat, lng);
+  showNotificationToast(`📍 Guided to ${primaryName}! Drag pin to your exact building or gate.`);
+}
+
+async function searchAndGuideMapPin(query) {
+  const q = (query || document.getElementById('map-search-input')?.value || document.getElementById('map-input-street')?.value || '').trim();
+  const suggestionsBox = document.getElementById('map-search-suggestions');
+  if (suggestionsBox) suggestionsBox.classList.add('hidden');
+
+  if (!q) {
+    showNotificationToast("Please type an area or locality name to guide pin.");
+    const input = document.getElementById('map-search-input');
+    if (input) input.focus();
+    return;
+  }
+
+  const btn = document.getElementById('btn-map-search-guide');
+  const origText = btn ? btn.innerHTML : "Guide Pin 📍";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳ Finding...</span>`;
+  }
+
+  try {
+    const cfg = state.config?.deliveryZone || {};
+    const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
+    const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
+
+    const minLon = (storeLng - 0.20).toFixed(4);
+    const maxLat = (storeLat + 0.20).toFixed(4);
+    const maxLon = (storeLng + 0.20).toFixed(4);
+    const minLat = (storeLat - 0.20).toFixed(4);
+
+    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${minLon},${maxLat},${maxLon},${minLat}&bounded=0&limit=3&addressdetails=1`;
+    let res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    let data = res.ok ? await res.json() : [];
+
+    if (!Array.isArray(data) || data.length === 0) {
+      const city = state.config?.outletAddress?.city || 'Pune';
+      const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', ' + city)}&limit=3&addressdetails=1`;
+      const fallbackRes = await fetch(fallbackUrl, { headers: { 'Accept-Language': 'en' } });
+      if (fallbackRes.ok) data = await fallbackRes.json();
+    }
+
+    if (Array.isArray(data) && data.length > 0) {
+      const best = data[0];
+      const lat = parseFloat(best.lat);
+      const lon = parseFloat(best.lon);
+      const nameParts = (best.display_name || '').split(',');
+      const primaryName = nameParts[0] || q;
+      const road = best.address?.road || best.address?.pedestrian || best.address?.suburb || primaryName;
+      const suburb = best.address?.suburb || best.address?.neighbourhood || '';
+      const postcode = best.address?.postcode || '';
+
+      selectGuidedAddressSuggestion(lat, lon, primaryName, road, suburb, postcode);
+    } else {
+      showNotificationToast(`Could not find "${q}" nearby. Please use '🎯 Locate Me' or drag pin directly.`);
+    }
+  } catch (err) {
+    console.warn("Search & Guide error:", err);
+    showNotificationToast("Network error looking up address. Please drag pin manually.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+}
+
+// Close suggestions dropdown on outside click
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (e) => {
+    const box = document.getElementById('map-search-suggestions');
+    const input = document.getElementById('map-search-input');
+    if (box && !box.classList.contains('hidden')) {
+      if (!box.contains(e.target) && e.target !== input) {
+        box.classList.add('hidden');
+      }
+    }
+  });
 }
 
 function updateMapDistanceBadge(lat, lng) {
@@ -1284,6 +1536,11 @@ function openAddressPickerModal() {
   const selfPhoneInput = document.getElementById('map-self-phone');
   if (selfNameInput) selfNameInput.value = state.currentUser?.name || '';
   if (selfPhoneInput) selfPhoneInput.value = state.currentUser?.phone || '';
+
+  const searchInput = document.getElementById('map-search-input');
+  if (searchInput) searchInput.value = '';
+  const suggestionsBox = document.getElementById('map-search-suggestions');
+  if (suggestionsBox) suggestionsBox.classList.add('hidden');
 
   const hasSaved = state.currentUser && Array.isArray(state.currentUser.savedAddresses) && state.currentUser.savedAddresses.length > 0;
   if (hasSaved) {
