@@ -332,6 +332,10 @@ function loadConfigAndData() {
   renderBanners();
   renderAnnouncement();
 
+  if (state.config?.deliveryZone?.googleMapsApiKey) {
+    loadGoogleMapsPlacesSDK(state.config.deliveryZone.googleMapsApiKey);
+  }
+
   // Async direct cloud sync pull for config, banners and catalog
   if (typeof fetchConfigFromCloud === 'function') {
     fetchConfigFromCloud().then(cfg => {
@@ -341,6 +345,9 @@ function loadConfigAndData() {
         renderAnnouncement();
         renderBanners();
         updateCheckoutButtonText();
+        if (cfg.deliveryZone?.googleMapsApiKey) {
+          loadGoogleMapsPlacesSDK(cfg.deliveryZone.googleMapsApiKey);
+        }
       }
     }).catch(() => {});
   }
@@ -1044,11 +1051,26 @@ function initDeliveryMap(targetLat, targetLng) {
     deliveryMap = L.map('delivery-map-picker', {
       zoomControl: true,
       attributionControl: false
-    }).setView([initLat, initLng], 14);
+    }).setView([initLat, initLng], 15);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19
-    }).addTo(deliveryMap);
+    // Google Maps Tile Layers (High-resolution Google Roadmap & Satellite Imagery)
+    googleRoadmapLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: 'Map data © Google'
+    });
+
+    googleSatelliteLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: 'Imagery © Google'
+    });
+
+    if (currentMapTileType === 'satellite') {
+      googleSatelliteLayer.addTo(deliveryMap);
+    } else {
+      googleRoadmapLayer.addTo(deliveryMap);
+    }
 
     // Draw store hub & 5km circle if store coordinates exist
     if (storeLat !== 0 && storeLng !== 0) {
@@ -1121,8 +1143,324 @@ function initDeliveryMap(targetLat, targetLng) {
   }
 }
 
-// ================= BLINKIT/ZEPTO GUIDED ADDRESS SEARCH & DROP PIN GUIDER =================
+// ================= BLINKIT/ZEPTO 3-TIER GOOGLE MAPS GUIDED SEARCH ENGINE =================
+// Tier 1: Local High-Precision Society & Apartment Index (Kondhwa, NIBM, Wanowrie, Salunke Vihar, Undri, Bibwewadi, Katraj)
+// Tier 2: Google Maps Places API Autocomplete (Live buildings, landmarks, gates via Google Maps JS SDK)
+// Tier 3: Photon Fast Fuzzy Geocoder + OpenStreetMap Fallback
+
+const LOCAL_PUNE_SOCIETIES = [
+  // Kondhwa / NIBM Road
+  { name: "Kumar Palmcrest", area: "Kondhwa", road: "Kondhwa Main Road", pincode: "411048", lat: 18.4721, lng: 73.8864 },
+  { name: "Kumar Sublime", area: "Kondhwa", road: "Kondhwa Budruk", pincode: "411048", lat: 18.4682, lng: 73.8841 },
+  { name: "Kumar Surabhi", area: "Pune-Satara Road", road: "Parvati", pincode: "411009", lat: 18.4891, lng: 73.8562 },
+  { name: "Kumar Prithvi", area: "Market Yard", road: "Salisbury Park", pincode: "411037", lat: 18.4905, lng: 73.8712 },
+  { name: "Kumar Pebble Park", area: "Hadapsar", road: "Handewadi Road", pincode: "411028", lat: 18.4851, lng: 73.9312 },
+  { name: "Ganga Satellite", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4883, lng: 73.8967 },
+  { name: "Ganga Florentina", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4705, lng: 73.8998 },
+  { name: "Ganga Kingston", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4752, lng: 73.9101 },
+  { name: "Bramha Sun City", area: "Kalyani Nagar / Wadgaon Sheri", road: "New Kalyani Nagar", pincode: "411014", lat: 18.5478, lng: 73.9065 },
+  { name: "Bramha Avenue", area: "Kondhwa", road: "Jyoti Chowk", pincode: "411048", lat: 18.4789, lng: 73.8885 },
+  { name: "Bramha Emerald County", area: "Kondhwa", road: "NIBM Road", pincode: "411048", lat: 18.4764, lng: 73.8912 },
+  { name: "Dorabjee Heritage Mall", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4691, lng: 73.8985 },
+  { name: "Dorabjee Paradise", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4688, lng: 73.9056 },
+  { name: "Clover Highlands", area: "NIBM Road", road: "NIBM Road", pincode: "411048", lat: 18.4735, lng: 73.8972 },
+  { name: "Clover Palisades", area: "NIBM Undri Road", road: "Undri Road", pincode: "411048", lat: 18.4668, lng: 73.9012 },
+  { name: "Clover Hills", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4771, lng: 73.8945 },
+  { name: "Clover Park View", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4741, lng: 73.9082 },
+  { name: "Nyati Estate", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4674, lng: 73.9085 },
+  { name: "Nyati Enclave", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4659, lng: 73.9092 },
+  { name: "Nyati Windchimes", area: "Undri", road: "Undri Chowk", pincode: "411060", lat: 18.4589, lng: 73.9142 },
+  { name: "Nyati County", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4665, lng: 73.9078 },
+  { name: "Nyati Serenity", area: "Mohammadwadi", road: "Mohammadwadi", pincode: "411060", lat: 18.4698, lng: 73.9112 },
+  { name: "Raheja Vistas", area: "NIBM Road", road: "Post Office Road", pincode: "411048", lat: 18.4718, lng: 73.8962 },
+  { name: "Raheja Vistas Premiere", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4729, lng: 73.9068 },
+  { name: "Marvel Isola", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4711, lng: 73.9075 },
+  { name: "Marvel Ganga Sangria", area: "NIBM Undri Road", road: "Mohammadwadi", pincode: "411060", lat: 18.4645, lng: 73.9051 },
+  { name: "Marvel Bounty", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5085, lng: 73.9295 },
+  { name: "Salunke Vihar", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4831, lng: 73.8951 },
+  { name: "Oxford Village", area: "Wanowrie", road: "Kedari Nagar", pincode: "411040", lat: 18.4875, lng: 73.8979 },
+  { name: "Sacred Heart Town", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4902, lng: 73.8935 },
+  { name: "Mayfair Elegance", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4745, lng: 73.8965 },
+  { name: "Sunshree Emerald", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4782, lng: 73.8931 },
+  { name: "Sunshree Woods", area: "NIBM", road: "Salunke Vihar Road", pincode: "411048", lat: 18.4795, lng: 73.8942 },
+  { name: "Sunshree Kangan", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4778, lng: 73.8925 },
+  { name: "Kausar Baugh", area: "Kondhwa", road: "Kausar Baugh Road", pincode: "411048", lat: 18.4761, lng: 73.8892 },
+  { name: "Meeta Nagar", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4731, lng: 73.8845 },
+  { name: "Mithanagar", area: "Kondhwa", road: "Kondhwa Khurd", pincode: "411048", lat: 18.4755, lng: 73.8832 },
+  { name: "Lullanagar", area: "Wanowrie", road: "Lullanagar Chowk", pincode: "411040", lat: 18.4912, lng: 73.8856 },
+  { name: "Kedari Nagar", area: "Wanowrie", road: "Kedari Road", pincode: "411040", lat: 18.4862, lng: 73.8981 },
+  { name: "Fatima Nagar", area: "Wanowrie", road: "Solapur Road", pincode: "411013", lat: 18.5025, lng: 73.9015 },
+  { name: "Market Yard", area: "Gultekdi", road: "Market Yard Road", pincode: "411037", lat: 18.4885, lng: 73.8682 },
+  { name: "Bibwewadi", area: "Bibwewadi", road: "Bibwewadi Road", pincode: "411037", lat: 18.4735, lng: 73.8612 },
+  { name: "Katraj", area: "Katraj", road: "Katraj Chowk", pincode: "411046", lat: 18.4552, lng: 73.8582 },
+  { name: "Katraj Kondhwa Road", area: "Katraj / Kondhwa", road: "Katraj Kondhwa Road", pincode: "411046", lat: 18.4582, lng: 73.8715 },
+  { name: "Upper Indira Nagar", area: "Bibwewadi", road: "Bibwewadi", pincode: "411037", lat: 18.4682, lng: 73.8645 },
+  { name: "Undri Chowk", area: "Undri", road: "Undri Main Road", pincode: "411060", lat: 18.4561, lng: 73.9118 },
+  { name: "Mohammadwadi", area: "Mohammadwadi", road: "Tarawade Vasti", pincode: "411060", lat: 18.4715, lng: 73.9082 },
+  { name: "NIBM Road", area: "Kondhwa", road: "NIBM Road", pincode: "411048", lat: 18.4748, lng: 73.8955 },
+  { name: "NIBM Undri Road", area: "Undri / NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4655, lng: 73.9015 },
+  { name: "Salunke Vihar Road", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4822, lng: 73.8942 },
+  { name: "Kondhwa Budruk", area: "Kondhwa", road: "Saswad Road", pincode: "411048", lat: 18.4612, lng: 73.8895 },
+  { name: "Kondhwa Khurd", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4772, lng: 73.8865 },
+  { name: "Dynamic Grandeur", area: "Undri", road: "Undri Chowk", pincode: "411060", lat: 18.4542, lng: 73.9165 },
+  { name: "Godrej Horizon", area: "Undri", road: "Undri Road", pincode: "411060", lat: 18.4525, lng: 73.9178 },
+  { name: "Godrej Greens", area: "Undri", road: "Undri Road", pincode: "411060", lat: 18.4510, lng: 73.9192 },
+  { name: "Amit Colori", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4538, lng: 73.9145 },
+  { name: "Hill Mist Garden", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4715, lng: 73.8941 },
+  { name: "Cloud 9", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4758, lng: 73.8981 },
+  { name: "Palace Orchard", area: "NIBM", road: "Undri Road", pincode: "411048", lat: 18.4695, lng: 73.8971 },
+  { name: "Green Valley", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4845, lng: 73.8912 },
+  { name: "Kubera Park", area: "Kondhwa", road: "Lullanagar", pincode: "411040", lat: 18.4895, lng: 73.8872 },
+  { name: "Konark Indrayu", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4768, lng: 73.8878 },
+  { name: "Konark Pooram", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4782, lng: 73.8889 },
+  { name: "Archana Paradise", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4852, lng: 73.8961 },
+  { name: "Bizzbay Mall", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4685, lng: 73.8992 },
+  { name: "Magarpatta City", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5132, lng: 73.9272 },
+  { name: "Amanora Park Town", area: "Hadapsar", road: "Amanora Park Town", pincode: "411028", lat: 18.5185, lng: 73.9352 },
+  { name: "Runwal Seagull", area: "Handewadi", road: "Handewadi Road", pincode: "411028", lat: 18.4762, lng: 73.9315 },
+  { name: "Wanowrie", area: "Wanowrie", road: "Wanowrie Bazar", pincode: "411040", lat: 18.4872, lng: 73.8945 },
+  { name: "Camp MG Road", area: "Camp", road: "MG Road", pincode: "411001", lat: 18.5172, lng: 73.8785 }
+];
+
 let addressSearchDebounceTimer = null;
+let googleMapsPlacesService = null;
+let googleMapsAutocompleteService = null;
+let isGoogleMapsPlacesLoading = false;
+
+// Dynamically load Google Maps Places JavaScript SDK when an API key is configured
+function loadGoogleMapsPlacesSDK(apiKey) {
+  if (typeof window === 'undefined') return;
+  if (window.google && window.google.maps && window.google.maps.places) {
+    if (!googleMapsAutocompleteService) {
+      try {
+        googleMapsAutocompleteService = new google.maps.places.AutocompleteService();
+        const dummyNode = document.createElement('div');
+        googleMapsPlacesService = new google.maps.places.PlacesService(dummyNode);
+      } catch (e) {}
+    }
+    return;
+  }
+  const key = apiKey || state.config?.deliveryZone?.googleMapsApiKey || window.googleMapsApiKey;
+  if (!key || isGoogleMapsPlacesLoading) return;
+
+  isGoogleMapsPlacesLoading = true;
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places`;
+  script.async = true;
+  script.defer = true;
+  script.onload = () => {
+    isGoogleMapsPlacesLoading = false;
+    try {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        googleMapsAutocompleteService = new google.maps.places.AutocompleteService();
+        const dummyNode = document.createElement('div');
+        googleMapsPlacesService = new google.maps.places.PlacesService(dummyNode);
+        console.log("✓ Google Maps Places SDK loaded for guided address search");
+      }
+    } catch (e) {
+      console.warn("Google Maps Places initialization error:", e);
+    }
+  };
+  script.onerror = () => {
+    isGoogleMapsPlacesLoading = false;
+    console.warn("Could not load Google Maps Places SDK (verify API key or network)");
+  };
+  document.head.appendChild(script);
+}
+
+// Search pre-indexed societies in Pune store delivery zone (Instant, 0ms latency)
+function searchLocalSocieties(query, storeLat, storeLng, maxRadiusKm) {
+  const q = (query || '').toLowerCase().trim();
+  if (q.length < 2) return [];
+
+  const tokens = q.split(/\s+/).filter(Boolean);
+
+  const matched = [];
+  LOCAL_PUNE_SOCIETIES.forEach(soc => {
+    const fullText = `${soc.name} ${soc.area} ${soc.road} ${soc.pincode}`.toLowerCase();
+    
+    // Check if every token matches
+    const allTokensMatch = tokens.every(t => fullText.includes(t));
+    if (!allTokensMatch) return;
+
+    let dist = 0;
+    if (storeLat !== 0 && storeLng !== 0) {
+      dist = calculateDistanceKm(storeLat, storeLng, soc.lat, soc.lng);
+    }
+    const isWithin = dist <= maxRadiusKm;
+
+    // Relevance score
+    let score = 10;
+    if (soc.name.toLowerCase() === q) score += 100;
+    else if (soc.name.toLowerCase().startsWith(q)) score += 50;
+    else if (soc.name.toLowerCase().includes(q)) score += 30;
+
+    matched.push({
+      primaryName: soc.name,
+      secondaryName: `${soc.road}, ${soc.area} • ${soc.pincode}`,
+      road: soc.road,
+      suburb: soc.area,
+      postcode: soc.pincode,
+      lat: soc.lat,
+      lng: soc.lng,
+      dist: dist,
+      isWithin: isWithin,
+      badge: '⚡ Local Society',
+      score: score
+    });
+  });
+
+  return matched.sort((a, b) => b.score - a.score).slice(0, 5);
+}
+
+// Query Photon Geocoder (Fast Elasticsearch geocoder with typo tolerance)
+async function fetchPhotonSuggestions(query, storeLat, storeLng, maxRadiusKm) {
+  try {
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${storeLat}&lon=${storeLng}&limit=5`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data || !Array.isArray(data.features)) return [];
+
+    return data.features.map(f => {
+      const p = f.properties || {};
+      const coords = f.geometry && f.geometry.coordinates;
+      if (!coords || coords.length < 2) return null;
+      const lon = coords[0];
+      const lat = coords[1];
+
+      let dist = 0;
+      if (storeLat !== 0 && storeLng !== 0) {
+        dist = calculateDistanceKm(storeLat, storeLng, lat, lon);
+      }
+      const isWithin = dist <= maxRadiusKm;
+
+      const primary = p.name || query;
+      const secondary = [p.street, p.district || p.suburb, p.city, p.postcode].filter(Boolean).join(', ');
+
+      return {
+        primaryName: primary,
+        secondaryName: secondary || p.state || 'Pune',
+        road: p.street || p.name || '',
+        suburb: p.district || p.suburb || p.city || '',
+        postcode: p.postcode || '',
+        lat: lat,
+        lng: lon,
+        dist: dist,
+        isWithin: isWithin,
+        badge: '📍 Guided Place'
+      };
+    }).filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
+// Query OpenStreetMap Nominatim Fallback
+async function fetchNominatimSuggestions(query, storeLat, storeLng, maxRadiusKm) {
+  try {
+    const minLon = (storeLng - 0.20).toFixed(4);
+    const maxLat = (storeLat + 0.20).toFixed(4);
+    const maxLon = (storeLng + 0.20).toFixed(4);
+    const minLat = (storeLat - 0.20).toFixed(4);
+
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${minLon},${maxLat},${maxLon},${minLat}&bounded=0&limit=5&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    if (!res.ok) return [];
+    let data = await res.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      const city = state.config?.outletAddress?.city || 'Pune';
+      const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', ' + city)}&limit=5&addressdetails=1`;
+      const fallbackRes = await fetch(fallbackUrl, { headers: { 'Accept-Language': 'en' } });
+      if (fallbackRes.ok) data = await fallbackRes.json();
+    }
+
+    if (!Array.isArray(data)) return [];
+
+    return data.map(item => {
+      const lat = parseFloat(item.lat);
+      const lon = parseFloat(item.lon);
+      let dist = 0;
+      if (storeLat !== 0 && storeLng !== 0) {
+        dist = calculateDistanceKm(storeLat, storeLng, lat, lon);
+      }
+      const isWithin = dist <= maxRadiusKm;
+      const nameParts = (item.display_name || '').split(',');
+      const primaryName = nameParts[0] || query;
+      const secondaryName = nameParts.slice(1, 4).join(',').trim();
+
+      const road = item.address?.road || item.address?.pedestrian || item.address?.suburb || primaryName;
+      const suburb = item.address?.suburb || item.address?.neighbourhood || item.address?.city_district || '';
+      const postcode = item.address?.postcode || '';
+
+      return {
+        primaryName,
+        secondaryName,
+        road,
+        suburb,
+        postcode,
+        lat,
+        lng: lon,
+        dist,
+        isWithin,
+        badge: '🗺️ Map Area'
+      };
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+// Google Places Autocomplete query
+function fetchGooglePlacesPredictions(query, storeLat, storeLng) {
+  return new Promise((resolve) => {
+    if (!googleMapsAutocompleteService || !window.google || !window.google.maps) {
+      return resolve([]);
+    }
+    try {
+      const loc = (storeLat !== 0 && storeLng !== 0) ? new google.maps.LatLng(storeLat, storeLng) : undefined;
+      googleMapsAutocompleteService.getPlacePredictions({
+        input: query,
+        location: loc,
+        radius: 7000,
+        componentRestrictions: { country: 'in' }
+      }, (predictions, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && Array.isArray(predictions)) {
+          resolve(predictions);
+        } else {
+          resolve([]);
+        }
+      });
+    } catch (e) {
+      resolve([]);
+    }
+  });
+}
+
+function resolveGooglePlaceDetails(placeId) {
+  return new Promise((resolve) => {
+    if (!googleMapsPlacesService || !window.google || !window.google.maps) {
+      return resolve(null);
+    }
+    try {
+      googleMapsPlacesService.getDetails({
+        placeId: placeId,
+        fields: ['geometry', 'name', 'formatted_address', 'address_components']
+      }, (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry && place.geometry.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          resolve({ lat, lng, place });
+        } else {
+          resolve(null);
+        }
+      });
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
 
 function handleAddressSearchInput(query) {
   const suggestionsBox = document.getElementById('map-search-suggestions');
@@ -1139,114 +1477,156 @@ function handleAddressSearchInput(query) {
     return;
   }
 
-  suggestionsBox.innerHTML = `
-    <div class="p-3 text-center text-gray-400 font-medium text-xs flex items-center justify-center gap-2">
-      <svg class="animate-spin h-3.5 w-3.5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-      </svg>
-      <span>Searching nearby places for "${escapeHtml(q)}"...</span>
-    </div>
-  `;
-  suggestionsBox.classList.remove('hidden');
+  const cfg = state.config?.deliveryZone || {};
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
+  const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
+
+  // Attempt to load Google Places SDK if key is in config
+  if (cfg.googleMapsApiKey && !googleMapsAutocompleteService) {
+    loadGoogleMapsPlacesSDK(cfg.googleMapsApiKey);
+  }
+
+  // Tier 1: Instant local society match (0ms latency)
+  const localMatches = searchLocalSocieties(q, storeLat, storeLng, maxRadiusKm);
+  if (localMatches.length > 0) {
+    renderAddressSuggestions(localMatches, suggestionsBox, q);
+  } else {
+    suggestionsBox.innerHTML = `
+      <div class="p-3 text-center text-gray-400 font-medium text-xs flex items-center justify-center gap-2">
+        <svg class="animate-spin h-3.5 w-3.5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span>Searching Google Maps &amp; Pune societies for "${escapeHtml(q)}"...</span>
+      </div>
+    `;
+    suggestionsBox.classList.remove('hidden');
+  }
 
   addressSearchDebounceTimer = setTimeout(async () => {
     try {
-      const cfg = state.config?.deliveryZone || {};
-      const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
-      const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
-      const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
+      // Parallel Tier 2 & 3 queries: Google Places, Photon, Nominatim
+      const [googlePredictions, photonResults, nominatimResults] = await Promise.all([
+        fetchGooglePlacesPredictions(q, storeLat, storeLng),
+        fetchPhotonSuggestions(q, storeLat, storeLng, maxRadiusKm),
+        fetchNominatimSuggestions(q, storeLat, storeLng, maxRadiusKm)
+      ]);
 
-      // Viewbox around store: ~0.15 deg (~16 km)
-      const minLon = (storeLng - 0.15).toFixed(4);
-      const maxLat = (storeLat + 0.15).toFixed(4);
-      const maxLon = (storeLng + 0.15).toFixed(4);
-      const minLat = (storeLat - 0.15).toFixed(4);
+      const combined = [...localMatches];
+      const seen = new Set(localMatches.map(m => m.primaryName.toLowerCase()));
 
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${minLon},${maxLat},${maxLon},${minLat}&bounded=0&limit=5&addressdetails=1`;
-      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-
-      if (!res.ok) {
-        suggestionsBox.classList.add('hidden');
-        return;
+      // Process Google Places predictions
+      if (googlePredictions && googlePredictions.length > 0) {
+        googlePredictions.slice(0, 4).forEach(gp => {
+          const mainText = gp.structured_formatting?.main_text || gp.description.split(',')[0];
+          if (!seen.has(mainText.toLowerCase())) {
+            seen.add(mainText.toLowerCase());
+            combined.push({
+              primaryName: mainText,
+              secondaryName: gp.structured_formatting?.secondary_text || gp.description,
+              placeId: gp.place_id,
+              badge: '🗺️ Google Place',
+              isGooglePlace: true,
+              isWithin: true
+            });
+          }
+        });
       }
 
-      let data = await res.json();
-      
-      // If viewbox returned 0 results, fall back to city-level search
-      if (!Array.isArray(data) || data.length === 0) {
-        const city = state.config?.outletAddress?.city || 'Pune';
-        const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', ' + city)}&limit=5&addressdetails=1`;
-        const fallbackRes = await fetch(fallbackUrl, { headers: { 'Accept-Language': 'en' } });
-        if (fallbackRes.ok) {
-          data = await fallbackRes.json();
+      // Add Photon results
+      photonResults.forEach(pr => {
+        if (!seen.has(pr.primaryName.toLowerCase())) {
+          seen.add(pr.primaryName.toLowerCase());
+          combined.push(pr);
         }
-      }
+      });
 
-      if (!Array.isArray(data) || data.length === 0) {
+      // Add Nominatim results
+      nominatimResults.forEach(nr => {
+        if (!seen.has(nr.primaryName.toLowerCase())) {
+          seen.add(nr.primaryName.toLowerCase());
+          combined.push(nr);
+        }
+      });
+
+      if (combined.length === 0) {
         suggestionsBox.innerHTML = `
           <div class="p-3 text-center text-gray-500 text-xs">
             <span class="block text-gray-700 font-semibold mb-0.5">No exact area found for "${escapeHtml(q)}"</span>
-            <span class="text-[10px] text-gray-400">Click "Guide Pin" or drag the pin directly on the map.</span>
+            <span class="text-[10px] text-gray-400">Click "Guide Pin 📍" or drag the pin directly on the Google Map.</span>
           </div>
         `;
+        suggestionsBox.classList.remove('hidden');
         return;
       }
 
-      suggestionsBox.innerHTML = data.map(item => {
-        const lat = parseFloat(item.lat);
-        const lon = parseFloat(item.lon);
-        let dist = 0;
-        if (storeLat !== 0 && storeLng !== 0) {
-          dist = calculateDistanceKm(storeLat, storeLng, lat, lon);
-        }
-        const isWithin = dist <= maxRadiusKm;
-        
-        const nameParts = (item.display_name || '').split(',');
-        const primaryName = nameParts[0] || q;
-        const secondaryName = nameParts.slice(1, 4).join(',').trim();
-
-        const road = item.address?.road || item.address?.pedestrian || item.address?.suburb || primaryName;
-        const suburb = item.address?.suburb || item.address?.neighbourhood || item.address?.city_district || '';
-        const postcode = item.address?.postcode || '';
-
-        const safePrimary = primaryName.replace(/'/g, "\\'");
-        const safeRoad = road.replace(/'/g, "\\'");
-        const safeSuburb = suburb.replace(/'/g, "\\'");
-        const safePostcode = postcode.replace(/'/g, "\\'");
-
-        return `
-          <div 
-            onclick="selectGuidedAddressSuggestion(${lat}, ${lon}, '${safePrimary}', '${safeRoad}', '${safeSuburb}', '${safePostcode}')"
-            class="p-2.5 hover:bg-emerald-50 cursor-pointer flex items-start justify-between gap-2 transition-colors"
-          >
-            <div class="flex items-start gap-2 flex-1 min-w-0">
-              <span class="text-base flex-shrink-0 mt-0.5">📍</span>
-              <div class="min-w-0">
-                <div class="font-bold text-gray-900 text-xs truncate">${escapeHtml(primaryName)}</div>
-                <div class="text-[10px] text-gray-500 truncate">${escapeHtml(secondaryName)}</div>
-              </div>
-            </div>
-            <div class="flex-shrink-0 text-right">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isWithin ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-                ${dist > 0 ? `${dist} km` : 'In Zone'}
-              </span>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      suggestionsBox.classList.remove('hidden');
+      renderAddressSuggestions(combined.slice(0, 7), suggestionsBox, q);
     } catch (err) {
-      console.warn("Geocoding suggestions error:", err);
-      suggestionsBox.classList.add('hidden');
+      console.warn("Address search error:", err);
     }
-  }, 300);
+  }, 220);
 }
 
-function selectGuidedAddressSuggestion(lat, lng, primaryName, road, suburb, postcode) {
+function renderAddressSuggestions(items, suggestionsBox, query) {
+  if (!items || items.length === 0) {
+    suggestionsBox.classList.add('hidden');
+    return;
+  }
+
+  suggestionsBox.innerHTML = items.map((item, idx) => {
+    const isGoogle = !!item.isGooglePlace;
+    const safePrimary = (item.primaryName || query).replace(/'/g, "\\'");
+    const safeRoad = (item.road || '').replace(/'/g, "\\'");
+    const safeSuburb = (item.suburb || '').replace(/'/g, "\\'");
+    const safePostcode = (item.postcode || '').replace(/'/g, "\\'");
+    const placeIdArg = item.placeId ? `'${item.placeId}'` : 'null';
+
+    const distLabel = item.dist > 0 ? `${item.dist} km` : (isGoogle ? 'Google Map' : 'In Zone');
+    const isWithin = item.isWithin !== false;
+
+    return `
+      <div 
+        onclick="selectGuidedAddressSuggestion(${item.lat || 0}, ${item.lng || 0}, '${safePrimary}', '${safeRoad}', '${safeSuburb}', '${safePostcode}', ${placeIdArg})"
+        class="p-2.5 hover:bg-emerald-50 cursor-pointer flex items-start justify-between gap-2 transition-colors border-b border-gray-100 last:border-b-0"
+      >
+        <div class="flex items-start gap-2.5 flex-1 min-w-0">
+          <span class="text-base flex-shrink-0 mt-0.5">${item.badge?.includes('Local') ? '🏢' : '📍'}</span>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="font-bold text-gray-900 text-xs truncate">${escapeHtml(item.primaryName)}</span>
+              ${item.badge ? `<span class="text-[9px] font-bold px-1.5 py-0.2 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">${item.badge}</span>` : ''}
+            </div>
+            <div class="text-[10px] text-gray-500 truncate mt-0.5">${escapeHtml(item.secondaryName || '')}</div>
+          </div>
+        </div>
+        <div class="flex-shrink-0 text-right">
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isWithin ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+            ${distLabel}
+          </span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  suggestionsBox.classList.remove('hidden');
+}
+
+async function selectGuidedAddressSuggestion(lat, lng, primaryName, road, suburb, postcode, placeId = null) {
   const suggestionsBox = document.getElementById('map-search-suggestions');
   if (suggestionsBox) suggestionsBox.classList.add('hidden');
+
+  let finalLat = parseFloat(lat) || 0;
+  let finalLng = parseFloat(lng) || 0;
+
+  // If this was a Google Place without lat/lng yet, resolve coordinates via PlacesService
+  if (placeId && (finalLat === 0 || finalLng === 0)) {
+    const details = await resolveGooglePlaceDetails(placeId);
+    if (details) {
+      finalLat = details.lat;
+      finalLng = details.lng;
+    }
+  }
 
   const searchInput = document.getElementById('map-search-input');
   if (searchInput) searchInput.value = primaryName || '';
@@ -1262,18 +1642,24 @@ function selectGuidedAddressSuggestion(lat, lng, primaryName, road, suburb, post
     pinInput.value = postcode;
   }
 
-  currentMapCoords = { lat, lng };
+  if (finalLat === 0 || finalLng === 0) {
+    const cfg = state.config?.deliveryZone || {};
+    finalLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
+    finalLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
+  }
+
+  currentMapCoords = { lat: finalLat, lng: finalLng };
 
   if (deliveryMap) {
-    deliveryMap.flyTo([lat, lng], 17, { animate: true, duration: 1.2 });
+    deliveryMap.flyTo([finalLat, finalLng], 17, { animate: true, duration: 1.2 });
   }
   if (deliveryMarker) {
-    deliveryMarker.setLatLng([lat, lng]);
-    
+    deliveryMarker.setLatLng([finalLat, finalLng]);
+
     // Guided popup prompting customer to fine-tune pin onto exact building / gate
     deliveryMarker.bindPopup(`
-      <div class="p-1 text-center" style="min-width:160px;">
-        <div class="font-black text-xs text-emerald-800">📍 Guided to Nearby Area!</div>
+      <div class="p-1 text-center" style="min-width:180px;">
+        <div class="font-black text-xs text-emerald-800">📍 Guided to ${escapeHtml(primaryName)}!</div>
         <div class="text-[11px] text-gray-700 font-semibold mt-1">Now drag this pin to your exact building or gate 👇</div>
       </div>
     `).openPopup();
@@ -1282,10 +1668,10 @@ function selectGuidedAddressSuggestion(lat, lng, primaryName, road, suburb, post
       if (deliveryMarker && deliveryMarker.closePopup) {
         deliveryMarker.closePopup();
       }
-    }, 4000);
+    }, 4500);
   }
 
-  updateMapDistanceBadge(lat, lng);
+  updateMapDistanceBadge(finalLat, finalLng);
   showNotificationToast(`📍 Guided to ${primaryName}! Drag pin to your exact building or gate.`);
 }
 
@@ -1305,44 +1691,54 @@ async function searchAndGuideMapPin(query) {
   const origText = btn ? btn.innerHTML : "Guide Pin 📍";
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<span>⏳ Finding...</span>`;
+    btn.innerHTML = `<span>⏳ Guiding...</span>`;
   }
 
   try {
     const cfg = state.config?.deliveryZone || {};
     const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
     const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
+    const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
 
-    const minLon = (storeLng - 0.20).toFixed(4);
-    const maxLat = (storeLat + 0.20).toFixed(4);
-    const maxLon = (storeLng + 0.20).toFixed(4);
-    const minLat = (storeLat - 0.20).toFixed(4);
-
-    let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${minLon},${maxLat},${maxLon},${minLat}&bounded=0&limit=3&addressdetails=1`;
-    let res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-    let data = res.ok ? await res.json() : [];
-
-    if (!Array.isArray(data) || data.length === 0) {
-      const city = state.config?.outletAddress?.city || 'Pune';
-      const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ', ' + city)}&limit=3&addressdetails=1`;
-      const fallbackRes = await fetch(fallbackUrl, { headers: { 'Accept-Language': 'en' } });
-      if (fallbackRes.ok) data = await fallbackRes.json();
+    // 1. Check local Pune societies first (instant)
+    const localMatches = searchLocalSocieties(q, storeLat, storeLng, maxRadiusKm);
+    if (localMatches.length > 0) {
+      const top = localMatches[0];
+      selectGuidedAddressSuggestion(top.lat, top.lng, top.primaryName, top.road, top.suburb, top.postcode);
+      return;
     }
 
-    if (Array.isArray(data) && data.length > 0) {
-      const best = data[0];
-      const lat = parseFloat(best.lat);
-      const lon = parseFloat(best.lon);
-      const nameParts = (best.display_name || '').split(',');
-      const primaryName = nameParts[0] || q;
-      const road = best.address?.road || best.address?.pedestrian || best.address?.suburb || primaryName;
-      const suburb = best.address?.suburb || best.address?.neighbourhood || '';
-      const postcode = best.address?.postcode || '';
-
-      selectGuidedAddressSuggestion(lat, lon, primaryName, road, suburb, postcode);
-    } else {
-      showNotificationToast(`Could not find "${q}" nearby. Please use '🎯 Locate Me' or drag pin directly.`);
+    // 2. Check Google Places if SDK loaded
+    if (googleMapsAutocompleteService) {
+      const gResults = await fetchGooglePlacesPredictions(q, storeLat, storeLng);
+      if (gResults.length > 0) {
+        const topG = gResults[0];
+        const mainText = topG.structured_formatting?.main_text || topG.description.split(',')[0];
+        const details = await resolveGooglePlaceDetails(topG.place_id);
+        if (details) {
+          selectGuidedAddressSuggestion(details.lat, details.lng, mainText, mainText, details.place?.formatted_address || '', '');
+          return;
+        }
+      }
     }
+
+    // 3. Check Photon fast geocoder
+    const photonResults = await fetchPhotonSuggestions(q, storeLat, storeLng, maxRadiusKm);
+    if (photonResults.length > 0) {
+      const topP = photonResults[0];
+      selectGuidedAddressSuggestion(topP.lat, topP.lng, topP.primaryName, topP.road, topP.suburb, topP.postcode);
+      return;
+    }
+
+    // 4. Nominatim fallback
+    const nominatimResults = await fetchNominatimSuggestions(q, storeLat, storeLng, maxRadiusKm);
+    if (nominatimResults.length > 0) {
+      const topN = nominatimResults[0];
+      selectGuidedAddressSuggestion(topN.lat, topN.lng, topN.primaryName, topN.road, topN.suburb, topN.postcode);
+      return;
+    }
+
+    showNotificationToast(`Could not find "${q}" nearby. Please use '🎯 Auto-Detect' or drag pin directly.`);
   } catch (err) {
     console.warn("Search & Guide error:", err);
     showNotificationToast("Network error looking up address. Please drag pin manually.");

@@ -27,7 +27,7 @@ const DEFAULT_BANNERS = [
     btnText: "Explore Aisle →",
     action: "explore",
     gradient: "from-green-800 to-green-950",
-    enabled: true
+    enabled: false
   },
   {
     id: "banner-2",
@@ -39,7 +39,7 @@ const DEFAULT_BANNERS = [
     btnText: "📸 Order via WhatsApp",
     action: "photo-whatsapp",
     gradient: "from-emerald-600 to-teal-800",
-    enabled: true
+    enabled: false
   },
   {
     id: "banner-3",
@@ -51,7 +51,7 @@ const DEFAULT_BANNERS = [
     btnText: "Chat with Manager",
     action: "whatsapp-chat",
     gradient: "from-amber-500 to-orange-600",
-    enabled: true
+    enabled: false
   }
 ];
 
@@ -93,7 +93,7 @@ const DEFAULT_CONFIG = {
   closingTime: "11:30 PM",
   deliveryTimeEstimate: "Standard Delivery",
   isStoreOpen: true, // Emergency store toggle
-  showBanners: true, // Master Promotional Banners visibility toggle
+  showBanners: false, // Master Promotional Banners visibility toggle (default false as configured by admin)
   storeNotice: "⚡ Farm fresh morning vegetables harvested & in stock! Delivered fresh to your doorstep.",
   showAnnouncementBar: false,
   minOrderValue: 99,
@@ -111,7 +111,8 @@ const DEFAULT_CONFIG = {
     },
     storeName: "Rasoee Fresh Supermarket",
     strictBoundaryCheck: false,
-    allowedPincodes: []
+    allowedPincodes: [],
+    googleMapsApiKey: ""
   },
 
   // Payment Gateway Configuration
@@ -987,6 +988,7 @@ function getStoreConfig() {
       return { 
         ...DEFAULT_CONFIG, 
         ...parsed,
+        deliveryZone: { ...DEFAULT_CONFIG.deliveryZone, ...(parsed.deliveryZone || {}) },
         payment: { ...DEFAULT_CONFIG.payment, ...(parsed.payment || {}) },
         outletAddress: { ...DEFAULT_CONFIG.outletAddress, ...(parsed.outletAddress || {}) },
         cloudSync: { ...DEFAULT_CONFIG.cloudSync, ...(parsed.cloudSync || {}) },
