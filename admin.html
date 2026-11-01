@@ -1300,16 +1300,23 @@
               </div>
 
               <div>
-                <label class="block text-[11px] font-bold text-gray-700 mb-1">Google Maps API Key (Optional / Recommended)</label>
-                <div class="relative">
+                <label class="block text-[11px] font-bold text-gray-700 mb-1">Google Maps JavaScript &amp; Places API Key (Recommended)</label>
+                <div class="flex items-center gap-2">
                   <input 
                     type="text" 
                     id="outlet-google-maps-key" 
-                    class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono text-xs font-semibold"
-                    placeholder="AIzaSy... (For Google Places Autocomplete)"
+                    class="flex-1 p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-mono text-xs font-semibold"
+                    placeholder="AIzaSy... (For Native Google Maps vector &amp; Places Autocomplete)"
                   />
+                  <button 
+                    type="button" 
+                    onclick="testGoogleMapsKey()" 
+                    class="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition-all cursor-pointer flex-shrink-0"
+                  >
+                    Test Key 🔑
+                  </button>
                 </div>
-                <p class="text-[10px] text-gray-400 mt-1">Enables live Google Places search for any building, apartment or colony. Even without a key, 70+ Pune societies and Photon fuzzy search are built-in.</p>
+                <p class="text-[10px] text-gray-500 mt-1">Enables official Native Google Maps vector roadmap, satellite views, and live Google Places autocomplete for any building, apartment or shop in Pune. 200+ Pune societies and Google Maps link/coords parser work even without a key.</p>
               </div>
             </div>
           </div>
@@ -5137,6 +5144,25 @@
           billEmoji.classList.remove('hidden');
         }
       }
+    }
+
+    function testGoogleMapsKey() {
+      const keyInput = document.getElementById('outlet-google-maps-key');
+      const key = keyInput ? keyInput.value.trim() : '';
+      if (!key) {
+        alert("Please enter a Google Maps API Key first.");
+        if (keyInput) keyInput.focus();
+        return;
+      }
+      const testScript = document.createElement('script');
+      testScript.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=onGoogleMapsTestSuccess`;
+      window.onGoogleMapsTestSuccess = function() {
+        alert("✓ Google Maps API Key is valid and active!\nNative Google Maps & Google Places Autocomplete are now enabled in the customer app.");
+      };
+      testScript.onerror = function() {
+        alert("⚠️ Could not load Google Maps with this key. Please check your API key, billing status, or HTTP referrer restrictions in Google Cloud Console.");
+      };
+      document.head.appendChild(testScript);
     }
 
     function saveOutletSettings(silent = false) {

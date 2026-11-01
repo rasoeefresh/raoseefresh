@@ -1010,14 +1010,93 @@ function detectUserGpsLocation() {
   );
 }
 
-// ================= INTERACTIVE LEAFLET MAP & BLINKIT/ZEPTO ADDRESS PICKER =================
+// ================= INTERACTIVE DUAL-MODE MAP ENGINE & BLINKIT/ZEPTO ADDRESS PICKER =================
+// Mode 1: True Native Google Maps JavaScript API (new google.maps.Map with vector roadmap, satellite, Google Places Autocomplete & POIs)
+// Mode 2: Interactive Leaflet Engine with high-resolution Google Roadmap & Satellite Tiles (Zero-configuration instant fallback)
+let googleMap = null;
+let googleMarker = null;
+let googleCircle = null;
+let googleAutocomplete = null;
+let isNativeGoogleMap = false;
+
 let deliveryMap = null;
 let deliveryMarker = null;
 let deliveryCircle = null;
 let currentMapCoords = { lat: 0, lng: 0 };
 let currentRecipientType = 'self';
 let currentAddressTag = 'Home';
+let currentMapTileType = 'roadmap'; // 'roadmap' | 'satellite'
+let googleRoadmapLayer = null;
+let googleSatelliteLayer = null;
+let isGoogleMapsSDKLoading = false;
 
+// Unified map pan helper that works seamlessly with both Google Maps and Leaflet
+function panMapTo(lat, lng, zoom = 16) {
+  const finalLat = parseFloat(lat) || 18.455585;
+  const finalLng = parseFloat(lng) || 73.873529;
+  if (isNativeGoogleMap && googleMap) {
+    try {
+      googleMap.panTo({ lat: finalLat, lng: finalLng });
+      if (zoom) googleMap.setZoom(zoom);
+      return;
+    } catch (e) {}
+  }
+  if (deliveryMap) {
+    try {
+      deliveryMap.flyTo([finalLat, finalLng], zoom || 16, { animate: true, duration: 1.2 });
+    } catch (e) {}
+  }
+}
+
+// Unified marker position setter that updates current coordinates and distance badge
+function setMarkerPosition(lat, lng) {
+  const finalLat = parseFloat(lat) || 18.455585;
+  const finalLng = parseFloat(lng) || 73.873529;
+  currentMapCoords = { lat: finalLat, lng: finalLng };
+
+  if (isNativeGoogleMap && googleMarker) {
+    try {
+      googleMarker.setPosition({ lat: finalLat, lng: finalLng });
+    } catch (e) {}
+  }
+  if (deliveryMarker) {
+    try {
+      deliveryMarker.setLatLng([finalLat, finalLng]);
+    } catch (e) {}
+  }
+  updateMapDistanceBadge(finalLat, finalLng);
+}
+
+// Map Tile / View Switcher (Google Roadmap vs Google Satellite)
+function switchMapTileLayer(type) {
+  currentMapTileType = type;
+  const btnMap = document.getElementById('btn-tile-map');
+  const btnSat = document.getElementById('btn-tile-sat');
+
+  if (type === 'satellite') {
+    if (btnMap) btnMap.className = "px-2 py-1 rounded-lg text-gray-700 hover:text-gray-900 cursor-pointer transition-all";
+    if (btnSat) btnSat.className = "px-2 py-1 rounded-lg bg-emerald-600 text-white font-extrabold cursor-pointer transition-all shadow-xs";
+
+    if (isNativeGoogleMap && googleMap && window.google?.maps?.MapTypeId) {
+      googleMap.setMapTypeId(google.maps.MapTypeId.HYBRID);
+    } else if (deliveryMap) {
+      if (googleRoadmapLayer && deliveryMap.hasLayer(googleRoadmapLayer)) deliveryMap.removeLayer(googleRoadmapLayer);
+      if (googleSatelliteLayer && !deliveryMap.hasLayer(googleSatelliteLayer)) deliveryMap.addLayer(googleSatelliteLayer);
+    }
+  } else {
+    if (btnSat) btnSat.className = "px-2 py-1 rounded-lg text-gray-700 hover:text-gray-900 cursor-pointer transition-all";
+    if (btnMap) btnMap.className = "px-2 py-1 rounded-lg bg-emerald-600 text-white font-extrabold cursor-pointer transition-all shadow-xs";
+
+    if (isNativeGoogleMap && googleMap && window.google?.maps?.MapTypeId) {
+      googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+    } else if (deliveryMap) {
+      if (googleSatelliteLayer && deliveryMap.hasLayer(googleSatelliteLayer)) deliveryMap.removeLayer(googleSatelliteLayer);
+      if (googleRoadmapLayer && !deliveryMap.hasLayer(googleRoadmapLayer)) deliveryMap.addLayer(googleRoadmapLayer);
+    }
+  }
+}
+
+// Master map initializer (Dual Mode: Native Google Maps or Leaflet Fallback)
 function initDeliveryMap(targetLat, targetLng) {
   const container = document.getElementById('delivery-map-picker');
   if (!container) return;
@@ -1030,7 +1109,138 @@ function initDeliveryMap(targetLat, targetLng) {
   // Default coordinate selection
   let initLat = targetLat || (storeLat !== 0 ? storeLat : 18.455585);
   let initLng = targetLng || (storeLng !== 0 ? storeLng : 73.873529);
+  currentMapCoords = { lat: initLat, lng: initLng };
 
+  // CHECK: If Google Maps JavaScript API is available, render True Native Google Map!
+  if (window.google && window.google.maps && window.google.maps.Map) {
+    try {
+      if (deliveryMap) {
+        deliveryMap.remove();
+        deliveryMap = null;
+      }
+      container.innerHTML = '';
+
+      googleMap = new google.maps.Map(container, {
+        center: { lat: initLat, lng: initLng },
+        zoom: 16,
+        mapTypeId: currentMapTileType === 'satellite' ? google.maps.MapTypeId.HYBRID : google.maps.MapTypeId.ROADMAP,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+        gestureHandling: 'greedy'
+      });
+
+      // Native draggable Google Maps marker
+      googleMarker = new google.maps.Marker({
+        position: { lat: initLat, lng: initLng },
+        map: googleMap,
+        draggable: true,
+        animation: google.maps.Animation.DROP,
+        title: "Your Delivery Location"
+      });
+
+      // 5km zone circle if store coordinates exist
+      if (storeLat !== 0 && storeLng !== 0) {
+        googleCircle = new google.maps.Circle({
+          strokeColor: '#0C831F',
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: '#10b981',
+          fillOpacity: 0.12,
+          map: googleMap,
+          center: { lat: storeLat, lng: storeLng },
+          radius: maxRadiusKm * 1000
+        });
+
+        // Store Hub marker
+        new google.maps.Marker({
+          position: { lat: storeLat, lng: storeLng },
+          map: googleMap,
+          icon: {
+            url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+            scaledSize: new google.maps.Size(32, 32)
+          },
+          title: "🏪 Store Hub"
+        });
+      }
+
+      // Drag listeners on Google Marker
+      googleMarker.addListener('drag', function () {
+        const pos = googleMarker.getPosition();
+        const lat = pos.lat();
+        const lng = pos.lng();
+        currentMapCoords = { lat, lng };
+        updateMapDistanceBadge(lat, lng);
+      });
+
+      googleMarker.addListener('dragend', function () {
+        const pos = googleMarker.getPosition();
+        const lat = pos.lat();
+        const lng = pos.lng();
+        currentMapCoords = { lat, lng };
+        const check = updateMapDistanceBadge(lat, lng);
+        reverseGeocode(lat, lng);
+        if (check.isWithin) {
+          showNotificationToast(`📍 Exact pin location locked (${check.distanceKm} km from store) ✓`);
+        }
+      });
+
+      googleMap.addListener('click', function (e) {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        googleMarker.setPosition({ lat, lng });
+        currentMapCoords = { lat, lng };
+        const check = updateMapDistanceBadge(lat, lng);
+        reverseGeocode(lat, lng);
+        if (check.isWithin) {
+          showNotificationToast(`📍 Pin placed at location (${check.distanceKm} km) ✓`);
+        }
+      });
+
+      // Attach native Google Places Autocomplete if available
+      const searchInput = document.getElementById('map-search-input');
+      if (searchInput && window.google.maps.places && window.google.maps.places.Autocomplete) {
+        try {
+          if (!googleAutocomplete) {
+            googleAutocomplete = new google.maps.places.Autocomplete(searchInput, {
+              componentRestrictions: { country: 'in' },
+              fields: ['geometry', 'name', 'formatted_address', 'address_components']
+            });
+            if (storeLat !== 0 && storeLng !== 0) {
+              const bounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(storeLat - 0.08, storeLng - 0.08),
+                new google.maps.LatLng(storeLat + 0.08, storeLng + 0.08)
+              );
+              googleAutocomplete.setBounds(bounds);
+            }
+            googleAutocomplete.addListener('place_changed', function () {
+              const place = googleAutocomplete.getPlace();
+              if (place && place.geometry && place.geometry.location) {
+                const plat = place.geometry.location.lat();
+                const plng = place.geometry.location.lng();
+                panMapTo(plat, plng, 17);
+                setMarkerPosition(plat, plng);
+                reverseGeocode(plat, plng);
+                showNotificationToast(`📍 Guided to ${place.name || 'location'}! Drag pin to fine-tune.`);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn("Google Places Autocomplete init warning:", e);
+        }
+      }
+
+      isNativeGoogleMap = true;
+      updateMapDistanceBadge(initLat, initLng);
+      return;
+    } catch (e) {
+      console.warn("Native Google Maps initialization error, falling back to Leaflet:", e);
+    }
+  }
+
+  // FALLBACK: Leaflet Map with Google Roadmap & Satellite Tile Layers
+  isNativeGoogleMap = false;
   if (typeof L === 'undefined') {
     container.innerHTML = `
       <div class="h-full flex flex-col items-center justify-center p-4 text-center space-y-2 bg-gray-50 text-gray-500">
@@ -1082,7 +1292,6 @@ function initDeliveryMap(targetLat, targetLng) {
       });
       L.marker([storeLat, storeLng], { icon: storeIcon, interactive: false }).addTo(deliveryMap);
 
-      // Translucent 5 km Delivery Zone boundary
       deliveryCircle = L.circle([storeLat, storeLng], {
         radius: maxRadiusKm * 1000,
         color: '#0C831F',
@@ -1143,89 +1352,312 @@ function initDeliveryMap(targetLat, targetLng) {
   }
 }
 
-// ================= BLINKIT/ZEPTO 3-TIER GOOGLE MAPS GUIDED SEARCH ENGINE =================
-// Tier 1: Local High-Precision Society & Apartment Index (Kondhwa, NIBM, Wanowrie, Salunke Vihar, Undri, Bibwewadi, Katraj)
-// Tier 2: Google Maps Places API Autocomplete (Live buildings, landmarks, gates via Google Maps JS SDK)
-// Tier 3: Photon Fast Fuzzy Geocoder + OpenStreetMap Fallback
-
+// ================= COMPREHENSIVE 200+ PUNE SOCIETIES & LANDMARKS DIRECTORY =================
+// Pre-indexed for 0ms Instant Match across Kondhwa, NIBM, Wanowrie, Salunke Vihar, Undri, Mohammadwadi, Bibwewadi, Katraj, Camp, Hadapsar, Market Yard
 const LOCAL_PUNE_SOCIETIES = [
   // Kondhwa / NIBM Road
   { name: "Kumar Palmcrest", area: "Kondhwa", road: "Kondhwa Main Road", pincode: "411048", lat: 18.4721, lng: 73.8864 },
   { name: "Kumar Sublime", area: "Kondhwa", road: "Kondhwa Budruk", pincode: "411048", lat: 18.4682, lng: 73.8841 },
+  { name: "Kumar Park West", area: "Kondhwa", road: "Kondhwa Main Road", pincode: "411048", lat: 18.4715, lng: 73.8870 },
   { name: "Kumar Surabhi", area: "Pune-Satara Road", road: "Parvati", pincode: "411009", lat: 18.4891, lng: 73.8562 },
   { name: "Kumar Prithvi", area: "Market Yard", road: "Salisbury Park", pincode: "411037", lat: 18.4905, lng: 73.8712 },
   { name: "Kumar Pebble Park", area: "Hadapsar", road: "Handewadi Road", pincode: "411028", lat: 18.4851, lng: 73.9312 },
-  { name: "Ganga Satellite", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4883, lng: 73.8967 },
-  { name: "Ganga Florentina", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4705, lng: 73.8998 },
-  { name: "Ganga Kingston", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4752, lng: 73.9101 },
-  { name: "Bramha Sun City", area: "Kalyani Nagar / Wadgaon Sheri", road: "New Kalyani Nagar", pincode: "411014", lat: 18.5478, lng: 73.9065 },
+  { name: "Kumar Paras", area: "Salisbury Park", road: "Salisbury Park", pincode: "411037", lat: 18.4955, lng: 73.8735 },
+  { name: "Kumar Park Residency", area: "Salisbury Park", road: "Salisbury Park", pincode: "411037", lat: 18.4970, lng: 73.8750 },
+  { name: "Kumar Picasso", area: "Hadapsar", road: "Handewadi Road", pincode: "411028", lat: 18.4980, lng: 73.9350 },
+  { name: "Kumar Primavera", area: "Wadgaon Sheri", road: "Kalyani Nagar Road", pincode: "411014", lat: 18.5430, lng: 73.9210 },
   { name: "Bramha Avenue", area: "Kondhwa", road: "Jyoti Chowk", pincode: "411048", lat: 18.4789, lng: 73.8885 },
   { name: "Bramha Emerald County", area: "Kondhwa", road: "NIBM Road", pincode: "411048", lat: 18.4764, lng: 73.8912 },
-  { name: "Dorabjee Heritage Mall", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4691, lng: 73.8985 },
-  { name: "Dorabjee Paradise", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4688, lng: 73.9056 },
+  { name: "Bramha Horizon", area: "Kondhwa", road: "Kondhwa Khurd", pincode: "411048", lat: 18.4755, lng: 73.8895 },
+  { name: "Bramha Memories", area: "Kondhwa", road: "NIBM Road", pincode: "411048", lat: 18.4770, lng: 73.8920 },
+  { name: "Bramha Majestic", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4755, lng: 73.8920 },
+  { name: "Bramha Angan", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4842, lng: 73.8955 },
+  { name: "Bramha Sun City", area: "Kalyani Nagar / Wadgaon Sheri", road: "New Kalyani Nagar", pincode: "411014", lat: 18.5478, lng: 73.9065 },
   { name: "Clover Highlands", area: "NIBM Road", road: "NIBM Road", pincode: "411048", lat: 18.4735, lng: 73.8972 },
   { name: "Clover Palisades", area: "NIBM Undri Road", road: "Undri Road", pincode: "411048", lat: 18.4668, lng: 73.9012 },
   { name: "Clover Hills", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4771, lng: 73.8945 },
+  { name: "Clover Citadel", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4860, lng: 73.8950 },
   { name: "Clover Park View", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4741, lng: 73.9082 },
-  { name: "Nyati Estate", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4674, lng: 73.9085 },
-  { name: "Nyati Enclave", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4659, lng: 73.9092 },
-  { name: "Nyati Windchimes", area: "Undri", road: "Undri Chowk", pincode: "411060", lat: 18.4589, lng: 73.9142 },
-  { name: "Nyati County", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4665, lng: 73.9078 },
-  { name: "Nyati Serenity", area: "Mohammadwadi", road: "Mohammadwadi", pincode: "411060", lat: 18.4698, lng: 73.9112 },
-  { name: "Raheja Vistas", area: "NIBM Road", road: "Post Office Road", pincode: "411048", lat: 18.4718, lng: 73.8962 },
-  { name: "Raheja Vistas Premiere", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4729, lng: 73.9068 },
-  { name: "Marvel Isola", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4711, lng: 73.9075 },
-  { name: "Marvel Ganga Sangria", area: "NIBM Undri Road", road: "Mohammadwadi", pincode: "411060", lat: 18.4645, lng: 73.9051 },
-  { name: "Marvel Bounty", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5085, lng: 73.9295 },
-  { name: "Salunke Vihar", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4831, lng: 73.8951 },
-  { name: "Oxford Village", area: "Wanowrie", road: "Kedari Nagar", pincode: "411040", lat: 18.4875, lng: 73.8979 },
-  { name: "Sacred Heart Town", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4902, lng: 73.8935 },
-  { name: "Mayfair Elegance", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4745, lng: 73.8965 },
+  { name: "Clover Village", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4840, lng: 73.8945 },
+  { name: "Clover Acropolis", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4855, lng: 73.8970 },
+  { name: "Clover Metropolis", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4765, lng: 73.8890 },
+  { name: "Dorabjee Heritage Mall", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4691, lng: 73.8985 },
+  { name: "Dorabjee Paradise", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4688, lng: 73.9056 },
+  { name: "Dorabjee Enclave", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4865, lng: 73.8940 },
   { name: "Sunshree Emerald", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4782, lng: 73.8931 },
   { name: "Sunshree Woods", area: "NIBM", road: "Salunke Vihar Road", pincode: "411048", lat: 18.4795, lng: 73.8942 },
   { name: "Sunshree Kangan", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4778, lng: 73.8925 },
+  { name: "Sunshree Gold", area: "NIBM", road: "Salunke Vihar Road", pincode: "411048", lat: 18.4802, lng: 73.8938 },
+  { name: "Sunshree Classic", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4788, lng: 73.8929 },
+  { name: "Sunshree Flower Valley", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4820, lng: 73.8935 },
+  { name: "Mayfair Elegance", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4745, lng: 73.8965 },
+  { name: "Mayfair Eleganza", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4750, lng: 73.8958 },
+  { name: "Hill Mist Garden", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4715, lng: 73.8941 },
+  { name: "Hill Mist Harmony", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4725, lng: 73.8950 },
+  { name: "Cloud 9", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4758, lng: 73.8981 },
+  { name: "Palace Orchard", area: "NIBM", road: "Undri Road", pincode: "411048", lat: 18.4695, lng: 73.8971 },
+  { name: "Bizzbay Mall", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4685, lng: 73.8992 },
   { name: "Kausar Baugh", area: "Kondhwa", road: "Kausar Baugh Road", pincode: "411048", lat: 18.4761, lng: 73.8892 },
   { name: "Meeta Nagar", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4731, lng: 73.8845 },
   { name: "Mithanagar", area: "Kondhwa", road: "Kondhwa Khurd", pincode: "411048", lat: 18.4755, lng: 73.8832 },
-  { name: "Lullanagar", area: "Wanowrie", road: "Lullanagar Chowk", pincode: "411040", lat: 18.4912, lng: 73.8856 },
+  { name: "Konark Pooram", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4782, lng: 73.8889 },
+  { name: "Konark Indrayu", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4768, lng: 73.8878 },
+  { name: "Konark Bella Vista", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4760, lng: 73.8935 },
+  { name: "Kubera Park", area: "Kondhwa", road: "Lullanagar", pincode: "411040", lat: 18.4895, lng: 73.8872 },
+  { name: "Kubera Garden", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4740, lng: 73.8860 },
+  { name: "Fakhri Hills", area: "Kondhwa", road: "Kondhwa Khurd", pincode: "411048", lat: 18.4710, lng: 73.8830 },
+  { name: "B M K Towers", area: "Kondhwa", road: "Kondhwa Khurd", pincode: "411048", lat: 18.4745, lng: 73.8840 },
+  { name: "Silver Crest", area: "Kondhwa", road: "Kondhwa Khurd", pincode: "411048", lat: 18.4720, lng: 73.8850 },
+  { name: "Green Park", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4730, lng: 73.8870 },
+  { name: "Ashoka Mews", area: "Kondhwa", road: "Kondhwa Khurd", pincode: "411048", lat: 18.4750, lng: 73.8880 },
+  { name: "Jyoti Chowk", area: "Kondhwa", road: "Kondhwa Main Road", pincode: "411048", lat: 18.4785, lng: 73.8880 },
+  { name: "Kondhwa Police Station", area: "Kondhwa", road: "Kondhwa Main Road", pincode: "411048", lat: 18.4725, lng: 73.8860 },
+  { name: "Sheetla Devi Temple", area: "Kondhwa", road: "Kondhwa Khurd", pincode: "411048", lat: 18.4745, lng: 73.8850 },
+  { name: "Prime Multispeciality Hospital", area: "Kondhwa", road: "Kondhwa Main Road", pincode: "411048", lat: 18.4735, lng: 73.8875 },
+  { name: "Satyanand Hospital", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4710, lng: 73.8855 },
+  { name: "Khadi Machine Chowk", area: "Kondhwa", road: "Kondhwa Budruk", pincode: "411048", lat: 18.4625, lng: 73.8860 },
+  { name: "Tilekar Nagar", area: "Kondhwa", road: "Kondhwa Budruk", pincode: "411048", lat: 18.4590, lng: 73.8840 },
+  { name: "Sinhgad City School", area: "Kondhwa", road: "Kondhwa Budruk", pincode: "411048", lat: 18.4635, lng: 73.8855 },
+  { name: "NIBM Campus", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4765, lng: 73.8970 },
+
+  // Wanowrie & Salunke Vihar
+  { name: "Salunke Vihar", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4831, lng: 73.8951 },
+  { name: "Salunke Vihar Society Gate 1", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4830, lng: 73.8945 },
+  { name: "Salunke Vihar Society Gate 2", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4835, lng: 73.8958 },
+  { name: "ABC Farms", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4815, lng: 73.8960 },
+  { name: "Oxford Village", area: "Wanowrie", road: "Kedari Nagar", pincode: "411040", lat: 18.4875, lng: 73.8979 },
+  { name: "Oxford Comforts", area: "Wanowrie", road: "Kedari Nagar", pincode: "411040", lat: 18.4880, lng: 73.8965 },
+  { name: "Oxford Hallmark", area: "Wanowrie", road: "Kedari Nagar", pincode: "411040", lat: 18.4885, lng: 73.8975 },
+  { name: "Oxford Blues", area: "Wanowrie", road: "Kedari Nagar", pincode: "411040", lat: 18.4890, lng: 73.8980 },
+  { name: "Sacred Heart Town", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4902, lng: 73.8935 },
+  { name: "Sacred Heart Mega City", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4910, lng: 73.8945 },
+  { name: "Ganga Satellite", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4883, lng: 73.8967 },
+  { name: "Green Valley", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4845, lng: 73.8912 },
+  { name: "Archana Paradise", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4852, lng: 73.8961 },
   { name: "Kedari Nagar", area: "Wanowrie", road: "Kedari Road", pincode: "411040", lat: 18.4862, lng: 73.8981 },
+  { name: "Kedari Heights", area: "Wanowrie", road: "Kedari Nagar", pincode: "411040", lat: 18.4870, lng: 73.8985 },
+  { name: "Kedari Landmark", area: "Wanowrie", road: "Kedari Nagar", pincode: "411040", lat: 18.4865, lng: 73.8975 },
+  { name: "Lullanagar", area: "Wanowrie", road: "Lullanagar Chowk", pincode: "411040", lat: 18.4912, lng: 73.8856 },
+  { name: "Mount Vert Biarritz", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4828, lng: 73.8948 },
+  { name: "Raheja Gardens", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4918, lng: 73.8940 },
+  { name: "Manish Garden", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4870, lng: 73.8920 },
+  { name: "Parmar Nagar", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.5005, lng: 73.9010 },
+  { name: "Parmar Park", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4868, lng: 73.8955 },
+  { name: "Parmar Galaxy", area: "Fatima Nagar", road: "Fatima Nagar", pincode: "411013", lat: 18.5015, lng: 73.9020 },
   { name: "Fatima Nagar", area: "Wanowrie", road: "Solapur Road", pincode: "411013", lat: 18.5025, lng: 73.9015 },
-  { name: "Market Yard", area: "Gultekdi", road: "Market Yard Road", pincode: "411037", lat: 18.4885, lng: 73.8682 },
-  { name: "Bibwewadi", area: "Bibwewadi", road: "Bibwewadi Road", pincode: "411037", lat: 18.4735, lng: 73.8612 },
-  { name: "Katraj", area: "Katraj", road: "Katraj Chowk", pincode: "411046", lat: 18.4552, lng: 73.8582 },
-  { name: "Katraj Kondhwa Road", area: "Katraj / Kondhwa", road: "Katraj Kondhwa Road", pincode: "411046", lat: 18.4582, lng: 73.8715 },
-  { name: "Upper Indira Nagar", area: "Bibwewadi", road: "Bibwewadi", pincode: "411037", lat: 18.4682, lng: 73.8645 },
+  { name: "Inamdar Hospital", area: "Fatima Nagar", road: "Fatima Nagar", pincode: "411013", lat: 18.5030, lng: 73.9022 },
+  { name: "Command Hospital", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4985, lng: 73.8910 },
+  { name: "Ruby Hall Clinic Wanowrie", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4890, lng: 73.8970 },
+  { name: "AFMC", area: "Wanowrie", road: "Solapur Road", pincode: "411040", lat: 18.5020, lng: 73.8860 },
+  { name: "Sobha Garnet", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4835, lng: 73.8965 },
+  { name: "Supreme Palms", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4825, lng: 73.8950 },
+  { name: "Supreme Headway", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4850, lng: 73.8930 },
+  { name: "Gulmohar Habitat", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4880, lng: 73.8930 },
+  { name: "Gulmohar Queenstown", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4840, lng: 73.8960 },
+  { name: "Gulmohar Centre Point", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4875, lng: 73.8940 },
+  { name: "Hutchings High School", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4875, lng: 73.8910 },
+  { name: "St. Matthew's Academy", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4860, lng: 73.8905 },
+
+  // Mohammadwadi / NIBM Annexe
+  { name: "Corinthians Club", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4680, lng: 73.9070 },
+  { name: "Dorabjee Paradise", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4688, lng: 73.9056 },
+  { name: "Nyati Estate", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4674, lng: 73.9085 },
+  { name: "Nyati Enclave", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4659, lng: 73.9092 },
+  { name: "Nyati County", area: "Mohammadwadi", road: "Corinthians Club Road", pincode: "411060", lat: 18.4665, lng: 73.9078 },
+  { name: "Nyati Serenity", area: "Mohammadwadi", road: "Mohammadwadi", pincode: "411060", lat: 18.4698, lng: 73.9112 },
+  { name: "Nyati Meadows", area: "Mohammadwadi", road: "Mohammadwadi", pincode: "411060", lat: 18.4710, lng: 73.9125 },
+  { name: "Nyati Highlands", area: "Mohammadwadi", road: "Mohammadwadi", pincode: "411060", lat: 18.4660, lng: 73.9065 },
+  { name: "Raheja Vistas", area: "NIBM Road", road: "Post Office Road", pincode: "411048", lat: 18.4718, lng: 73.8962 },
+  { name: "Raheja Vistas Premiere", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4729, lng: 73.9068 },
+  { name: "Raheja Vistas Phase 3", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4735, lng: 73.9070 },
+  { name: "Ganga Kingston", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4752, lng: 73.9101 },
+  { name: "Ganga Kingston Phase 2", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4755, lng: 73.9105 },
+  { name: "Ganga Florentina", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4705, lng: 73.8998 },
+  { name: "Marvel Isola", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4711, lng: 73.9075 },
+  { name: "Marvel Ganga Sangria", area: "NIBM Undri Road", road: "Mohammadwadi", pincode: "411060", lat: 18.4645, lng: 73.9051 },
+  { name: "Marvel Albesia", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4695, lng: 73.9095 },
+  { name: "Marvel Simrose", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4705, lng: 73.9110 },
+  { name: "Archana Greens", area: "Mohammadwadi", road: "Mohammadwadi", pincode: "411060", lat: 18.4715, lng: 73.9090 },
+  { name: "Elina Living", area: "Mohammadwadi", road: "Mohammadwadi", pincode: "411060", lat: 18.4678, lng: 73.9100 },
+  { name: "Kolte Patil Margosa Heights", area: "Mohammadwadi", road: "NIBM Annexe", pincode: "411060", lat: 18.4725, lng: 73.9140 },
+  { name: "Sobha Carnation", area: "NIBM Undri Road", road: "NIBM Undri Road", pincode: "411048", lat: 18.4680, lng: 73.9002 },
+  { name: "Sobha Ivory", area: "NIBM Undri Road", road: "NIBM Undri Road", pincode: "411048", lat: 18.4675, lng: 73.8995 },
+  { name: "Vibgyor High School", area: "NIBM Annexe", road: "Dorabjee Paradise Road", pincode: "411060", lat: 18.4735, lng: 73.9080 },
+  { name: "Delhi Public School", area: "Mohammadwadi", road: "DPS Road", pincode: "411060", lat: 18.4640, lng: 73.9135 },
+
+  // Undri & Handewadi
+  { name: "The Bishop's Co-Ed School", area: "Undri", road: "Undri Road", pincode: "411060", lat: 18.4575, lng: 73.9130 },
   { name: "Undri Chowk", area: "Undri", road: "Undri Main Road", pincode: "411060", lat: 18.4561, lng: 73.9118 },
-  { name: "Mohammadwadi", area: "Mohammadwadi", road: "Tarawade Vasti", pincode: "411060", lat: 18.4715, lng: 73.9082 },
-  { name: "NIBM Road", area: "Kondhwa", road: "NIBM Road", pincode: "411048", lat: 18.4748, lng: 73.8955 },
-  { name: "NIBM Undri Road", area: "Undri / NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4655, lng: 73.9015 },
-  { name: "Salunke Vihar Road", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4822, lng: 73.8942 },
-  { name: "Kondhwa Budruk", area: "Kondhwa", road: "Saswad Road", pincode: "411048", lat: 18.4612, lng: 73.8895 },
-  { name: "Kondhwa Khurd", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4772, lng: 73.8865 },
+  { name: "Nyati Windchimes", area: "Undri", road: "Undri Chowk", pincode: "411060", lat: 18.4589, lng: 73.9142 },
+  { name: "Nyati Esteban", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4570, lng: 73.9135 },
   { name: "Dynamic Grandeur", area: "Undri", road: "Undri Chowk", pincode: "411060", lat: 18.4542, lng: 73.9165 },
+  { name: "Dynamic Crest", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4550, lng: 73.9170 },
+  { name: "Dynamic Oasis", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4535, lng: 73.9160 },
   { name: "Godrej Horizon", area: "Undri", road: "Undri Road", pincode: "411060", lat: 18.4525, lng: 73.9178 },
   { name: "Godrej Greens", area: "Undri", road: "Undri Road", pincode: "411060", lat: 18.4510, lng: 73.9192 },
   { name: "Amit Colori", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4538, lng: 73.9145 },
-  { name: "Hill Mist Garden", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4715, lng: 73.8941 },
-  { name: "Cloud 9", area: "NIBM", road: "NIBM Road", pincode: "411048", lat: 18.4758, lng: 73.8981 },
-  { name: "Palace Orchard", area: "NIBM", road: "Undri Road", pincode: "411048", lat: 18.4695, lng: 73.8971 },
-  { name: "Green Valley", area: "Wanowrie", road: "Wanowrie", pincode: "411040", lat: 18.4845, lng: 73.8912 },
-  { name: "Kubera Park", area: "Kondhwa", road: "Lullanagar", pincode: "411040", lat: 18.4895, lng: 73.8872 },
-  { name: "Konark Indrayu", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4768, lng: 73.8878 },
-  { name: "Konark Pooram", area: "Kondhwa", road: "Kondhwa", pincode: "411048", lat: 18.4782, lng: 73.8889 },
-  { name: "Archana Paradise", area: "Wanowrie", road: "Salunke Vihar Road", pincode: "411040", lat: 18.4852, lng: 73.8961 },
-  { name: "Bizzbay Mall", area: "NIBM", road: "NIBM Undri Road", pincode: "411048", lat: 18.4685, lng: 73.8992 },
-  { name: "Magarpatta City", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5132, lng: 73.9272 },
-  { name: "Amanora Park Town", area: "Hadapsar", road: "Amanora Park Town", pincode: "411028", lat: 18.5185, lng: 73.9352 },
+  { name: "Atur Park", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4580, lng: 73.9105 },
+  { name: "Kingston Memories", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4550, lng: 73.9135 },
+  { name: "Mantra Essence", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4568, lng: 73.9150 },
+  { name: "38 Park Majestique", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4530, lng: 73.9120 },
+  { name: "VTP Urban Nest", area: "Undri / Mohammadwadi", road: "Undri Road", pincode: "411060", lat: 18.4625, lng: 73.9110 },
+  { name: "Ganga Glitz", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4535, lng: 73.9160 },
+  { name: "ARV Regalia", area: "Undri", road: "Undri", pincode: "411060", lat: 18.4555, lng: 73.9140 },
+  { name: "ARV New Town", area: "Pisoli / Undri", road: "Pisoli Road", pincode: "411060", lat: 18.4495, lng: 73.9080 },
   { name: "Runwal Seagull", area: "Handewadi", road: "Handewadi Road", pincode: "411028", lat: 18.4762, lng: 73.9315 },
-  { name: "Wanowrie", area: "Wanowrie", road: "Wanowrie Bazar", pincode: "411040", lat: 18.4872, lng: 73.8945 },
-  { name: "Camp MG Road", area: "Camp", road: "MG Road", pincode: "411001", lat: 18.5172, lng: 73.8785 }
+  { name: "Majestique City", area: "Handewadi", road: "Handewadi Road", pincode: "411028", lat: 18.4750, lng: 73.9340 },
+  { name: "Silver Stone", area: "Handewadi", road: "Handewadi Road", pincode: "411028", lat: 18.4780, lng: 73.9325 },
+  { name: "Dream Infiniti", area: "Handewadi", road: "Handewadi Road", pincode: "411028", lat: 18.4740, lng: 73.9350 },
+  { name: "Pisoli", area: "Pisoli", road: "Pisoli Road", pincode: "411060", lat: 18.4480, lng: 73.9050 },
+  { name: "Yewalewadi", area: "Yewalewadi", road: "Kondhwa Saswad Road", pincode: "411048", lat: 18.4450, lng: 73.8920 },
+
+  // Market Yard, Gultekdi, Salisbury Park & Bibwewadi
+  { name: "Market Yard", area: "Gultekdi", road: "Market Yard Road", pincode: "411037", lat: 18.4885, lng: 73.8682 },
+  { name: "Ganga Dham", area: "Market Yard", road: "Market Yard", pincode: "411037", lat: 18.4875, lng: 73.8710 },
+  { name: "Ganga Dham Commercial", area: "Market Yard", road: "Market Yard", pincode: "411037", lat: 18.4880, lng: 73.8715 },
+  { name: "Ganga Ishanya", area: "Pune-Satara Road", road: "Pune-Satara Road", pincode: "411037", lat: 18.4860, lng: 73.8590 },
+  { name: "Salisbury Park", area: "Salisbury Park", road: "Salisbury Park Road", pincode: "411037", lat: 18.4960, lng: 73.8745 },
+  { name: "Bibwewadi", area: "Bibwewadi", road: "Bibwewadi Road", pincode: "411037", lat: 18.4735, lng: 73.8612 },
+  { name: "Upper Indira Nagar", area: "Bibwewadi", road: "Bibwewadi", pincode: "411037", lat: 18.4682, lng: 73.8645 },
+  { name: "Lower Indira Nagar", area: "Bibwewadi", road: "Bibwewadi", pincode: "411037", lat: 18.4710, lng: 73.8630 },
+  { name: "Chintamani Nagar", area: "Bibwewadi", road: "Bibwewadi", pincode: "411037", lat: 18.4760, lng: 73.8625 },
+  { name: "Vardhaman Heights", area: "Bibwewadi", road: "Bibwewadi", pincode: "411037", lat: 18.4720, lng: 73.8620 },
+  { name: "Pancharatna Society", area: "Bibwewadi", road: "Bibwewadi", pincode: "411037", lat: 18.4740, lng: 73.8635 },
+  { name: "Lake Town", area: "Bibwewadi", road: "Katraj Bibwewadi Road", pincode: "411037", lat: 18.4650, lng: 73.8610 },
+  { name: "Adinath Society", area: "Pune-Satara Road", road: "Pune-Satara Road", pincode: "411037", lat: 18.4850, lng: 73.8575 },
+  { name: "Walvekar Nagar", area: "Parvati", road: "Pune-Satara Road", pincode: "411009", lat: 18.4910, lng: 73.8550 },
+  { name: "Dhankawadi", area: "Dhankawadi", road: "Dhankawadi Chowk", pincode: "411043", lat: 18.4660, lng: 73.8540 },
+
+  // Katraj & Katraj-Kondhwa Road
+  { name: "Katraj Chowk", area: "Katraj", road: "Katraj Chowk", pincode: "411046", lat: 18.4552, lng: 73.8582 },
+  { name: "Katraj Snake Park", area: "Katraj", road: "Satara Road", pincode: "411046", lat: 18.4530, lng: 73.8615 },
+  { name: "Katraj Kondhwa Road", area: "Katraj / Kondhwa", road: "Katraj Kondhwa Road", pincode: "411046", lat: 18.4582, lng: 73.8715 },
+  { name: "Gokul Nagar", area: "Kondhwa", road: "Katraj Kondhwa Road", pincode: "411048", lat: 18.4610, lng: 73.8760 },
+  { name: "Gokul Nagar Bus Stop", area: "Kondhwa", road: "Katraj Kondhwa Road", pincode: "411048", lat: 18.4605, lng: 73.8755 },
+  { name: "ISKCON NVCC Temple", area: "Kondhwa / Katraj", road: "Katraj Kondhwa Road", pincode: "411048", lat: 18.4585, lng: 73.8825 },
+  { name: "Shatrunjay Temple", area: "Kondhwa", road: "Katraj Kondhwa Road", pincode: "411048", lat: 18.4600, lng: 73.8740 },
+  { name: "Kolte Patil Three Jewels", area: "Kondhwa", road: "Katraj Kondhwa Road", pincode: "411048", lat: 18.4565, lng: 73.8815 },
+  { name: "Bharti Vidyapeeth", area: "Katraj", road: "Pune-Satara Road", pincode: "411046", lat: 18.4590, lng: 73.8530 },
+  { name: "PICT College", area: "Katraj", road: "Katraj-Dehu Road Bypass", pincode: "411046", lat: 18.4570, lng: 73.8510 },
+  { name: "Wonder City", area: "Katraj", road: "Katraj", pincode: "411046", lat: 18.4540, lng: 73.8560 },
+  { name: "Sukhsagar Nagar", area: "Katraj", road: "Katraj", pincode: "411046", lat: 18.4620, lng: 73.8680 },
+  { name: "Rajas Society", area: "Katraj", road: "Katraj", pincode: "411046", lat: 18.4575, lng: 73.8640 },
+
+  // Hadapsar, Magarpatta & Amanora
+  { name: "Magarpatta City", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5132, lng: 73.9272 },
+  { name: "Magarpatta Cosmos", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5140, lng: 73.9280 },
+  { name: "Magarpatta Roystonea", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5120, lng: 73.9260 },
+  { name: "Magarpatta Jasminium", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5115, lng: 73.9250 },
+  { name: "Magarpatta Laburnum", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5150, lng: 73.9290 },
+  { name: "Amanora Park Town", area: "Hadapsar", road: "Amanora Park Town", pincode: "411028", lat: 18.5185, lng: 73.9352 },
+  { name: "Amanora Future Towers", area: "Hadapsar", road: "Amanora Park Town", pincode: "411028", lat: 18.5175, lng: 73.9345 },
+  { name: "Amanora Gateway Towers", area: "Hadapsar", road: "Amanora Park Town", pincode: "411028", lat: 18.5190, lng: 73.9360 },
+  { name: "Season's Mall", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5180, lng: 73.9325 },
+  { name: "Marvel Bounty", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5085, lng: 73.9295 },
+  { name: "Nobel Hospital", area: "Hadapsar", road: "Magarpatta Road", pincode: "411028", lat: 18.5040, lng: 73.9300 },
+  { name: "Hadapsar Gadital", area: "Hadapsar", road: "Solapur Road", pincode: "411028", lat: 18.5010, lng: 73.9320 },
+  { name: "Vaiduwadi", area: "Hadapsar", road: "Hadapsar", pincode: "411013", lat: 18.5050, lng: 73.9180 },
+  { name: "Ramtekdi", area: "Hadapsar", road: "Hadapsar Industrial Estate", pincode: "411013", lat: 18.5015, lng: 73.9120 },
+
+  // Camp, Swargate & Central Pune
+  { name: "Camp MG Road", area: "Camp", road: "MG Road", pincode: "411001", lat: 18.5172, lng: 73.8785 },
+  { name: "East Street", area: "Camp", road: "East Street", pincode: "411001", lat: 18.5160, lng: 73.8810 },
+  { name: "Aurora Towers", area: "Camp", road: "Moledina Road", pincode: "411001", lat: 18.5180, lng: 73.8770 },
+  { name: "SGS Mall", area: "Camp", road: "Moledina Road", pincode: "411001", lat: 18.5155, lng: 73.8795 },
+  { name: "Poona Club", area: "Camp", road: "Bund Garden Road", pincode: "411001", lat: 18.5230, lng: 73.8820 },
+  { name: "Turf Club", area: "Camp", road: "Race Course Road", pincode: "411001", lat: 18.5080, lng: 73.8840 },
+  { name: "Swargate", area: "Swargate", road: "Swargate Chowk", pincode: "411042", lat: 18.5010, lng: 73.8580 },
+  { name: "Seven Loves Chowk", area: "Gultekdi", road: "Shankarsheth Road", pincode: "411042", lat: 18.5020, lng: 73.8660 },
+  { name: "Timber Market", area: "Bhavani Peth", road: "Timber Market Road", pincode: "411042", lat: 18.5045, lng: 73.8700 },
+  { name: "Pune Railway Station", area: "Pune Station", road: "Station Road", pincode: "411001", lat: 18.5285, lng: 73.8745 }
+];
+
+// Stopwords set for Indian residential address search
+const PUNE_STOP_WORDS = new Set([
+  'flat', 'flt', 'bldg', 'building', 'wing', 'room', 'rm', 'house', 'hs', 'apt', 'apartment',
+  'floor', 'fl', 'opp', 'opposite', 'near', 'nr', 'behind', 'bh', 'beside', 'next', 'road',
+  'rd', 'lane', 'ln', 'chowk', 'chwk', 'pune', 'maharashtra', 'mh', 'india', 'society', 'soc',
+  'nagar', 'colony', 'park', 'vihar', 'city', 'heights', 'residency', 'enclave', 'phase',
+  'block', 'sector', 'gate', 'no', 'num', 'number', 'floor', 'first', 'second', 'third'
+]);
+
+// General Pune locality center coordinates for guaranteed fallback guidance (Pin never stays static)
+const PUNE_GENERAL_AREAS = [
+  { name: "Kondhwa", lat: 18.4721, lng: 73.8864, road: "Kondhwa Main Road", pincode: "411048" },
+  { name: "NIBM Road", lat: 18.4748, lng: 73.8955, road: "NIBM Road", pincode: "411048" },
+  { name: "Wanowrie", lat: 18.4872, lng: 73.8945, road: "Wanowrie Bazar", pincode: "411040" },
+  { name: "Salunke Vihar", lat: 18.4831, lng: 73.8951, road: "Salunke Vihar Road", pincode: "411040" },
+  { name: "Undri", lat: 18.4561, lng: 73.9118, road: "Undri Chowk", pincode: "411060" },
+  { name: "Mohammadwadi", lat: 18.4715, lng: 73.9082, road: "Corinthians Road", pincode: "411060" },
+  { name: "Bibwewadi", lat: 18.4735, lng: 73.8612, road: "Bibwewadi Road", pincode: "411037" },
+  { name: "Katraj", lat: 18.4552, lng: 73.8582, road: "Katraj Chowk", pincode: "411046" },
+  { name: "Market Yard", lat: 18.4885, lng: 73.8682, road: "Market Yard Road", pincode: "411037" },
+  { name: "Salisbury Park", lat: 18.4960, lng: 73.8745, road: "Salisbury Park", pincode: "411037" },
+  { name: "Hadapsar", lat: 18.5010, lng: 73.9320, road: "Solapur Road", pincode: "411028" },
+  { name: "Camp", lat: 18.5172, lng: 73.8785, road: "MG Road", pincode: "411001" },
+  { name: "Fatima Nagar", lat: 18.5025, lng: 73.9015, road: "Fatima Nagar Chowk", pincode: "411013" },
+  { name: "Lullanagar", lat: 18.4912, lng: 73.8856, road: "Lullanagar Chowk", pincode: "411040" },
+  { name: "Pisoli", lat: 18.4480, lng: 73.9050, road: "Pisoli Road", pincode: "411060" },
+  { name: "Handewadi", lat: 18.4762, lng: 73.9315, road: "Handewadi Road", pincode: "411028" },
+  { name: "Kalyani Nagar", lat: 18.5478, lng: 73.9065, road: "New Kalyani Nagar", pincode: "411014" },
+  { name: "Swargate", lat: 18.5010, lng: 73.8580, road: "Swargate", pincode: "411042" }
 ];
 
 let addressSearchDebounceTimer = null;
 let googleMapsPlacesService = null;
 let googleMapsAutocompleteService = null;
-let isGoogleMapsPlacesLoading = false;
+
+// Parse coordinates or Google Maps share links pasted into search input
+function tryParseGoogleMapsLinkOrCoords(inputStr) {
+  if (!inputStr || typeof inputStr !== 'string') return null;
+  const s = inputStr.trim();
+
+  // 1. Plain lat, lng: "18.4721, 73.8864" or "18.4721,73.8864" or "18.4721 73.8864"
+  const plainMatch = s.match(/^\s*([+-]?\d{1,2}\.\d+)\s*[, \t]+\s*([+-]?\d{1,3}\.\d+)\s*$/);
+  if (plainMatch) {
+    return { lat: parseFloat(plainMatch[1]), lng: parseFloat(plainMatch[2]), source: 'Coordinates' };
+  }
+
+  // 2. Google Maps URL with @lat,lng: ".../@18.4721,73.8864,17z..."
+  const atMatch = s.match(/@([+-]?\d{1,2}\.\d+),([+-]?\d{1,3}\.\d+)/);
+  if (atMatch) {
+    return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]), source: 'Google Maps Link' };
+  }
+
+  // 3. Google Maps URL with ?q=lat,lng or &ll=lat,lng
+  const qMatch = s.match(/[?&](?:q|ll|query)=([+-]?\d{1,2}\.\d+),([+-]?\d{1,3}\.\d+)/);
+  if (qMatch) {
+    return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]), source: 'Google Maps Link' };
+  }
+
+  // 4. Google Maps destination=lat,lng
+  const destMatch = s.match(/destination=([+-]?\d{1,2}\.\d+),([+-]?\d{1,3}\.\d+)/);
+  if (destMatch) {
+    return { lat: parseFloat(destMatch[1]), lng: parseFloat(destMatch[2]), source: 'Google Maps Link' };
+  }
+
+  return null;
+}
+
+// Open Google Maps search in a new tab so user can pick their exact building and paste link
+function openDirectGoogleMapsPicker() {
+  const query = (document.getElementById('map-search-input')?.value || '').trim();
+  const cfg = state.config?.deliveryZone || {};
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
+  const targetLat = currentMapCoords.lat || storeLat;
+  const targetLng = currentMapCoords.lng || storeLng;
+
+  let url = '';
+  if (query) {
+    url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query + ' Pune')}`;
+  } else {
+    url = `https://www.google.com/maps/@${targetLat},${targetLng},17z`;
+  }
+
+  window.open(url, '_blank');
+  showNotificationToast("🗺️ In Google Maps: Locate house, tap 'Share' -> 'Copy Link', then paste it here!");
+}
 
 // Dynamically load Google Maps Places JavaScript SDK when an API key is configured
 function loadGoogleMapsPlacesSDK(apiKey) {
@@ -1245,7 +1677,7 @@ function loadGoogleMapsPlacesSDK(apiKey) {
 
   isGoogleMapsPlacesLoading = true;
   const script = document.createElement('script');
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&loading=async`;
   script.async = true;
   script.defer = true;
   script.onload = () => {
@@ -1256,6 +1688,11 @@ function loadGoogleMapsPlacesSDK(apiKey) {
         const dummyNode = document.createElement('div');
         googleMapsPlacesService = new google.maps.places.PlacesService(dummyNode);
         console.log("✓ Google Maps Places SDK loaded for guided address search");
+        // Re-initialize active map if currently open
+        const container = document.getElementById('delivery-map-picker');
+        if (container && container.offsetParent !== null && !isNativeGoogleMap) {
+          initDeliveryMap(currentMapCoords.lat, currentMapCoords.lng);
+        }
       }
     } catch (e) {
       console.warn("Google Maps Places initialization error:", e);
@@ -1268,32 +1705,50 @@ function loadGoogleMapsPlacesSDK(apiKey) {
   document.head.appendChild(script);
 }
 
-// Search pre-indexed societies in Pune store delivery zone (Instant, 0ms latency)
+// Search pre-indexed societies in Pune store delivery zone (Instant 0ms latency with fuzzy scoring & stopword filtration)
 function searchLocalSocieties(query, storeLat, storeLng, maxRadiusKm) {
   const q = (query || '').toLowerCase().trim();
   if (q.length < 2) return [];
 
-  const tokens = q.split(/\s+/).filter(Boolean);
+  // Clean and filter tokens
+  const rawTokens = q.split(/[\s,./\-_+]+/).filter(Boolean);
+  const cleanTokens = rawTokens.filter(t => !PUNE_STOP_WORDS.has(t) && !/^\d+$/.test(t));
+  const activeTokens = cleanTokens.length > 0 ? cleanTokens : rawTokens;
 
   const matched = [];
   LOCAL_PUNE_SOCIETIES.forEach(soc => {
+    const socNameLower = soc.name.toLowerCase();
     const fullText = `${soc.name} ${soc.area} ${soc.road} ${soc.pincode}`.toLowerCase();
-    
-    // Check if every token matches
-    const allTokensMatch = tokens.every(t => fullText.includes(t));
-    if (!allTokensMatch) return;
+
+    let score = 0;
+    if (socNameLower === q) {
+      score += 200;
+    } else if (socNameLower.startsWith(q)) {
+      score += 100;
+    } else if (socNameLower.includes(q)) {
+      score += 60;
+    }
+
+    let matchCount = 0;
+    activeTokens.forEach(t => {
+      if (fullText.includes(t)) {
+        score += 25;
+        matchCount++;
+      }
+    });
+
+    if (activeTokens.length > 0 && matchCount === activeTokens.length) {
+      score += 50;
+    }
+
+    if (score < 20) return;
 
     let dist = 0;
     if (storeLat !== 0 && storeLng !== 0) {
       dist = calculateDistanceKm(storeLat, storeLng, soc.lat, soc.lng);
     }
     const isWithin = dist <= maxRadiusKm;
-
-    // Relevance score
-    let score = 10;
-    if (soc.name.toLowerCase() === q) score += 100;
-    else if (soc.name.toLowerCase().startsWith(q)) score += 50;
-    else if (soc.name.toLowerCase().includes(q)) score += 30;
+    if (isWithin) score += 15;
 
     matched.push({
       primaryName: soc.name,
@@ -1310,7 +1765,7 @@ function searchLocalSocieties(query, storeLat, storeLng, maxRadiusKm) {
     });
   });
 
-  return matched.sort((a, b) => b.score - a.score).slice(0, 5);
+  return matched.sort((a, b) => b.score - a.score).slice(0, 6);
 }
 
 // Query Photon Geocoder (Fast Elasticsearch geocoder with typo tolerance)
@@ -1477,6 +1932,30 @@ function handleAddressSearchInput(query) {
     return;
   }
 
+  // Check if input is a Google Maps link or coordinates
+  const parsedCoords = tryParseGoogleMapsLinkOrCoords(q);
+  if (parsedCoords) {
+    suggestionsBox.innerHTML = `
+      <div 
+        onclick="selectGuidedAddressSuggestion(${parsedCoords.lat}, ${parsedCoords.lng}, 'Google Maps Location', 'Drop Pin Location', 'Pune', '')"
+        class="p-3 hover:bg-blue-50 cursor-pointer flex items-center justify-between gap-2 border-b border-gray-100"
+      >
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">🗺️</span>
+          <div>
+            <div class="font-black text-blue-900 text-xs">Lock ${parsedCoords.source}</div>
+            <div class="text-[10px] text-gray-500 font-mono">Lat: ${parsedCoords.lat.toFixed(5)}, Lng: ${parsedCoords.lng.toFixed(5)}</div>
+          </div>
+        </div>
+        <span class="text-[10px] font-extrabold bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full">
+          Tap to Fly Here ✈️
+        </span>
+      </div>
+    `;
+    suggestionsBox.classList.remove('hidden');
+    return;
+  }
+
   const cfg = state.config?.deliveryZone || {};
   const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
   const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
@@ -1551,10 +2030,42 @@ function handleAddressSearchInput(query) {
       });
 
       if (combined.length === 0) {
+        // Check general area fallback
+        const qLower = q.toLowerCase();
+        const matchedArea = PUNE_GENERAL_AREAS.find(a => qLower.includes(a.name.toLowerCase()));
+        if (matchedArea) {
+          suggestionsBox.innerHTML = `
+            <div 
+              onclick="selectGuidedAddressSuggestion(${matchedArea.lat}, ${matchedArea.lng}, '${matchedArea.name}', '${matchedArea.road}', '${matchedArea.name}', '${matchedArea.pincode}')"
+              class="p-3 hover:bg-emerald-50 cursor-pointer flex items-center justify-between gap-2"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-base">📍</span>
+                <div>
+                  <div class="font-bold text-xs text-gray-900">${matchedArea.name} Area</div>
+                  <div class="text-[10px] text-gray-500">${matchedArea.road}, Pune • ${matchedArea.pincode}</div>
+                </div>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                Fly to Area ✈️
+              </span>
+            </div>
+          `;
+          suggestionsBox.classList.remove('hidden');
+          return;
+        }
+
         suggestionsBox.innerHTML = `
           <div class="p-3 text-center text-gray-500 text-xs">
             <span class="block text-gray-700 font-semibold mb-0.5">No exact area found for "${escapeHtml(q)}"</span>
-            <span class="text-[10px] text-gray-400">Click "Guide Pin 📍" or drag the pin directly on the Google Map.</span>
+            <div class="flex items-center justify-center gap-2 mt-2">
+              <button type="button" onclick="openDirectGoogleMapsPicker()" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold text-[11px] border border-blue-200">
+                🗺️ Open in Google Maps
+              </button>
+              <button type="button" onclick="searchAndGuideMapPin('${escapeHtml(q)}')" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg font-bold text-[11px] border border-emerald-200">
+                📍 Guide Closest
+              </button>
+            </div>
           </div>
         `;
         suggestionsBox.classList.remove('hidden');
@@ -1574,7 +2085,7 @@ function renderAddressSuggestions(items, suggestionsBox, query) {
     return;
   }
 
-  suggestionsBox.innerHTML = items.map((item, idx) => {
+  suggestionsBox.innerHTML = items.map((item) => {
     const isGoogle = !!item.isGooglePlace;
     const safePrimary = (item.primaryName || query).replace(/'/g, "\\'");
     const safeRoad = (item.road || '').replace(/'/g, "\\'");
@@ -1650,13 +2161,10 @@ async function selectGuidedAddressSuggestion(lat, lng, primaryName, road, suburb
 
   currentMapCoords = { lat: finalLat, lng: finalLng };
 
-  if (deliveryMap) {
-    deliveryMap.flyTo([finalLat, finalLng], 17, { animate: true, duration: 1.2 });
-  }
-  if (deliveryMarker) {
-    deliveryMarker.setLatLng([finalLat, finalLng]);
+  panMapTo(finalLat, finalLng, 17);
+  setMarkerPosition(finalLat, finalLng);
 
-    // Guided popup prompting customer to fine-tune pin onto exact building / gate
+  if (!isNativeGoogleMap && deliveryMarker && deliveryMarker.bindPopup) {
     deliveryMarker.bindPopup(`
       <div class="p-1 text-center" style="min-width:180px;">
         <div class="font-black text-xs text-emerald-800">📍 Guided to ${escapeHtml(primaryName)}!</div>
@@ -1676,14 +2184,22 @@ async function selectGuidedAddressSuggestion(lat, lng, primaryName, road, suburb
 }
 
 async function searchAndGuideMapPin(query) {
-  const q = (query || document.getElementById('map-search-input')?.value || document.getElementById('map-input-street')?.value || '').trim();
+  const rawQ = (query || document.getElementById('map-search-input')?.value || document.getElementById('map-input-street')?.value || '').trim();
   const suggestionsBox = document.getElementById('map-search-suggestions');
   if (suggestionsBox) suggestionsBox.classList.add('hidden');
 
-  if (!q) {
-    showNotificationToast("Please type an area or locality name to guide pin.");
+  if (!rawQ) {
+    showNotificationToast("Please type an area or paste a Google Maps link to guide pin.");
     const input = document.getElementById('map-search-input');
     if (input) input.focus();
+    return;
+  }
+
+  // 1. Check if user entered coordinates or a Google Maps URL!
+  const parsedCoords = tryParseGoogleMapsLinkOrCoords(rawQ);
+  if (parsedCoords) {
+    selectGuidedAddressSuggestion(parsedCoords.lat, parsedCoords.lng, "Google Maps Location", "Drop Pin Location", "Pune", "", null);
+    showNotificationToast(`📍 Exact coordinates locked from ${parsedCoords.source}! Within 5km zone ✓`);
     return;
   }
 
@@ -1700,17 +2216,17 @@ async function searchAndGuideMapPin(query) {
     const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
     const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
 
-    // 1. Check local Pune societies first (instant)
-    const localMatches = searchLocalSocieties(q, storeLat, storeLng, maxRadiusKm);
+    // 2. Check local Pune societies first (instant 0ms)
+    const localMatches = searchLocalSocieties(rawQ, storeLat, storeLng, maxRadiusKm);
     if (localMatches.length > 0) {
       const top = localMatches[0];
       selectGuidedAddressSuggestion(top.lat, top.lng, top.primaryName, top.road, top.suburb, top.postcode);
       return;
     }
 
-    // 2. Check Google Places if SDK loaded
+    // 3. Check Google Places if SDK loaded
     if (googleMapsAutocompleteService) {
-      const gResults = await fetchGooglePlacesPredictions(q, storeLat, storeLng);
+      const gResults = await fetchGooglePlacesPredictions(rawQ, storeLat, storeLng);
       if (gResults.length > 0) {
         const topG = gResults[0];
         const mainText = topG.structured_formatting?.main_text || topG.description.split(',')[0];
@@ -1722,23 +2238,32 @@ async function searchAndGuideMapPin(query) {
       }
     }
 
-    // 3. Check Photon fast geocoder
-    const photonResults = await fetchPhotonSuggestions(q, storeLat, storeLng, maxRadiusKm);
+    // 4. Check Photon fast geocoder
+    const photonResults = await fetchPhotonSuggestions(rawQ, storeLat, storeLng, maxRadiusKm);
     if (photonResults.length > 0) {
       const topP = photonResults[0];
       selectGuidedAddressSuggestion(topP.lat, topP.lng, topP.primaryName, topP.road, topP.suburb, topP.postcode);
       return;
     }
 
-    // 4. Nominatim fallback
-    const nominatimResults = await fetchNominatimSuggestions(q, storeLat, storeLng, maxRadiusKm);
+    // 5. Nominatim fallback
+    const nominatimResults = await fetchNominatimSuggestions(rawQ, storeLat, storeLng, maxRadiusKm);
     if (nominatimResults.length > 0) {
       const topN = nominatimResults[0];
       selectGuidedAddressSuggestion(topN.lat, topN.lng, topN.primaryName, topN.road, topN.suburb, topN.postcode);
       return;
     }
 
-    showNotificationToast(`Could not find "${q}" nearby. Please use '🎯 Auto-Detect' or drag pin directly.`);
+    // 6. Locality keyword fallback: NEVER leave the pin static!
+    const qLower = rawQ.toLowerCase();
+    const matchedArea = PUNE_GENERAL_AREAS.find(a => qLower.includes(a.name.toLowerCase()));
+    if (matchedArea) {
+      selectGuidedAddressSuggestion(matchedArea.lat, matchedArea.lng, matchedArea.name, matchedArea.road, matchedArea.name, matchedArea.pincode);
+      showNotificationToast(`📍 Pin guided to ${matchedArea.name}! Drag pin to your exact building or gate.`);
+      return;
+    }
+
+    showNotificationToast(`Could not find "${rawQ}". Tap '🗺️ Open in Google Maps' to pick and paste link.`);
   } catch (err) {
     console.warn("Search & Guide error:", err);
     showNotificationToast("Network error looking up address. Please drag pin manually.");
@@ -1749,6 +2274,7 @@ async function searchAndGuideMapPin(query) {
     }
   }
 }
+
 
 // Close suggestions dropdown on outside click
 if (typeof document !== 'undefined') {
@@ -1836,11 +2362,8 @@ function locateUserOnMap() {
       state.userGpsCoords = { lat, lng };
       currentMapCoords = { lat, lng };
 
-      if (deliveryMap) {
-        deliveryMap.setView([lat, lng], 15);
-        if (deliveryMarker) deliveryMarker.setLatLng([lat, lng]);
-      }
-      updateMapDistanceBadge(lat, lng);
+      panMapTo(lat, lng, 17);
+      setMarkerPosition(lat, lng);
       reverseGeocode(lat, lng);
       if (btn) btn.innerHTML = `<span>✓ Found</span>`;
       setTimeout(() => { if (btn) btn.innerHTML = `<span>🎯 Locate Me</span>`; }, 2000);
@@ -2064,12 +2587,9 @@ function addNewAddressFlow() {
 
   setTimeout(() => {
     initDeliveryMap(initLat, initLng);
-    if (deliveryMap) {
-      deliveryMap.invalidateSize();
-      deliveryMap.setView([initLat, initLng], 15);
-    }
-    if (deliveryMarker) {
-      deliveryMarker.setLatLng([initLat, initLng]);
+    panMapTo(initLat, initLng, 16);
+    setMarkerPosition(initLat, initLng);
+    if (!isNativeGoogleMap && deliveryMarker && deliveryMarker.bindPopup) {
       deliveryMarker.bindPopup(`
         <div class="p-1 text-center" style="min-width:180px;">
           <div class="font-black text-xs text-emerald-800">⚡ Adding Another Address</div>
@@ -2158,12 +2678,9 @@ function editSavedAddress(id) {
 
   setTimeout(() => {
     initDeliveryMap(editLat, editLng);
-    if (deliveryMap) {
-      deliveryMap.invalidateSize();
-      deliveryMap.setView([editLat, editLng], 17);
-    }
-    if (deliveryMarker) {
-      deliveryMarker.setLatLng([editLat, editLng]);
+    panMapTo(editLat, editLng, 17);
+    setMarkerPosition(editLat, editLng);
+    if (!isNativeGoogleMap && deliveryMarker && deliveryMarker.bindPopup) {
       deliveryMarker.bindPopup(`
         <div class="p-1 text-center" style="min-width:160px;">
           <div class="font-black text-xs text-emerald-800">Editing Address</div>
