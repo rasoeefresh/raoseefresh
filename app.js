@@ -403,14 +403,21 @@ function startLiveCatalogSync() {
         });
 
         // Determine if images, prices, names, stock, or items changed
-        const currentSig = (state.products || []).map(p => `${p.id}:${p.name}:${p.price}:${p.image}:${p.inStock}:${p.enabled !== false}`).join('|');
-        const newSig = cloudProducts.map(p => `${p.id}:${p.name}:${p.price}:${p.image}:${p.inStock}:${p.enabled !== false}`).join('|');
+        const currentSig = (state.products || []).map(p => `${p.id}:${p.name}:${p.price}:${p.image ? (p.image.startsWith('data:') ? p.image.slice(-30) : p.image) : ''}:${p.inStock}:${p.enabled !== false}`).join('|');
+        const newSig = cloudProducts.map(p => `${p.id}:${p.name}:${p.price}:${p.image ? (p.image.startsWith('data:') ? p.image.slice(-30) : p.image) : ''}:${p.inStock}:${p.enabled !== false}`).join('|');
 
         if (currentSig !== newSig || (state.products || []).length !== cloudProducts.length) {
           state.products = cloudProducts;
-          localStorage.setItem("rasoee_fresh_products", JSON.stringify(cloudProducts));
-          localStorage.setItem("raosee_fresh_products", JSON.stringify(cloudProducts));
-          localStorage.setItem("Rasoee_products", JSON.stringify(cloudProducts));
+          try {
+            localStorage.removeItem("raosee_fresh_products");
+            localStorage.removeItem("Rasoee_products");
+            localStorage.setItem("rasoee_fresh_products", JSON.stringify(cloudProducts));
+          } catch (e) {
+            console.warn("Could not write products to localStorage (quota exceeded)", e);
+          }
+          if (typeof saveToIndexedDB === 'function') {
+            saveToIndexedDB("rasoee_fresh_products", cloudProducts);
+          }
           renderProducts();
         }
       }

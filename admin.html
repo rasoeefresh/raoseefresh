@@ -1949,10 +1949,13 @@
           </div>
           <div class="flex items-center justify-between gap-2 mt-2">
             <input type="file" id="modal-prod-file-input" accept="image/*" class="hidden" onchange="handleProductImageUpload(event)" />
-            <button type="button" onclick="document.getElementById('modal-prod-file-input').click()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer">
-              <span>📸 Choose Image from Phone / PC</span>
-            </button>
-            <span class="text-[10px] text-gray-500">Auto-converts to WebP (&lt;35KB) &amp; fits box</span>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="document.getElementById('modal-prod-file-input').click()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer">
+                <span id="modal-upload-btn-text">📸 Choose Image from Phone / PC</span>
+              </button>
+              <button type="button" onclick="document.getElementById('modal-prod-image').value=''; updateProductModalImagePreview('');" class="text-[11px] text-gray-500 hover:text-red-600 font-semibold underline px-1 cursor-pointer">Clear</button>
+            </div>
+            <span class="text-[10px] text-gray-500">Auto-converts to WebP (&lt;15KB) &amp; fits box</span>
           </div>
           <p class="text-[10px] text-emerald-700 font-semibold mt-1">
             ⚡ Google Drive links: Paste any shareable link. It is automatically converted to Google's ultra-fast CDN edge (&lt;100ms).
@@ -3014,7 +3017,7 @@
           <tr id="rate-row-${p.id}" class="hover:bg-gray-50/80 transition-colors">
             <td class="p-3">
               <div class="flex items-center gap-2.5">
-                <img src="${p.image}" class="w-9 h-9 object-cover rounded-lg bg-gray-100 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'" />
+                <img src="${typeof normalizeImageUrl === 'function' ? normalizeImageUrl(p.image) : (p.image || '')}" class="w-9 h-9 object-cover rounded-lg bg-gray-100 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c53300491e?w=100'" />
                 <div>
                   <div class="font-bold text-gray-900">${p.name}</div>
                   <div class="text-[11px] text-gray-400 font-mono">ID: ${p.id}</div>
@@ -3536,17 +3539,24 @@
     }
 
     function handleProductImageUpload(event) {
-      const file = event.target.files[0];
+      const fileInput = event.target;
+      const file = fileInput.files && fileInput.files[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const rawDataUrl = e.target.result;
-        // Compress to high performance 400x400 WebP (<35KB) using HTML5 Canvas
-        const img = new Image();
-        img.onload = function() {
+      const previewImg = document.getElementById('modal-prod-img-preview');
+      const inputEl = document.getElementById('modal-prod-image');
+      const uploadBtn = document.getElementById('modal-upload-btn-text');
+      if (uploadBtn) uploadBtn.textContent = "⏳ Optimizing...";
+
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = function() {
+        URL.revokeObjectURL(objectUrl);
+        try {
           const canvas = document.createElement('canvas');
-          const maxDim = 400;
+          // Scale to max 320x320 - crisp retina thumbnail, tiny 8-15KB footprint
+          const maxDim = 320;
           let width = img.width;
           let height = img.height;
           if (width > height) {
@@ -3563,26 +3573,48 @@
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
+          
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, width, height);
 
-          let compressed = canvas.toDataURL('image/webp', 0.85);
+          // WebP at 0.78 gives crystal clear visuals under 15KB
+          let compressed = canvas.toDataURL('image/webp', 0.78);
           if (!compressed.startsWith('data:image/webp')) {
-            compressed = canvas.toDataURL('image/jpeg', 0.85);
+            compressed = canvas.toDataURL('image/jpeg', 0.75);
           }
-          const inputEl = document.getElementById('modal-prod-image');
+          
           if (inputEl) inputEl.value = compressed;
-          updateProductModalImagePreview(compressed);
+          if (previewImg) previewImg.src = compressed;
+          if (uploadBtn) uploadBtn.textContent = "📸 Choose Image from Phone / PC";
+          fileInput.value = ''; // Always reset so the same file or subsequent files can be chosen repeatedly
           showNotificationToast("📸 Product image compressed to instant-load WebP! ✓");
-        };
-        img.src = rawDataUrl;
+        } catch (err) {
+          console.warn("Canvas compression error:", err);
+          if (uploadBtn) uploadBtn.textContent = "📸 Choose Image from Phone / PC";
+          fileInput.value = '';
+          showNotificationToast("❌ Image compression failed. Please try another image.");
+        }
       };
-      reader.readAsDataURL(file);
+
+      img.onerror = function() {
+        URL.revokeObjectURL(objectUrl);
+        if (uploadBtn) uploadBtn.textContent = "📸 Choose Image from Phone / PC";
+        fileInput.value = '';
+        showNotificationToast("❌ Unable to load image file. Please choose a JPG, PNG or WebP photo.");
+      };
+
+      img.src = objectUrl;
     }
 
     function openProductModal(id = null) {
       const modal = document.getElementById('product-modal');
       const title = document.getElementById('modal-product-title');
       const stockInp = document.getElementById('modal-prod-stock');
+      const fileInput = document.getElementById('modal-prod-file-input');
+      if (fileInput) fileInput.value = '';
+      const uploadBtn = document.getElementById('modal-upload-btn-text');
+      if (uploadBtn) uploadBtn.textContent = "📸 Choose Image from Phone / PC";
       
       if (id) {
         const p = productsList.find(item => item.id === id);
@@ -3619,78 +3651,107 @@
       document.getElementById('product-modal').classList.add('hidden');
     }
 
-    function saveProductFromModal() {
-      const origId = document.getElementById('modal-orig-id').value;
-      const customId = document.getElementById('modal-prod-id').value.trim();
-      const name = document.getElementById('modal-prod-name').value.trim();
-      const cat = document.getElementById('modal-prod-category').value;
-      const unit = document.getElementById('modal-prod-unit').value.trim();
-      const price = parseInt(document.getElementById('modal-prod-price').value, 10);
-      const mrp = parseInt(document.getElementById('modal-prod-mrp').value, 10) || price;
-      const rawImage = document.getElementById('modal-prod-image').value.trim() || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
-      const image = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(rawImage) : rawImage;
-      const tag = document.getElementById('modal-prod-tag').value.trim();
-      const inStock = document.getElementById('modal-prod-stock') ? document.getElementById('modal-prod-stock').checked : true;
-
-      if (!name || !unit || isNaN(price)) {
-        alert("Please fill in Product Name, Unit and Selling Price");
-        return;
+    async function saveProductFromModal() {
+      const saveBtn = document.querySelector('#product-modal button[onclick*="saveProductFromModal"]');
+      const origText = saveBtn ? saveBtn.textContent : "Save Product";
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg> Saving & Syncing...
+        `;
       }
 
-      if (origId) {
-        const p = productsList.find(item => item.id === origId);
-        if (p) {
-          if (customId && customId !== origId) {
-            const collision = productsList.find(item => item.id === customId && item !== p);
-            if (collision) {
-              alert(`Error: Product ID "${customId}" is already used by "${collision.name}". Please use a unique ID.`);
-              return;
-            }
-            p.id = customId;
-          }
-          p.name = name;
-          p.category = cat;
-          p.categoryLabel = cat.replace(/-/g, ' ');
-          p.unit = unit;
-          p.price = price;
-          p.mrp = mrp;
-          p.image = image;
-          p.tag = tag;
-          p.inStock = inStock;
-          p.deliveryTime = 'Fresh Stock';
-        }
-      } else {
-        const newId = customId || ('item-' + Date.now());
-        const collision = productsList.find(item => item.id === newId);
-        if (collision) {
-          alert(`Error: Product ID "${newId}" already exists. Please choose a unique ID.`);
+      try {
+        const origId = document.getElementById('modal-orig-id').value;
+        const customId = document.getElementById('modal-prod-id').value.trim();
+        const name = document.getElementById('modal-prod-name').value.trim();
+        const cat = document.getElementById('modal-prod-category').value;
+        const unit = document.getElementById('modal-prod-unit').value.trim();
+        const price = parseInt(document.getElementById('modal-prod-price').value, 10);
+        const mrp = parseInt(document.getElementById('modal-prod-mrp').value, 10) || price;
+        const rawImage = document.getElementById('modal-prod-image').value.trim() || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
+        const image = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(rawImage) : rawImage;
+        const tag = document.getElementById('modal-prod-tag').value.trim();
+        const inStock = document.getElementById('modal-prod-stock') ? document.getElementById('modal-prod-stock').checked : true;
+
+        if (!name || !unit || isNaN(price)) {
+          alert("Please fill in Product Name, Unit and Selling Price");
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
           return;
         }
-        const newProduct = {
-          id: newId,
-          name,
-          category: cat,
-          categoryLabel: cat.replace(/-/g, ' '),
-          price,
-          mrp,
-          unit,
-          image,
-          inStock: inStock,
-          tag: tag || 'Fresh',
-          deliveryTime: 'Fresh Stock'
-        };
-        productsList.unshift(newProduct);
-      }
 
-      saveProducts(productsList);
-      if (typeof syncToCloud === 'function') {
-        syncToCloud();
+        if (origId) {
+          const p = productsList.find(item => item.id === origId);
+          if (p) {
+            if (customId && customId !== origId) {
+              const collision = productsList.find(item => item.id === customId && item !== p);
+              if (collision) {
+                alert(`Error: Product ID "${customId}" is already used by "${collision.name}". Please use a unique ID.`);
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
+                return;
+              }
+              p.id = customId;
+            }
+            p.name = name;
+            p.category = cat;
+            p.categoryLabel = cat.replace(/-/g, ' ');
+            p.unit = unit;
+            p.price = price;
+            p.mrp = mrp;
+            p.image = image;
+            p.tag = tag;
+            p.inStock = inStock;
+            p.deliveryTime = 'Fresh Stock';
+          }
+        } else {
+          const newId = customId || ('item-' + Date.now());
+          const collision = productsList.find(item => item.id === newId);
+          if (collision) {
+            alert(`Error: Product ID "${newId}" already exists. Please choose a unique ID.`);
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
+            return;
+          }
+          const newProduct = {
+            id: newId,
+            name,
+            category: cat,
+            categoryLabel: cat.replace(/-/g, ' '),
+            price,
+            mrp,
+            unit,
+            image,
+            inStock: inStock,
+            tag: tag || 'Fresh',
+            deliveryTime: 'Fresh Stock'
+          };
+          productsList.unshift(newProduct);
+        }
+
+        // Save locally to localStorage and IndexedDB
+        saveProducts(productsList);
+
+        // Await direct cloud sync to Firebase Realtime Database
+        if (typeof syncProductsToCloud === 'function') {
+          await syncProductsToCloud(productsList);
+        }
+
+        closeProductModal();
+        renderItemsTable();
+        renderRateCard();
+        updateKpis();
+        showNotificationToast(`✅ Saved "${name}" and synced to all devices! 🚀`);
+      } catch (err) {
+        console.error("Save product error:", err);
+        showNotificationToast("❌ Error saving product: " + err.message);
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = origText;
+        }
       }
-      closeProductModal();
-      renderItemsTable();
-      renderRateCard();
-      updateKpis();
-      showNotificationToast(`✅ Saved "${name}" successfully!`);
     }
 
     function deleteProduct(id) {

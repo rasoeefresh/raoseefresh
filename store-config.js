@@ -337,9 +337,6 @@ function saveCategories(categories) {
     if (typeof saveToIndexedDB === "function") {
       saveToIndexedDB("raosee_categories", categories);
     }
-    if (typeof syncConfigToCloud === "function") {
-      syncConfigToCloud(merged);
-    }
     if (typeof syncToCloud === "function") {
       syncToCloud();
     }
@@ -532,11 +529,11 @@ function saveCloudSyncConfig(cfg) {
   } catch (e) {}
 }
 
-async function syncToCloud() {
+async function syncToCloud(customConfig, customProducts) {
   const syncCfg = getCloudSyncConfig();
   if (!syncCfg || !syncCfg.enabled) return { success: false, reason: "Sync disabled" };
 
-  const rawCfg = typeof getStoreConfig === "function" ? getStoreConfig() : DEFAULT_CONFIG;
+  const rawCfg = customConfig || (typeof getStoreConfig === "function" ? getStoreConfig() : DEFAULT_CONFIG);
   const safeConfig = JSON.parse(JSON.stringify(rawCfg));
   if (safeConfig.security) {
     delete safeConfig.security.adminPassword;
@@ -553,10 +550,14 @@ async function syncToCloud() {
   const payload = {
     updatedAt: new Date().toISOString(),
     config: safeConfig,
-    products: typeof getStoredProducts === "function" ? getStoredProducts() : [],
     categories: typeof getStoredCategories === "function" ? getStoredCategories() : DEFAULT_CATEGORIES,
     banners: typeof getStoredBanners === "function" ? getStoredBanners() : DEFAULT_BANNERS
   };
+
+  // Only include products if explicitly passed (prevents clobbering live product uploads with stale local caches)
+  if (Array.isArray(customProducts) && customProducts.length > 0) {
+    payload.products = customProducts;
+  }
 
   try {
     if (syncCfg.type === 'firebase' && syncCfg.firebaseUrl) {
@@ -564,7 +565,7 @@ async function syncToCloud() {
       if (!url.endsWith('.json')) url += '/store_live_data.json';
       if (syncCfg.authToken) url += `?auth=${encodeURIComponent(syncCfg.authToken.trim())}`;
       const res = await fetch(url, {
-        method: 'PATCH', // Changed from PUT to PATCH to safely preserve /customers, /orders, and /security_credentials
+        method: 'PATCH', // Preserves other live keys like /orders, /customers, /security_credentials
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -597,6 +598,7 @@ async function syncToCloud() {
 async function syncProductsToCloud(products) {
   try {
     const list = products || (typeof getStoredProducts === 'function' ? getStoredProducts() : []);
+    if (!Array.isArray(list) || list.length === 0) return false;
     const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json";
     const res = await fetch(url, {
       method: 'PUT',
@@ -612,8 +614,11 @@ async function syncProductsToCloud(products) {
 
 async function fetchProductsFromCloud() {
   try {
-    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json";
-    const res = await fetch(url);
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json?_t=" + Date.now();
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" }
+    });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
@@ -625,8 +630,21 @@ async function fetchProductsFromCloud() {
             p.image = 'https://lh3.googleusercontent.com/d/1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO=w400';
           }
         });
-        localStorage.setItem("rasoee_fresh_products", JSON.stringify(data));
-        localStorage.setItem("raosee_fresh_products", JSON.stringify(data));
+        try {
+          localStorage.removeItem("raosee_fresh_products");
+          localStorage.removeItem("Rasoee_products");
+        } catch (e) {}
+        try {
+          localStorage.setItem("rasoee_fresh_products", JSON.stringify(data));
+        } catch (e) {
+          console.warn("Could not save cloud products to localStorage (quota exceeded)", e);
+        }
+        if (typeof saveToIndexedDB === "function") {
+          saveToIndexedDB("rasoee_fresh_products", data);
+        }
+        if (typeof _inMemoryProducts !== 'undefined') {
+          _inMemoryProducts = data;
+        }
         return data;
       }
     }
@@ -870,7 +888,12 @@ function generatePermanentProductsJs(customProductsList) {
 const DEFAULT_PRODUCTS = ${JSON.stringify(prods, null, 2)};
 
 // Helper functions for catalog
+let _inMemoryProducts = null;
+
 function getStoredProducts() {
+  if (Array.isArray(_inMemoryProducts) && _inMemoryProducts.length > 0) {
+    return _inMemoryProducts;
+  }
   try {
     const saved = localStorage.getItem("rasoee_fresh_products") || localStorage.getItem("raosee_fresh_products");
     if (saved) {
@@ -884,9 +907,10 @@ function getStoredProducts() {
             p.image = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&auto=format&fit=crop&q=80';
           }
           if ((p.id === 'prod-59' || p.id === 'prod-591' || p.name === 'Allu Paan') && (!p.image || p.image.includes('photo-1540420773420') || p.image.includes('drive.google.com/file/d/'))) {
-            p.image = 'https://drive.google.com/thumbnail?id=1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO&sz=w800';
+            p.image = 'https://lh3.googleusercontent.com/d/1a3iYdVtj-nfKt9fZlPW58k2G9nQTzCLO=w400';
           }
         });
+        _inMemoryProducts = parsed;
         return parsed;
       }
     }
@@ -897,24 +921,28 @@ function getStoredProducts() {
 }
 
 function saveProducts(products) {
+  if (Array.isArray(products) && products.length > 0) {
+    _inMemoryProducts = products;
+  }
   try {
+    try {
+      localStorage.removeItem("raosee_fresh_products");
+      localStorage.removeItem("Rasoee_products");
+    } catch (e) {}
     localStorage.setItem("rasoee_fresh_products", JSON.stringify(products));
-    localStorage.setItem("raosee_fresh_products", JSON.stringify(products));
-    if (typeof saveToIndexedDB === "function") {
-      saveToIndexedDB("rasoee_fresh_products", products);
-      saveToIndexedDB("raosee_fresh_products", products);
-    }
-    if (typeof syncConfigToCloud === "function") {
-      syncConfigToCloud(merged);
-    }
-    if (typeof syncToCloud === "function") {
-      syncToCloud();
-    }
-    if (typeof syncProductsToCloud === "function") {
-      syncProductsToCloud(products);
-    }
   } catch (e) {
-    console.warn("Could not save products", e);
+    console.warn("Could not save products to localStorage (quota exceeded or blocked)", e);
+    try {
+      localStorage.removeItem("raosee_fresh_products");
+      localStorage.removeItem("Rasoee_products");
+      localStorage.setItem("rasoee_fresh_products", JSON.stringify(products));
+    } catch (retryErr) {}
+  }
+  if (typeof saveToIndexedDB === "function") {
+    saveToIndexedDB("rasoee_fresh_products", products);
+  }
+  if (typeof syncProductsToCloud === "function") {
+    syncProductsToCloud(products);
   }
 }
 

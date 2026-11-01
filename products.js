@@ -3111,7 +3111,12 @@ const DEFAULT_PRODUCTS = [
 ];
 
 // Helper functions for catalog
+let _inMemoryProducts = null;
+
 function getStoredProducts() {
+  if (Array.isArray(_inMemoryProducts) && _inMemoryProducts.length > 0) {
+    return _inMemoryProducts;
+  }
   try {
     const saved = (localStorage.getItem("rasoee_fresh_products") || localStorage.getItem("raosee_fresh_products"));
     if (saved) {
@@ -3143,9 +3148,9 @@ function getStoredProducts() {
         if (modified) {
           try {
             localStorage.setItem("rasoee_fresh_products", JSON.stringify(parsed));
-            localStorage.setItem("raosee_fresh_products", JSON.stringify(parsed));
           } catch (e) {}
         }
+        _inMemoryProducts = parsed;
         return parsed;
       }
     }
@@ -3156,18 +3161,27 @@ function getStoredProducts() {
 }
 
 function saveProducts(products) {
+  if (Array.isArray(products) && products.length > 0) {
+    _inMemoryProducts = products;
+  }
   try {
+    // Reclaim storage space by pruning obsolete duplicate keys
+    try {
+      localStorage.removeItem("raosee_fresh_products");
+      localStorage.removeItem("Rasoee_products");
+    } catch (e) {}
+
     localStorage.setItem("rasoee_fresh_products", JSON.stringify(products)); 
-    localStorage.setItem("raosee_fresh_products", JSON.stringify(products));
   } catch (e) {
     console.warn("Could not save products to localStorage (quota exceeded or blocked)", e);
+    try {
+      localStorage.removeItem("raosee_fresh_products");
+      localStorage.removeItem("Rasoee_products");
+      localStorage.setItem("rasoee_fresh_products", JSON.stringify(products));
+    } catch (retryErr) {}
   }
   if (typeof saveToIndexedDB === "function") {
     saveToIndexedDB("rasoee_fresh_products", products); 
-    saveToIndexedDB("raosee_fresh_products", products);
-  }
-  if (typeof syncToCloud === "function") {
-    syncToCloud();
   }
   if (typeof syncProductsToCloud === "function") {
     syncProductsToCloud(products);
