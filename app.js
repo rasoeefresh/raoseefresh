@@ -1527,28 +1527,36 @@ function setMapAddressTag(tag) {
   });
 }
 
+let editingAddressId = null;
+
 function openAddressPickerModal() {
   const modal = document.getElementById('address-modal');
   if (!modal) return;
   modal.classList.remove('hidden');
 
-  const selfNameInput = document.getElementById('map-self-name');
-  const selfPhoneInput = document.getElementById('map-self-phone');
-  if (selfNameInput) selfNameInput.value = state.currentUser?.name || '';
-  if (selfPhoneInput) selfPhoneInput.value = state.currentUser?.phone || '';
-
-  const searchInput = document.getElementById('map-search-input');
-  if (searchInput) searchInput.value = '';
-  const suggestionsBox = document.getElementById('map-search-suggestions');
-  if (suggestionsBox) suggestionsBox.classList.add('hidden');
-
   const hasSaved = state.currentUser && Array.isArray(state.currentUser.savedAddresses) && state.currentUser.savedAddresses.length > 0;
+  const tabSaved = document.getElementById('tab-btn-saved');
+  const countBadge = document.getElementById('saved-addr-count-badge');
+  const tabMapLabel = document.getElementById('tab-btn-map-label');
+
+  if (countBadge) countBadge.textContent = hasSaved ? state.currentUser.savedAddresses.length : 0;
+
   if (hasSaved) {
+    if (tabSaved) tabSaved.classList.remove('hidden');
+    if (tabMapLabel) tabMapLabel.textContent = "➕ Add New Address";
     switchAddressModalTab('saved');
     renderSavedAddressesModalList();
   } else {
-    switchAddressModalTab('map');
+    if (tabSaved) tabSaved.classList.add('hidden');
+    if (tabMapLabel) tabMapLabel.textContent = "📍 Set Delivery Location";
+    addNewAddressFlow();
   }
+}
+
+function openAddressPickerModalForNew() {
+  const modal = document.getElementById('address-modal');
+  if (modal) modal.classList.remove('hidden');
+  addNewAddressFlow();
 }
 
 function closeAddressPickerModal() {
@@ -1573,21 +1581,205 @@ function switchAddressModalTab(tab, forceNew = false) {
     if (viewMap) viewMap.classList.add('hidden');
     renderSavedAddressesModalList();
   } else {
-    if (tabMap) {
-      tabMap.className = "pb-2 px-3 border-b-2 border-blinkit-green text-blinkit-green flex items-center gap-1.5 transition-colors cursor-pointer";
-    }
-    if (tabSaved) {
-      tabSaved.className = "pb-2 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1.5 transition-colors cursor-pointer";
-    }
-    if (viewMap) viewMap.classList.remove('hidden');
-    if (viewSaved) viewSaved.classList.add('hidden');
-
-    const initLat = state.deliveryAddress?.lat || state.userGpsCoords?.lat || 0;
-    const initLng = state.deliveryAddress?.lng || state.userGpsCoords?.lng || 0;
-    setTimeout(() => {
-      initDeliveryMap(initLat, initLng);
-    }, 150);
+    // When switching to map tab or clicking "Add another address", always follow the clean guided process!
+    addNewAddressFlow();
   }
+}
+
+function addNewAddressFlow() {
+  editingAddressId = null;
+
+  // 1. Reset all inputs cleanly
+  const searchInput = document.getElementById('map-search-input');
+  const flatInput = document.getElementById('map-input-flat');
+  const streetInput = document.getElementById('map-input-street');
+  const landmarkInput = document.getElementById('map-input-landmark');
+  const pinInput = document.getElementById('map-input-pincode');
+  const friendName = document.getElementById('map-friend-name');
+  const friendPhone = document.getElementById('map-friend-phone');
+  const suggestionsBox = document.getElementById('map-search-suggestions');
+  const errBox = document.getElementById('modal-address-error');
+  const btnSave = document.getElementById('btn-confirm-address-selection');
+  const backBar = document.getElementById('addr-map-back-bar');
+
+  if (searchInput) searchInput.value = '';
+  if (flatInput) flatInput.value = '';
+  if (streetInput) streetInput.value = '';
+  if (landmarkInput) landmarkInput.value = '';
+  if (pinInput) pinInput.value = '';
+  if (friendName) friendName.value = '';
+  if (friendPhone) friendPhone.value = '';
+  if (suggestionsBox) {
+    suggestionsBox.innerHTML = '';
+    suggestionsBox.classList.add('hidden');
+  }
+  if (errBox) {
+    errBox.textContent = '';
+    errBox.classList.add('hidden');
+  }
+
+  // 2. Reset recipient to self & tag to Home
+  setRecipientType('self');
+  setMapAddressTag('Home');
+
+  const selfNameInput = document.getElementById('map-self-name');
+  const selfPhoneInput = document.getElementById('map-self-phone');
+  if (selfNameInput) selfNameInput.value = state.currentUser?.name || '';
+  if (selfPhoneInput) selfPhoneInput.value = state.currentUser?.phone || '';
+
+  // 3. UI tabs state
+  const tabMap = document.getElementById('tab-btn-map');
+  const tabSaved = document.getElementById('tab-btn-saved');
+  const viewMap = document.getElementById('addr-view-map');
+  const viewSaved = document.getElementById('addr-view-saved');
+
+  if (tabMap) {
+    tabMap.className = "pb-2 px-3 border-b-2 border-blinkit-green text-blinkit-green flex items-center gap-1.5 transition-colors cursor-pointer";
+  }
+  if (tabSaved) {
+    tabSaved.className = "pb-2 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1.5 transition-colors cursor-pointer";
+  }
+  if (viewMap) viewMap.classList.remove('hidden');
+  if (viewSaved) viewSaved.classList.add('hidden');
+
+  const hasSaved = state.currentUser && Array.isArray(state.currentUser.savedAddresses) && state.currentUser.savedAddresses.length > 0;
+  if (backBar) {
+    if (hasSaved) {
+      backBar.classList.remove('hidden');
+      backBar.classList.add('flex');
+    } else {
+      backBar.classList.add('hidden');
+      backBar.classList.remove('flex');
+    }
+  }
+
+  if (btnSave) {
+    btnSave.innerHTML = `<span>✓ Confirm & Deliver to This Location</span>`;
+  }
+
+  // 4. Center map on Store coordinates or User GPS (NOT old previous address)
+  const cfg = state.config?.deliveryZone || {};
+  const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
+  const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
+  const initLat = (state.userGpsCoords?.lat && state.userGpsCoords.lat !== 0) ? state.userGpsCoords.lat : storeLat;
+  const initLng = (state.userGpsCoords?.lng && state.userGpsCoords.lng !== 0) ? state.userGpsCoords.lng : storeLng;
+
+  currentMapCoords = { lat: initLat, lng: initLng };
+
+  setTimeout(() => {
+    initDeliveryMap(initLat, initLng);
+    if (deliveryMap) {
+      deliveryMap.invalidateSize();
+      deliveryMap.setView([initLat, initLng], 15);
+    }
+    if (deliveryMarker) {
+      deliveryMarker.setLatLng([initLat, initLng]);
+      deliveryMarker.bindPopup(`
+        <div class="p-1 text-center" style="min-width:180px;">
+          <div class="font-black text-xs text-emerald-800">⚡ Adding Another Address</div>
+          <div class="text-[11px] text-gray-700 font-semibold mt-1">1. Type area in search above to fly here ✈️<br>2. Drag pin to exact building or gate 📍</div>
+        </div>
+      `).openPopup();
+
+      setTimeout(() => {
+        if (deliveryMarker && deliveryMarker.closePopup) deliveryMarker.closePopup();
+      }, 4000);
+    }
+
+    updateMapDistanceBadge(initLat, initLng);
+
+    // 5. Step 1: Auto-focus the search bar so the user immediately starts typing
+    if (searchInput) {
+      searchInput.focus();
+    }
+  }, 150);
+
+  showNotificationToast("📍 Step 1: Type area or society name above to guide pin nearby.");
+}
+
+function editSavedAddress(id) {
+  const addresses = (state.currentUser && Array.isArray(state.currentUser.savedAddresses)) ? state.currentUser.savedAddresses : [];
+  const addr = addresses.find(a => a.id === id);
+  if (!addr) return;
+
+  editingAddressId = id;
+
+  const searchInput = document.getElementById('map-search-input');
+  const flatInput = document.getElementById('map-input-flat');
+  const streetInput = document.getElementById('map-input-street');
+  const landmarkInput = document.getElementById('map-input-landmark');
+  const pinInput = document.getElementById('map-input-pincode');
+  const friendName = document.getElementById('map-friend-name');
+  const friendPhone = document.getElementById('map-friend-phone');
+  const suggestionsBox = document.getElementById('map-search-suggestions');
+  const errBox = document.getElementById('modal-address-error');
+  const btnSave = document.getElementById('btn-confirm-address-selection');
+  const backBar = document.getElementById('addr-map-back-bar');
+
+  if (searchInput) searchInput.value = addr.street || '';
+  if (flatInput) flatInput.value = addr.flat || '';
+  if (streetInput) streetInput.value = addr.street || '';
+  if (landmarkInput) landmarkInput.value = addr.landmark || '';
+  if (pinInput) pinInput.value = addr.pincode || '';
+  if (suggestionsBox) suggestionsBox.classList.add('hidden');
+  if (errBox) {
+    errBox.textContent = '';
+    errBox.classList.add('hidden');
+  }
+
+  if (addr.isFriendOrder || addr.tag === 'Friend') {
+    setRecipientType('friend');
+    if (friendName) friendName.value = addr.receiverName || '';
+    if (friendPhone) friendPhone.value = addr.receiverPhone || '';
+  } else {
+    setRecipientType('self');
+  }
+
+  setMapAddressTag(addr.tag || 'Home');
+
+  const tabMap = document.getElementById('tab-btn-map');
+  const tabSaved = document.getElementById('tab-btn-saved');
+  const viewMap = document.getElementById('addr-view-map');
+  const viewSaved = document.getElementById('addr-view-saved');
+
+  if (tabMap) tabMap.className = "pb-2 px-3 border-b-2 border-blinkit-green text-blinkit-green flex items-center gap-1.5 transition-colors cursor-pointer";
+  if (tabSaved) tabSaved.className = "pb-2 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1.5 transition-colors cursor-pointer";
+  if (viewMap) viewMap.classList.remove('hidden');
+  if (viewSaved) viewSaved.classList.add('hidden');
+
+  if (backBar) {
+    backBar.classList.remove('hidden');
+    backBar.classList.add('flex');
+  }
+
+  if (btnSave) {
+    btnSave.innerHTML = `<span>✓ Update Delivery Location</span>`;
+  }
+
+  const editLat = parseFloat(addr.lat) || 18.455585;
+  const editLng = parseFloat(addr.lng) || 73.873529;
+  currentMapCoords = { lat: editLat, lng: editLng };
+
+  setTimeout(() => {
+    initDeliveryMap(editLat, editLng);
+    if (deliveryMap) {
+      deliveryMap.invalidateSize();
+      deliveryMap.setView([editLat, editLng], 17);
+    }
+    if (deliveryMarker) {
+      deliveryMarker.setLatLng([editLat, editLng]);
+      deliveryMarker.bindPopup(`
+        <div class="p-1 text-center" style="min-width:160px;">
+          <div class="font-black text-xs text-emerald-800">Editing Address</div>
+          <div class="text-[11px] text-gray-700 font-semibold mt-1">Drag pin to adjust location if needed 👇</div>
+        </div>
+      `).openPopup();
+      setTimeout(() => {
+        if (deliveryMarker && deliveryMarker.closePopup) deliveryMarker.closePopup();
+      }, 3000);
+    }
+    updateMapDistanceBadge(editLat, editLng);
+  }, 150);
 }
 
 function renderSavedAddressesModalList() {
@@ -1603,7 +1795,7 @@ function renderSavedAddressesModalList() {
       <div class="p-6 text-center text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl space-y-1">
         <span class="text-3xl block mb-1">📍</span>
         <p class="font-bold text-gray-700 text-xs">No saved addresses yet</p>
-        <p class="text-[11px]">Drop a pin on the map to add your first delivery location!</p>
+        <p class="text-[11px]">Type an area or drop a pin to add your first delivery location!</p>
       </div>
     `;
     return;
@@ -1646,9 +1838,15 @@ function renderSavedAddressesModalList() {
           <button type="button" onclick="selectSavedAddress('${addr.id}')" class="px-3 py-1.5 rounded-xl font-bold text-[11px] ${isSelected ? 'bg-blinkit-green text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'} cursor-pointer">
             ${isSelected ? '✓ Selected' : 'Deliver Here'}
           </button>
-          <button type="button" onclick="deleteSavedAddress('${addr.id}')" class="text-[10px] text-gray-400 hover:text-red-600 transition-colors cursor-pointer">
-            Delete
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="editSavedAddress('${addr.id}')" class="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold transition-colors cursor-pointer">
+              Edit ✏️
+            </button>
+            <span class="text-gray-300">|</span>
+            <button type="button" onclick="deleteSavedAddress('${addr.id}')" class="text-[10px] text-gray-400 hover:text-red-600 transition-colors cursor-pointer">
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -1682,19 +1880,47 @@ function selectSavedAddress(id) {
   updateCheckoutButtonText();
 }
 
-function deleteSavedAddress(id) {
+function deleteSavedAddress(idOrIndex) {
   if (!state.currentUser || !Array.isArray(state.currentUser.savedAddresses)) return;
-  state.currentUser.savedAddresses = state.currentUser.savedAddresses.filter(a => a.id !== id);
+  
+  let targetId = null;
+  if (typeof idOrIndex === 'number') {
+    const item = state.currentUser.savedAddresses[idOrIndex];
+    if (item) targetId = item.id;
+    state.currentUser.savedAddresses.splice(idOrIndex, 1);
+  } else {
+    targetId = idOrIndex;
+    state.currentUser.savedAddresses = state.currentUser.savedAddresses.filter(a => a.id !== targetId);
+  }
+
+  const userPhone = state.currentUser?.phone ? String(state.currentUser.phone).replace(/\D/g, '').slice(-10) : '';
+
   try {
     localStorage.setItem('Rasoee_current_user', JSON.stringify(state.currentUser));
-    if (state.currentUser.phone && typeof syncCustomerToCloud === 'function') {
+    let users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
+    const uIdx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === userPhone);
+    if (uIdx >= 0) {
+      users[uIdx].savedAddresses = state.currentUser.savedAddresses;
+      localStorage.setItem('Rasoee_users', JSON.stringify(users));
+    }
+    if (userPhone && typeof syncCustomerToCloud === 'function') {
       syncCustomerToCloud(state.currentUser);
     }
   } catch (e) {}
+
   renderSavedAddressesModalList();
-  if (state.selectedAddressId === id) {
+  if (typeof renderSavedAddressesList === 'function') {
+    renderSavedAddressesList();
+  }
+
+  if (state.selectedAddressId === targetId || (state.deliveryAddress && state.deliveryAddress.id === targetId)) {
     state.deliveryAddress = state.currentUser.savedAddresses[0] || null;
     state.selectedAddressId = state.deliveryAddress ? state.deliveryAddress.id : null;
+    if (state.deliveryAddress) {
+      localStorage.setItem('Rasoee_address', JSON.stringify(state.deliveryAddress));
+    } else {
+      localStorage.removeItem('Rasoee_address');
+    }
     renderSelectedAddressInDrawer();
     updateCheckoutButtonText();
   }
@@ -1763,7 +1989,7 @@ async function confirmAndSaveAddressFromMap() {
     }
   }
 
-  const addressId = 'addr_' + Date.now();
+  const addressId = editingAddressId || ('addr_' + Date.now());
   const newAddress = {
     id: addressId,
     tag: currentAddressTag || (isFriend ? 'Friend' : 'Home'),
@@ -1796,9 +2022,19 @@ async function confirmAndSaveAddressFromMap() {
     state.currentUser.savedAddresses = [];
   }
 
-  state.currentUser.savedAddresses.forEach(a => a.isDefault = false);
-  state.currentUser.savedAddresses.unshift(newAddress);
+  if (editingAddressId) {
+    const existingIdx = state.currentUser.savedAddresses.findIndex(a => a.id === editingAddressId);
+    if (existingIdx >= 0) {
+      state.currentUser.savedAddresses[existingIdx] = newAddress;
+    } else {
+      state.currentUser.savedAddresses.unshift(newAddress);
+    }
+  } else {
+    state.currentUser.savedAddresses.forEach(a => a.isDefault = false);
+    state.currentUser.savedAddresses.unshift(newAddress);
+  }
 
+  editingAddressId = null;
   state.deliveryAddress = newAddress;
   state.selectedAddressId = addressId;
 
@@ -1823,6 +2059,10 @@ async function confirmAndSaveAddressFromMap() {
   closeAddressPickerModal();
   renderSelectedAddressInDrawer();
   updateCheckoutButtonText();
+  if (typeof renderSavedAddressesList === 'function') {
+    renderSavedAddressesList();
+  }
+  showNotificationToast("✓ Delivery address saved and selected!");
 }
 
 function renderSelectedAddressInDrawer() {
@@ -3014,6 +3254,8 @@ function renderSavedAddressesList() {
 
   if (saved.length === 0 && user && user.address && (user.address.flat || user.address.street)) {
     saved = [{
+      id: 'addr_' + Date.now(),
+      tag: user.address.tag || 'Home',
       type: user.address.tag || 'Home',
       flat: user.address.flat || '',
       building: user.address.building || '',
@@ -3028,7 +3270,7 @@ function renderSavedAddressesList() {
   if (saved.length === 0) {
     container.innerHTML = `
       <div class="text-center py-3 text-gray-400 text-[11px] bg-gray-50 rounded-xl border border-dashed border-gray-200">
-        No additional addresses saved yet. Click "➕ Add Another" to save Work or Family addresses.
+        No addresses saved yet. Click "➕ Add Another (Guided Pin 📍)" to add your delivery location.
       </div>
     `;
     return;
@@ -3036,30 +3278,34 @@ function renderSavedAddressesList() {
 
   container.innerHTML = saved.map((item, index) => {
     const isPrimary = item.isDefault || index === 0;
-    const tagEmoji = item.type === 'Work' ? '🏢' : (item.type === 'Other' ? '📍' : '🏠');
+    const itemTag = item.tag || item.type || 'Home';
+    const tagEmoji = itemTag === 'Work' ? '🏢' : ((itemTag === 'Friend' || item.isFriendOrder) ? '🎁' : (itemTag === 'Other' ? '📍' : '🏠'));
     const fullText = [item.flat, item.building, item.street, item.landmark].filter(Boolean).join(', ');
 
     return `
       <div class="p-2.5 rounded-xl border ${isPrimary ? 'bg-green-50/60 border-green-200' : 'bg-gray-50 border-gray-200'} flex items-center justify-between gap-2">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-1.5">
+        <div class="flex-1 min-w-0 cursor-pointer" onclick="setPrimarySavedAddress(${index})">
+          <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-xs">${tagEmoji}</span>
-            <span class="font-bold text-gray-900 text-xs">${item.type || 'Address'}</span>
+            <span class="font-bold text-gray-900 text-xs">${itemTag}</span>
             ${isPrimary ? '<span class="bg-green-100 text-green-800 text-[9px] font-black px-1.5 py-0.2 rounded-full">Primary</span>' : ''}
+            ${item.distanceKm != null ? `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2 rounded-full">${item.distanceKm} km</span>` : ''}
+            ${item.isFriendOrder ? '<span class="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.2 rounded-full">🎁 Friend</span>' : ''}
           </div>
           <p class="text-[11px] text-gray-600 truncate mt-0.5" title="${escapeHtml(fullText)}">${escapeHtml(fullText)}</p>
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1.5">
           ${!isPrimary ? `
-            <button type="button" onclick="setPrimarySavedAddress(${index})" class="px-2 py-1 bg-white hover:bg-green-50 text-blinkit-green border border-green-200 rounded-lg text-[10px] font-bold">
+            <button type="button" onclick="setPrimarySavedAddress(${index})" class="px-2 py-1 bg-white hover:bg-green-50 text-blinkit-green border border-green-200 rounded-lg text-[10px] font-bold cursor-pointer">
               Use
             </button>
           ` : ''}
-          ${saved.length > 1 ? `
-            <button type="button" onclick="deleteSavedAddress(${index})" class="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 text-xs" title="Remove address">
-              🗑️
-            </button>
-          ` : ''}
+          <button type="button" onclick="editSavedAddress('${item.id || ''}')" class="p-1 text-emerald-700 hover:text-emerald-900 rounded-lg hover:bg-emerald-50 text-xs cursor-pointer" title="Edit address on map">
+            ✏️
+          </button>
+          <button type="button" onclick="deleteSavedAddress('${item.id || index}')" class="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 text-xs cursor-pointer" title="Remove address">
+            🗑️
+          </button>
         </div>
       </div>
     `;
@@ -3074,6 +3320,9 @@ function setPrimarySavedAddress(index) {
   list.forEach((item, i) => item.isDefault = (i === index));
   const chosen = list[index];
 
+  state.deliveryAddress = chosen;
+  state.selectedAddressId = chosen.id || null;
+
   const flatInput = document.getElementById('cust-setting-flat');
   const bldgInput = document.getElementById('cust-setting-building');
   const streetInput = document.getElementById('cust-setting-street');
@@ -3087,49 +3336,27 @@ function setPrimarySavedAddress(index) {
   const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
   if (cityInput) cityInput.value = chosen.city || defaultCity;
 
-  setCustomerAddressTag(chosen.type || 'Home');
+  setCustomerAddressTag(chosen.tag || chosen.type || 'Home');
   saveCustomerProfileSettings();
-}
 
-function deleteSavedAddress(index) {
-  if (!state.currentUser || !state.currentUser.savedAddresses) return;
-  if (confirm("Remove this saved address?")) {
-    state.currentUser.savedAddresses.splice(index, 1);
-    saveCustomerProfileSettings();
-  }
+  try {
+    localStorage.setItem('Rasoee_address', JSON.stringify(chosen));
+    localStorage.setItem('Rasoee_current_user', JSON.stringify(state.currentUser));
+    if (state.currentUser?.phone && typeof syncCustomerToCloud === 'function') {
+      syncCustomerToCloud(state.currentUser);
+    }
+  } catch (e) {}
+
+  renderSelectedAddressInDrawer();
+  updateCheckoutButtonText();
+  renderSavedAddressesModalList();
 }
 
 function addNewAddressSlot() {
-  const flat = prompt("Enter Flat / House / Floor number:");
-  if (!flat) return;
-  const street = prompt("Enter Street / Building / Locality:", "");
-  if (!street) return;
-  const typePrompt = prompt("Address Tag (Home, Work, or Other):", "Work");
-  const type = (typePrompt && ['Home', 'Work', 'Other'].includes(typePrompt.trim())) ? typePrompt.trim() : 'Other';
-
-  if (!state.currentUser) {
-    alert("Please log in to save multiple addresses.");
-    openLoginModal();
-    return;
+  if (typeof closeAccountDrawer === 'function') {
+    closeAccountDrawer();
   }
-
-  if (!Array.isArray(state.currentUser.savedAddresses)) {
-    state.currentUser.savedAddresses = [];
-  }
-
-  const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
-  state.currentUser.savedAddresses.push({
-    type: type,
-    flat: flat.trim(),
-    building: '',
-    street: street.trim(),
-    landmark: '',
-    city: defaultCity,
-    isDefault: false
-  });
-
-  saveCustomerProfileSettings();
-  renderSavedAddressesList();
+  openAddressPickerModalForNew();
 }
 
 function saveCustomerProfileSettings() {

@@ -1177,8 +1177,8 @@
           <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3 text-xs">
             <div class="flex items-center justify-between pb-1 border-b">
               <span class="font-black text-gray-900">Saved Addresses Portfolio</span>
-              <button type="button" onclick="addNewAddressSlot()" class="text-blinkit-green font-bold text-[11px] hover:underline flex items-center gap-1">
-                <span>➕ Add Another</span>
+              <button type="button" onclick="addNewAddressSlot()" class="text-blinkit-green font-bold text-[11px] hover:underline flex items-center gap-1 cursor-pointer">
+                <span>➕ Add Another (Guided Pin 📍)</span>
               </button>
             </div>
 
@@ -1503,8 +1503,8 @@
 
       <!-- Navigation Tabs (if saved addresses exist) -->
       <div id="addr-modal-tabs" class="flex border-b border-gray-200 bg-white text-xs font-bold px-4 pt-2 gap-2 flex-shrink-0">
-        <button id="tab-btn-map" onclick="switchAddressModalTab('map')" class="pb-2 px-3 border-b-2 border-blinkit-green text-blinkit-green flex items-center gap-1.5 transition-colors cursor-pointer">
-          <span>📍 Drop Pin on Map</span>
+        <button id="tab-btn-map" onclick="addNewAddressFlow()" class="pb-2 px-3 border-b-2 border-blinkit-green text-blinkit-green flex items-center gap-1.5 transition-colors cursor-pointer">
+          <span id="tab-btn-map-label">📍 Guided Drop Pin</span>
         </button>
         <button id="tab-btn-saved" onclick="switchAddressModalTab('saved')" class="pb-2 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1.5 transition-colors cursor-pointer">
           <span>📑 Saved Addresses</span>
@@ -1517,6 +1517,16 @@
 
         <!-- TAB 1: DROP PIN ON MAP & ADDRESS DETAILS -->
         <div id="addr-view-map" class="space-y-3.5">
+
+          <!-- Back to Saved Addresses Bar (shown when user has saved addresses) -->
+          <div id="addr-map-back-bar" class="hidden items-center justify-between pb-2 border-b border-gray-100">
+            <button type="button" onclick="switchAddressModalTab('saved')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer">
+              <span>← Back to Saved Addresses</span>
+            </button>
+            <span class="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+              Adding Another Address
+            </span>
+          </div>
 
           <!-- Step 1: Type Address to Guide Map Pin -->
           <div class="space-y-1.5">
@@ -1737,10 +1747,11 @@
           </div>
           <button 
             type="button" 
-            onclick="switchAddressModalTab('map', true)" 
-            class="w-full py-3 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-2xl font-bold text-xs text-gray-800 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            onclick="addNewAddressFlow()" 
+            class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
           >
-            <span>+ Drop Pin on Map for New Address</span>
+            <span class="text-base">➕</span>
+            <span>Add Another Address (Guided Pin 📍)</span>
           </button>
         </div>
 
