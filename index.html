@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -84,19 +84,38 @@
       <!-- Top Row: Logo, Store Info & Actions -->
       <div class="flex items-center justify-between h-14 sm:h-20 gap-2 sm:gap-6">
         
-        <!-- Logo & Store Branding (Full width on mobile, no collision) -->
+        <!-- Logo & Store Branding + Blinkit Style Location Pill -->
         <div class="flex items-center gap-2 sm:gap-3.5 min-w-0 flex-1">
-          <a href="#" class="flex items-center gap-2 sm:gap-2.5 min-w-0 group">
+          <a href="#" class="flex items-center gap-2 sm:gap-2.5 min-w-0 group flex-shrink-0">
             <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white border border-gray-100 flex items-center justify-center p-0.5 shadow-sm group-hover:rotate-6 transition-transform js-store-logo overflow-hidden flex-shrink-0">
               <img src="logo.svg" alt="Rasoee Fresh Logo" class="w-full h-full object-contain rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='🛒';" />
             </div>
-            <div class="min-w-0">
+            <div class="min-w-0 hidden xs:block">
               <div class="flex items-center gap-1.5">
                 <span class="font-black text-base sm:text-2xl tracking-tight text-blinkit-green js-store-name truncate">Rasoee Fresh</span>
               </div>
               <span class="block text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 js-outlet-name truncate">Supermarket</span>
             </div>
           </a>
+
+          <!-- Quick Location Pill (Blinkit Style, one-tap trigger for ad-4/ad-3) -->
+          <button 
+            type="button" 
+            onclick="showCurrentLocationPrompt()" 
+            class="flex items-center gap-1.5 text-left bg-gray-50 hover:bg-emerald-50/80 border border-gray-200 hover:border-emerald-300 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl transition-all cursor-pointer min-w-0 max-w-[170px] sm:max-w-[240px]"
+            title="Confirm or change delivery location"
+          >
+            <span class="text-xs sm:text-sm flex-shrink-0">📍</span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-0.5 leading-tight">
+                <span class="truncate">Delivery in 10-15m</span>
+                <span class="text-[9px] text-gray-400">▾</span>
+              </div>
+              <div id="header-delivery-address-label" class="text-[10px] sm:text-xs font-bold text-gray-800 truncate">
+                Select location
+              </div>
+            </div>
+          </button>
         </div>
 
         <!-- Desktop Search Bar (Hidden on Mobile, Visible on Tablet/Desktop) -->
@@ -970,247 +989,219 @@
     </div>
   </div>
 
-  <!-- ================= "MY ACCOUNT & CUSTOMER SETTINGS" SLIDE DRAWER ================= -->
+  <!-- ================= SCREEN AD-2: "YOUR ACCOUNT" PROFILE DRAWER (BLINKIT STYLE) ================= -->
   <div id="account-drawer" class="fixed inset-0 z-50 hidden">
     <div id="account-drawer-overlay" onclick="closeAccountDrawer()" class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
-    <div id="account-drawer-panel" class="absolute right-0 top-0 bottom-0 max-w-md w-full bg-white shadow-2xl flex flex-col transition-transform duration-300 translate-x-full">
+    <div id="account-drawer-panel" class="absolute right-0 top-0 bottom-0 max-w-md w-full bg-[#F4F6FB] shadow-2xl flex flex-col transition-transform duration-300 translate-x-full overflow-hidden">
       
-      <!-- Drawer Header -->
-      <div class="p-4 sm:p-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-11 h-11 rounded-2xl bg-blinkit-yellow text-blinkit-dark font-black flex items-center justify-center text-xl shadow-sm">
+      <!-- Golden / Warm Amber Gradient Top Banner (ad-2 style) -->
+      <div class="bg-gradient-to-b from-[#FCEBB6] via-[#FFF6DD] to-[#F4F6FB] px-5 pt-4 pb-3 flex-shrink-0">
+        <!-- Top Bar with Back Arrow & Profile title -->
+        <div class="flex items-center justify-between">
+          <button 
+            type="button" 
+            onclick="closeAccountDrawer()" 
+            class="w-9 h-9 rounded-full bg-white/90 hover:bg-white text-gray-800 font-bold text-base flex items-center justify-center shadow-xs transition-all cursor-pointer"
+          >
+            ←
+          </button>
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Profile</span>
+          <button 
+            type="button" 
+            onclick="closeAccountDrawer()" 
+            class="text-gray-400 hover:text-gray-700 p-1 font-bold text-sm"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Avatar & User Account Header -->
+        <div class="text-center pt-2 pb-1">
+          <div class="w-20 h-20 rounded-full bg-white border-2 border-amber-200/80 shadow-sm flex items-center justify-center text-4xl mx-auto text-gray-700">
             👤
           </div>
-          <div>
-            <div class="flex items-center gap-1.5">
-              <h4 class="font-black text-sm text-gray-900" id="account-user-name">Customer Account</h4>
-              <span class="bg-green-100 text-green-800 text-[9px] font-black px-1.5 py-0.5 rounded-full">Active Customer</span>
-            </div>
-            <div class="text-xs text-gray-500 font-semibold" id="account-user-phone">+91 98765 43210</div>
+          <h3 class="text-xl sm:text-2xl font-black text-gray-900 mt-2 tracking-tight" id="account-user-name">
+            Your account
+          </h3>
+          <div class="text-xs text-gray-600 font-bold mt-0.5" id="account-user-phone">
+            8857917293
           </div>
         </div>
-        <button onclick="closeAccountDrawer()" class="text-gray-400 hover:text-gray-700 p-2 font-bold text-sm rounded-xl hover:bg-gray-200">✕</button>
-      </div>
 
-      <!-- Navigation Tabs: My Orders vs Customer Details & Storefront Settings -->
-      <div class="flex border-b border-gray-200 bg-gray-50 px-4 pt-1 text-xs font-bold">
-        <button 
-          id="account-tab-btn-orders" 
-          onclick="setAccountDrawerTab('orders')" 
-          class="py-2.5 px-3 border-b-2 border-blinkit-green text-blinkit-green font-black transition-all flex items-center gap-1.5"
-        >
-          <span>🧾 My Orders</span>
-          <span id="account-tab-order-badge" class="bg-green-100 text-green-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
-        </button>
-        <button 
-          id="account-tab-btn-settings" 
-          onclick="setAccountDrawerTab('settings')" 
-          class="py-2.5 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-900 transition-all flex items-center gap-1.5"
-        >
-          <span>⚙️ Customer Settings</span>
-        </button>
+        <!-- 3 Quick Cards (ad-2 style: Your orders, Rasoee Money, Need help?) -->
+        <div class="grid grid-cols-3 gap-2.5 mt-3">
+          <button 
+            type="button" 
+            onclick="toggleAccountOrdersView(true)" 
+            class="p-3 bg-white border border-gray-200/80 rounded-2xl shadow-xs text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-all cursor-pointer group"
+          >
+            <div class="w-10 h-10 mx-auto rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center text-xl mb-1.5 group-hover:scale-105 transition-transform">
+              🛍️
+            </div>
+            <div class="font-extrabold text-[11px] text-gray-900 leading-tight">Your orders</div>
+          </button>
+
+          <button 
+            type="button" 
+            onclick="showNotificationToast('💰 Rasoee Money: ₹50 Instant Welcome Cashback Active!')" 
+            class="p-3 bg-white border border-gray-200/80 rounded-2xl shadow-xs text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-all cursor-pointer group"
+          >
+            <div class="w-10 h-10 mx-auto rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl mb-1.5 group-hover:scale-105 transition-transform">
+              💰
+            </div>
+            <div class="font-extrabold text-[11px] text-gray-900 leading-tight truncate">Rasoee Mon...</div>
+          </button>
+
+          <button 
+            type="button" 
+            onclick="openWhatsAppSupportModal()" 
+            class="p-3 bg-white border border-gray-200/80 rounded-2xl shadow-xs text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-all cursor-pointer group"
+          >
+            <div class="w-10 h-10 mx-auto rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl mb-1.5 group-hover:scale-105 transition-transform">
+              💬
+            </div>
+            <div class="font-extrabold text-[11px] text-gray-900 leading-tight">Need help?</div>
+          </button>
+        </div>
       </div>
 
       <!-- Drawer Body (Scrollable) -->
-      <div class="p-5 overflow-y-auto flex-1 space-y-5 custom-scroll">
+      <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4 custom-scroll text-xs">
         
-        <!-- ================= VIEW 1: ORDERS HISTORY ================= -->
-        <div id="account-view-orders" class="space-y-4">
-          <!-- Primary Delivery Address Quick Card -->
-          <div class="bg-green-50/70 rounded-2xl p-3.5 border border-green-200 text-xs">
-            <div class="flex items-center justify-between text-gray-500 font-bold mb-1">
-              <span class="text-[10px] uppercase">📍 Current Delivery Address</span>
-              <button onclick="setAccountDrawerTab('settings')" class="text-blinkit-green text-[10px] font-bold hover:underline">
-                ✏️ Edit Settings
-              </button>
+        <!-- App Preferences (ad-2 style) -->
+        <div class="space-y-2">
+          <!-- Appearance -->
+          <div class="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-2xl shadow-2xs">
+            <div class="flex items-center gap-3">
+              <span class="text-base text-gray-500">☀️</span>
+              <span class="font-bold text-xs text-gray-900">Appearance</span>
             </div>
-            <div class="font-black text-gray-900" id="account-user-address">-</div>
+            <span class="text-xs font-bold text-gray-500 flex items-center gap-1">
+              <span>LIGHT</span>
+              <span class="text-[10px]">∨</span>
+            </span>
           </div>
 
-          <!-- Orders Section -->
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="font-black text-sm text-gray-900 flex items-center gap-2">
-                <span>🧾</span>
-                <span>Past Orders &amp; Receipts</span>
-              </h4>
-              <a href="track.html" class="text-xs text-blinkit-green font-bold hover:underline">
-                Live Map ➔
-              </a>
+          <!-- Content Preferences -->
+          <div class="flex items-center justify-between p-3.5 bg-white border-2 border-emerald-600/70 bg-emerald-50/20 rounded-2xl shadow-2xs cursor-pointer">
+            <div class="flex items-center gap-3">
+              <span class="text-base text-emerald-800">🎛️</span>
+              <span class="font-bold text-xs text-gray-900">Content preferences</span>
             </div>
+            <div class="flex items-center gap-1.5">
+              <span class="bg-[#0C831F] text-white text-[9px] font-black px-2 py-0.5 rounded-full">NEW</span>
+              <span class="text-gray-400 font-bold">›</span>
+            </div>
+          </div>
 
-            <!-- Orders List Container -->
-            <div id="account-orders-container" class="space-y-3">
-              <!-- Rendered via JavaScript -->
+          <!-- Payment Cards / Modes -->
+          <div class="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-2xl shadow-2xs">
+            <div class="flex items-center gap-3">
+              <span class="text-base text-gray-500">💳</span>
+              <span class="font-bold text-xs text-gray-900">Payment Modes (Instant UPI QR &amp; COD)</span>
             </div>
+            <span class="text-gray-400 font-bold">›</span>
           </div>
         </div>
 
-        <!-- ================= VIEW 2: STOREFRONT SETTINGS FOR CUSTOMER DETAILS ================= -->
-        <div id="account-view-settings" class="space-y-4 hidden">
-          
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Storefront Customer Profile</span>
-            <p class="text-[11px] text-slate-600">Your profile details are auto-filled at checkout and used for order dispatch.</p>
+        <!-- Section: Your information (ad-2 style) -->
+        <div class="space-y-2 pt-2">
+          <div class="text-[11px] font-extrabold text-gray-900 uppercase tracking-wider mb-1">
+            Your information
           </div>
 
-          <!-- Personal Information Card -->
-          <div class="space-y-3 text-xs bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs">
-            <h5 class="font-black text-sm text-gray-900 flex items-center gap-1.5 pb-2 border-b">
-              <span>👤</span>
-              <span>Personal Details</span>
-            </h5>
-
-            <div>
-              <label class="block font-bold text-gray-700 mb-1">Customer Name *</label>
-              <input 
-                type="text" 
-                id="cust-setting-name" 
-                placeholder="Enter your full name" 
-                class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-semibold text-sm outline-none"
-              />
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">Mobile Number (Verified)</label>
-                <div class="flex items-center">
-                  <input 
-                    type="tel" 
-                    id="cust-setting-phone" 
-                    class="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 font-bold text-xs outline-none cursor-not-allowed" 
-                    readonly 
-                  />
+          <!-- 1. Address book > (OPENS AD-3!) -->
+          <div 
+            onclick="closeAccountDrawer(); openAddressBookModal();" 
+            class="flex items-center justify-between p-3.5 bg-white hover:bg-emerald-50/50 border border-gray-200 hover:border-emerald-400 rounded-2xl cursor-pointer transition-all shadow-xs group"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-lg flex-shrink-0">📖</span>
+              <div class="min-w-0">
+                <div class="font-extrabold text-xs text-gray-900 group-hover:text-emerald-800">
+                  Address book
+                </div>
+                <div class="text-[10px] text-gray-500 truncate" id="account-user-address">
+                  Manage saved delivery addresses
                 </div>
               </div>
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">Email Address (Optional)</label>
-                <input 
-                  type="email" 
-                  id="cust-setting-email" 
-                  placeholder="e.g. rahul@example.com" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium text-xs outline-none"
-                />
-              </div>
             </div>
+            <span class="text-gray-400 group-hover:text-emerald-700 font-bold text-base flex-shrink-0">›</span>
           </div>
 
-          <!-- Primary Delivery Address Form -->
-          <div class="space-y-3 text-xs bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs">
-            <div class="flex items-center justify-between pb-2 border-b">
-              <h5 class="font-black text-sm text-gray-900 flex items-center gap-1.5">
-                <span>📍</span>
-                <span>Delivery Address</span>
-              </h5>
-              <div class="flex items-center gap-1" id="cust-tag-pills">
-                <button type="button" onclick="setCustomerAddressTag('Home')" id="tag-btn-Home" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-green-100 text-green-800 border border-green-300">🏠 Home</button>
-                <button type="button" onclick="setCustomerAddressTag('Work')" id="tag-btn-Work" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">🏢 Work</button>
-                <button type="button" onclick="setCustomerAddressTag('Other')" id="tag-btn-Other" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">📍 Other</button>
-              </div>
+          <!-- 2. Bookmarked recipes -->
+          <div 
+            onclick="showNotificationToast('🍲 Fresh recipes section coming soon!')" 
+            class="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-2xl cursor-pointer shadow-2xs hover:bg-gray-50 transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-lg">🍲</span>
+              <span class="font-bold text-xs text-gray-900">Bookmarked recipes</span>
             </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">Flat / House / Floor *</label>
-                <input 
-                  type="text" 
-                  id="cust-setting-flat" 
-                  placeholder="e.g. Flat 301, Tower B" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-semibold outline-none"
-                />
-              </div>
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">Building / Society</label>
-                <input 
-                  type="text" 
-                  id="cust-setting-building" 
-                  placeholder="e.g. Sunshine Apartments" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label class="block font-bold text-gray-700 mb-1">Street / Locality / Sector *</label>
-              <input 
-                type="text" 
-                id="cust-setting-street" 
-                placeholder="e.g. Street name, Colony, Sector" 
-                class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-semibold outline-none"
-              />
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">Landmark (Optional)</label>
-                <input 
-                  type="text" 
-                  id="cust-setting-landmark" 
-                  placeholder="e.g. Near Market / Landmark" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium outline-none"
-                />
-              </div>
-              <div>
-                <label class="block font-bold text-gray-700 mb-1">City &amp; Pincode</label>
-                <input 
-                  type="text" 
-                  id="cust-setting-city" 
-                  placeholder="e.g. City - Pincode" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label class="block font-bold text-gray-700 mb-1">Default Delivery Instruction</label>
-              <select id="cust-setting-instruction" class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green font-medium bg-white outline-none">
-                <option value="Leave at door & ring bell">🔔 Leave at door &amp; ring bell</option>
-                <option value="Handover directly to me">🤝 Handover directly to me</option>
-                <option value="Please call before reaching">📞 Please call before reaching</option>
-                <option value="Leave with society security guard">🛡️ Leave with society security guard</option>
-                <option value="Do not ring bell (baby sleeping)">🤫 Do not ring bell (baby sleeping)</option>
-              </select>
-            </div>
+            <span class="text-gray-400 font-bold">›</span>
           </div>
 
-          <!-- Multiple Saved Addresses Section -->
-          <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs space-y-3 text-xs">
-            <div class="flex items-center justify-between pb-1 border-b">
-              <span class="font-black text-gray-900">Saved Addresses Portfolio</span>
-              <button type="button" onclick="addNewAddressSlot()" class="text-blinkit-green font-bold text-[11px] hover:underline flex items-center gap-1 cursor-pointer">
-                <span>➕ Add Another (Guided Pin 📍)</span>
-              </button>
+          <!-- 3. Your wishlist -->
+          <div 
+            onclick="showNotificationToast('❤️ Wishlist coming soon!')" 
+            class="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-2xl cursor-pointer shadow-2xs hover:bg-gray-50 transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-lg">❤️</span>
+              <span class="font-bold text-xs text-gray-900">Your wishlist</span>
             </div>
-
-            <div id="cust-saved-addresses-list" class="space-y-2">
-              <!-- Dynamically rendered -->
-            </div>
+            <span class="text-gray-400 font-bold">›</span>
           </div>
 
-          <!-- Save Button -->
-          <div class="pt-2">
-            <button 
-              type="button" 
-              onclick="saveCustomerProfileSettings()" 
-              class="w-full bg-blinkit-green hover:bg-blinkit-greenHover text-white py-3.5 rounded-2xl font-black text-xs shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5"
-            >
-              <span>💾 Save Profile &amp; Address Settings</span>
-            </button>
-            <div id="settings-save-success-msg" class="hidden text-center text-xs font-bold text-emerald-700 mt-2">
-              ✓ Customer settings saved successfully!
+          <!-- 4. GST details -->
+          <div 
+            onclick="showNotificationToast('📄 GST invoice is automatically provided on your order receipt!')" 
+            class="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-2xl cursor-pointer shadow-2xs hover:bg-gray-50 transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-lg">📄</span>
+              <span class="font-bold text-xs text-gray-900">GST details</span>
             </div>
+            <span class="text-gray-400 font-bold">›</span>
           </div>
 
+          <!-- 5. E-gift cards -->
+          <div 
+            onclick="showNotificationToast('🎁 E-Gift cards available soon!')" 
+            class="flex items-center justify-between p-3.5 bg-white border border-gray-200 rounded-2xl cursor-pointer shadow-2xs hover:bg-gray-50 transition-all"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-lg">🎁</span>
+              <span class="font-bold text-xs text-gray-900">E-gift cards</span>
+            </div>
+            <span class="text-gray-400 font-bold">›</span>
+          </div>
+        </div>
+
+        <!-- Collapsible Past Orders Section -->
+        <div id="account-view-orders" class="space-y-3 pt-2">
+          <div class="flex items-center justify-between border-b pb-2">
+            <h4 class="font-black text-sm text-gray-900 flex items-center gap-2">
+              <span>🧾</span>
+              <span>Past Orders &amp; Receipts</span>
+            </h4>
+            <a href="track.html" class="text-xs text-blinkit-green font-bold hover:underline">
+              Live Map ➔
+            </a>
+          </div>
+          <div id="account-orders-container" class="space-y-2.5">
+            <!-- Rendered by app.js -->
+          </div>
         </div>
 
       </div>
 
       <!-- Drawer Footer with Logout -->
-      <div class="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-        <a href="login.html" class="text-xs text-gray-500 hover:text-gray-900 font-semibold">
+      <div class="p-4 border-t border-gray-200 bg-white flex items-center justify-between flex-shrink-0">
+        <a href="login.html" class="text-xs text-gray-500 hover:text-gray-900 font-bold">
           Switch Account
         </a>
-        <button onclick="logoutCustomer()" class="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-xs font-bold border border-red-200 transition-colors">
+        <button onclick="logoutCustomer()" class="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-xs font-bold border border-red-200 transition-colors cursor-pointer">
           Logout
         </button>
       </div>
@@ -1480,316 +1471,440 @@
     </div>
   </div>
 
-  <!-- ================= BLINKIT/ZEPTO ADDRESS MANAGER & DROP PIN ON MAP MODAL ================= -->
-  <div id="address-modal" class="fixed inset-0 z-[65] hidden flex items-center justify-center p-3 sm:p-4">
-    <!-- Overlay -->
-    <div onclick="closeAddressPickerModal()" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <!-- ================= SCREEN AD-4: CURRENT LOCATION CONFIRMATION BOTTOM SHEET ================= -->
+  <div id="current-location-prompt-modal" class="fixed inset-0 z-[70] hidden flex items-end justify-center">
+    <!-- Dark Backdrop -->
+    <div onclick="closeCurrentLocationPrompt()" class="absolute inset-0 bg-black/75 backdrop-blur-xs transition-opacity duration-300"></div>
 
-    <div class="relative bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-gray-200 max-h-[92vh] flex flex-col z-10 animate-scale-in">
-      
-      <!-- Modal Header -->
-      <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50 flex-shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="text-xl">📍</span>
-          <div>
-            <h4 class="font-black text-sm sm:text-base text-gray-900 leading-tight">Delivery Address</h4>
-            <p class="text-[11px] text-gray-500 font-medium">Deliveries strictly within 5 km of our outlet</p>
+    <!-- Floating Top Circular Close Button (ad-4 style) -->
+    <div class="relative z-10 w-full max-w-md mx-auto flex flex-col items-center">
+      <button 
+        type="button" 
+        onclick="closeCurrentLocationPrompt()" 
+        class="mb-3 w-10 h-10 rounded-full bg-zinc-800/90 hover:bg-zinc-900 text-white font-bold text-base flex items-center justify-center shadow-lg transition-transform active:scale-95 cursor-pointer border border-white/20"
+        title="Close"
+      >
+        ✕
+      </button>
+
+      <!-- Bottom Sheet Content -->
+      <div class="bg-white rounded-t-[2.5rem] w-full p-6 pt-5 shadow-2xl border-t border-gray-100 flex flex-col items-center text-center space-y-5 animate-slide-up">
+        
+        <!-- Illustration: City skyline with Ferris wheel & Big Green Pin (ad-4 style) -->
+        <div class="relative w-44 h-36 flex items-center justify-center">
+          <svg class="w-full h-full text-gray-200" viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Ferris Wheel / City Skyline in light grey -->
+            <circle cx="100" cy="70" r="46" stroke="#E5E7EB" stroke-width="2" stroke-dasharray="4 3" opacity="0.8"/>
+            <circle cx="100" cy="70" r="28" stroke="#E5E7EB" stroke-width="1.5" opacity="0.6"/>
+            <line x1="100" y1="24" x2="100" y2="116" stroke="#E5E7EB" stroke-width="1.5" opacity="0.5"/>
+            <line x1="54" y1="70" x2="146" y2="70" stroke="#E5E7EB" stroke-width="1.5" opacity="0.5"/>
+            <line x1="68" y1="38" x2="132" y2="102" stroke="#E5E7EB" stroke-width="1.5" opacity="0.5"/>
+            <line x1="68" y1="102" x2="132" y2="38" stroke="#E5E7EB" stroke-width="1.5" opacity="0.5"/>
+            <!-- Buildings background -->
+            <rect x="18" y="55" width="22" height="65" rx="3" fill="#F3F4F6"/>
+            <rect x="44" y="70" width="18" height="50" rx="3" fill="#E5E7EB"/>
+            <rect x="138" y="65" width="20" height="55" rx="3" fill="#E5E7EB"/>
+            <rect x="162" y="50" width="22" height="70" rx="3" fill="#F3F4F6"/>
+          </svg>
+          <!-- Prominent Green Pin Overlay -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center animate-pulse">
+              <svg class="w-12 h-12 text-[#0C831F] drop-shadow-md" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+            </div>
           </div>
         </div>
-        <button onclick="closeAddressPickerModal()" class="w-8 h-8 rounded-full bg-white hover:bg-gray-200 border border-gray-200 text-gray-700 font-black text-sm flex items-center justify-center transition-colors cursor-pointer">
+
+        <!-- Heading (Exact text from ad-4) -->
+        <h3 class="text-xl sm:text-2xl font-black text-gray-900 tracking-tight leading-snug px-2">
+          Do you want this order at your current location?
+        </h3>
+
+        <!-- Option 1: Yes, deliver at my current location -->
+        <div 
+          onclick="confirmCurrentLocationDelivery()" 
+          class="w-full text-left p-4 rounded-2xl border-2 border-[#0C831F] bg-green-50/40 hover:bg-green-50 transition-all cursor-pointer shadow-xs active:scale-[0.99] space-y-1.5"
+        >
+          <div class="font-extrabold text-sm sm:text-base text-[#0C831F]">
+            Yes, deliver at my current location
+          </div>
+          <div class="flex items-start gap-2.5 text-xs text-gray-700 leading-relaxed">
+            <span class="text-emerald-700 text-sm mt-0.5 flex-shrink-0">🎯</span>
+            <span id="ad4-detected-address-text" class="font-medium text-gray-800">
+              Rasiklal M Dhariwal English Medium School &amp; Junior College, Opposite Anand Tirth Society, Katraj - Kondhwa Rd, Kondhwa Budruk, Pune, Maharashtra
+            </span>
+          </div>
+        </div>
+
+        <!-- Option 2: No, at some other location -->
+        <button 
+          type="button" 
+          onclick="rejectCurrentLocationPrompt()" 
+          class="w-full py-3.5 px-4 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-[#0C831F] font-extrabold text-sm sm:text-base transition-all active:scale-[0.99] cursor-pointer"
+        >
+          No, at some other location
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN AD-3: "MY ADDRESSES" SAVED ADDRESSES MODAL ================= -->
+  <div id="address-book-modal" class="fixed inset-0 z-[65] hidden flex items-center justify-center p-3 sm:p-4">
+    <!-- Overlay -->
+    <div onclick="closeAddressBookModal()" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+
+    <div class="relative bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-gray-200 max-h-[92vh] flex flex-col z-10 animate-scale-in">
+      
+      <!-- Header: ← My addresses -->
+      <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-white flex-shrink-0">
+        <div class="flex items-center gap-2.5">
+          <button 
+            type="button" 
+            onclick="closeAddressBookModal()" 
+            class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-base transition-colors cursor-pointer"
+          >
+            ←
+          </button>
+          <h4 class="font-black text-base text-gray-900">My addresses</h4>
+        </div>
+        <button 
+          type="button" 
+          onclick="closeAddressBookModal()" 
+          class="text-gray-400 hover:text-gray-600 font-bold p-1 text-sm"
+        >
           ✕
         </button>
       </div>
 
-      <!-- Navigation Tabs (if saved addresses exist) -->
-      <div id="addr-modal-tabs" class="flex border-b border-gray-200 bg-white text-xs font-bold px-4 pt-2 gap-2 flex-shrink-0">
-        <button id="tab-btn-map" onclick="addNewAddressFlow()" class="pb-2 px-3 border-b-2 border-blinkit-green text-blinkit-green flex items-center gap-1.5 transition-colors cursor-pointer">
-          <span id="tab-btn-map-label">📍 Guided Drop Pin</span>
-        </button>
-        <button id="tab-btn-saved" onclick="switchAddressModalTab('saved')" class="pb-2 px-3 border-b-2 border-transparent text-gray-500 hover:text-gray-800 flex items-center gap-1.5 transition-colors cursor-pointer">
-          <span>📑 Saved Addresses</span>
-          <span id="saved-addr-count-badge" class="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
-        </button>
-      </div>
-
-      <!-- Modal Body (Scrollable) -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-
-        <!-- TAB 1: DROP PIN ON MAP & ADDRESS DETAILS -->
-        <div id="addr-view-map" class="space-y-3.5">
-
-          <!-- Back to Saved Addresses Bar (shown when user has saved addresses) -->
-          <div id="addr-map-back-bar" class="hidden items-center justify-between pb-2 border-b border-gray-100">
-            <button type="button" onclick="switchAddressModalTab('saved')" class="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer">
-              <span>← Back to Saved Addresses</span>
-            </button>
-            <span class="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-              Adding Another Address
-            </span>
+      <!-- Scrollable Body -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs custom-scroll">
+        
+        <!-- 3 Top Action Rows (ad-3 style) -->
+        <div class="space-y-2">
+          <!-- 1. Add new address -->
+          <div 
+            onclick="openAddressFormModal(null)" 
+            class="flex items-center justify-between p-3.5 bg-white hover:bg-emerald-50/50 border border-gray-200 hover:border-emerald-400 rounded-2xl cursor-pointer transition-all shadow-xs group"
+          >
+            <div class="flex items-center gap-3">
+              <span class="text-emerald-700 font-black text-lg group-hover:scale-110 transition-transform">➕</span>
+              <span class="font-extrabold text-xs text-emerald-800">Add new address</span>
+            </div>
+            <span class="text-gray-400 group-hover:text-emerald-700 font-bold">›</span>
           </div>
 
-          <!-- Step 1: Type Address to Guide Map Pin -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between">
-              <label class="block text-[11px] font-black uppercase tracking-wider text-gray-800 flex items-center gap-1.5">
-                <span class="bg-[#0C831F] text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-black">1</span>
-                <span>Type Society, Building or Area to Guide Pin</span>
-              </label>
-              <span class="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-                <svg class="w-3 h-3 text-red-500 inline-block" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
-                <span>Google Map Guided ⚡</span>
-              </span>
-            </div>
-
-            <!-- Search Input with Live Autocomplete -->
-            <div class="relative">
-              <div class="flex items-center gap-2 bg-white border-2 border-emerald-500 rounded-2xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-emerald-400 focus-within:border-emerald-600 transition-all">
-                <span class="text-base pl-1 text-emerald-600">🔍</span>
-                <input 
-                  type="text" 
-                  id="map-search-input" 
-                  placeholder="Type society name, or paste Google Maps link / coords..." 
-                  autocomplete="off"
-                  class="flex-1 outline-none text-xs font-semibold text-gray-900 placeholder-gray-400 bg-transparent"
-                  oninput="handleAddressSearchInput(this.value)"
-                  onkeydown="if(event.key==='Enter'){event.preventDefault();searchAndGuideMapPin(this.value);}"
-                />
-                <button 
-                  type="button" 
-                  id="btn-map-search-guide"
-                  onclick="searchAndGuideMapPin(document.getElementById('map-search-input').value)" 
-                  class="px-3.5 py-1.5 bg-[#0C831F] hover:bg-emerald-800 active:scale-95 text-white font-black text-xs rounded-xl transition-all cursor-pointer shadow-xs flex-shrink-0 flex items-center gap-1"
-                >
-                  <span>Guide Pin 📍</span>
-                </button>
+          <!-- 2. Request address from someone else (WhatsApp) -->
+          <div 
+            onclick="requestAddressViaWhatsApp()" 
+            class="flex items-center justify-between p-3.5 bg-white hover:bg-green-50/50 border border-gray-200 hover:border-green-400 rounded-2xl cursor-pointer transition-all shadow-xs group"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-6 h-6 rounded-lg bg-[#25D366] text-white flex items-center justify-center text-xs flex-shrink-0">
+                💬
               </div>
+              <span class="font-bold text-xs text-gray-900">Request address from someone else</span>
+            </div>
+            <span class="text-gray-400 group-hover:text-green-700 font-bold">›</span>
+          </div>
 
-              <!-- Quick Helper Bar: Open Google Maps & Paste Link -->
-              <div class="flex items-center justify-between text-[11px] pt-1.5 px-1">
-                <span class="text-gray-500 font-medium">💡 Paste society name, Google Maps link, or coords</span>
-                <button 
-                  type="button" 
-                  onclick="openDirectGoogleMapsPicker()" 
-                  class="inline-flex items-center gap-1 text-[11px] font-black text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-lg border border-blue-200 transition-all cursor-pointer shadow-xs"
-                >
-                  <span>🗺️ Open in Google Maps</span>
-                </button>
+          <!-- 3. Import your addresses from Zomato / Google -->
+          <div 
+            onclick="importAddressPrompt()" 
+            class="flex items-center justify-between p-3.5 bg-white hover:bg-rose-50/50 border border-gray-200 hover:border-rose-400 rounded-2xl cursor-pointer transition-all shadow-xs group"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-6 h-6 rounded-lg bg-[#E23744] text-white font-black text-[10px] flex items-center justify-center flex-shrink-0">
+                Z
               </div>
-
-              <!-- Autocomplete Suggestions Dropdown -->
-              <div id="map-search-suggestions" class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-gray-200 rounded-2xl shadow-2xl z-[1000] max-h-60 overflow-y-auto hidden divide-y divide-gray-100">
-                <!-- Populated dynamically -->
-              </div>
+              <span class="font-bold text-xs text-gray-900">Import your addresses from Zomato / Google</span>
             </div>
+            <span class="text-gray-400 group-hover:text-rose-700 font-bold">›</span>
           </div>
-
-          <!-- Step 2 Header -->
-          <div class="flex items-center justify-between text-[11px] font-bold text-gray-700 pt-0.5">
-            <div class="flex items-center gap-1.5">
-              <span class="bg-blue-600 text-white rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-black">2</span>
-              <span>After approaching area, drag pin 📍 to exact house / gate</span>
-            </div>
-            <span class="text-[10px] text-emerald-700 font-extrabold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              Must be within 5 km
-            </span>
-          </div>
-          
-          <!-- Leaflet Interactive Map Container -->
-          <div class="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden border-2 border-gray-200 shadow-inner bg-slate-100">
-            <div id="delivery-map-picker" class="w-full h-full z-0"></div>
-            
-            <!-- Live Distance Pill floating top-left on map -->
-            <div id="map-live-pill" class="absolute top-2.5 left-2.5 z-[500] bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full shadow-md border border-gray-200 text-[11px] font-black flex items-center gap-1.5">
-              <span>⏳ Locating map center...</span>
-            </div>
-
-            <!-- Google Map / Satellite Layer Switcher Toggle -->
-            <div class="absolute top-2.5 right-28 z-[500] flex bg-white/95 backdrop-blur-md rounded-xl p-0.5 border border-gray-200 shadow-md text-[10px] font-bold">
-              <button type="button" id="btn-tile-map" onclick="switchMapTileLayer('roadmap')" class="px-2 py-1 rounded-lg bg-emerald-600 text-white font-extrabold cursor-pointer transition-all shadow-xs">🗺️ Google Map</button>
-              <button type="button" id="btn-tile-sat" onclick="switchMapTileLayer('satellite')" class="px-2 py-1 rounded-lg text-gray-700 hover:text-gray-900 cursor-pointer transition-all">🛰️ Satellite</button>
-            </div>
-
-            <!-- Locate GPS Button floating top-right on map -->
-            <button 
-              type="button" 
-              onclick="locateUserOnMap()" 
-              id="btn-map-locate-gps" 
-              class="absolute top-2.5 right-2.5 z-[500] bg-white hover:bg-gray-50 active:scale-95 text-gray-900 px-3 py-1.5 rounded-xl shadow-md border border-gray-200 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-            >
-              <span>🎯 Locate Me</span>
-            </button>
-
-            <!-- Map Hint Bottom Bar -->
-            <div class="absolute bottom-1.5 left-2 right-2 z-[500] bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-[10px] text-center font-semibold">
-              Drag pin 📍 or tap map to drop your exact delivery location
-            </div>
-          </div>
-
-          <!-- Who is this order for? (For Me vs For a Friend) -->
-          <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200 space-y-2">
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-700">Who is this order for?</label>
-            <div class="grid grid-cols-2 gap-2">
-              <button 
-                type="button" 
-                id="btn-recipient-self" 
-                onclick="setRecipientType('self')" 
-                class="py-2 px-3 rounded-xl border-2 border-blinkit-green bg-green-50/80 font-bold text-gray-900 text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <span>👤 For Myself</span>
-              </button>
-              <button 
-                type="button" 
-                id="btn-recipient-friend" 
-                onclick="setRecipientType('friend')" 
-                class="py-2 px-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 font-bold text-gray-600 text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <span>🎁 For a Friend</span>
-              </button>
-            </div>
-
-            <!-- Recipient Contact Details (Friend Order Fields) -->
-            <div id="friend-contact-fields" class="hidden space-y-2 pt-1 border-t border-gray-200">
-              <p class="text-[10px] text-amber-800 bg-amber-50 p-2 rounded-lg font-medium border border-amber-200">
-                🔔 <strong>Friend / Gift Delivery:</strong> Delivery boy & store operator will call this contact on arrival.
-              </p>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1">Friend's Name *</label>
-                  <input 
-                    type="text" 
-                    id="map-friend-name" 
-                    placeholder="e.g. Aman Shekhar" 
-                    class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-semibold text-xs" 
-                  />
-                </div>
-                <div>
-                  <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1">Friend's Mobile *</label>
-                  <input 
-                    type="tel" 
-                    id="map-friend-phone" 
-                    maxlength="10" 
-                    placeholder="10-digit mobile" 
-                    class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-semibold text-xs" 
-                    oninput="this.value = this.value.replace(/\D/g, '')"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Self Contact Details -->
-            <div id="self-contact-fields" class="grid grid-cols-2 gap-2 pt-1">
-              <div>
-                <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1">Your Name *</label>
-                <input 
-                  type="text" 
-                  id="map-self-name" 
-                  placeholder="Your full name" 
-                  class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-semibold text-xs" 
-                />
-              </div>
-              <div>
-                <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1">Your Mobile (Verified)</label>
-                <input 
-                  type="tel" 
-                  id="map-self-phone" 
-                  readonly 
-                  class="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-600 outline-none font-semibold text-xs cursor-not-allowed" 
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Address Tag Selection -->
-          <div>
-            <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1.5">Save Address As</label>
-            <div class="flex items-center gap-2">
-              <button type="button" onclick="setMapAddressTag('Home')" id="tag-opt-home" class="map-tag-btn px-3 py-1.5 rounded-xl border-2 border-blinkit-green bg-green-50 font-bold text-gray-900 cursor-pointer text-xs">🏠 Home</button>
-              <button type="button" onclick="setMapAddressTag('Work')" id="tag-opt-work" class="map-tag-btn px-3 py-1.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer text-xs">🏢 Work</button>
-              <button type="button" onclick="setMapAddressTag('Friend')" id="tag-opt-friend" class="map-tag-btn px-3 py-1.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer text-xs">🎁 Friend</button>
-              <button type="button" onclick="setMapAddressTag('Other')" id="tag-opt-other" class="map-tag-btn px-3 py-1.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer text-xs">📍 Other</button>
-            </div>
-          </div>
-
-          <!-- Address Specifics Inputs -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1">House / Flat / Floor / Building *</label>
-              <input 
-                type="text" 
-                id="map-input-flat" 
-                placeholder="e.g. Flat 302, 3rd Floor, Tower B" 
-                class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-semibold text-xs" 
-              />
-            </div>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="block text-[10px] font-bold uppercase text-gray-600">Street / Colony / Locality *</label>
-                <button type="button" onclick="searchAndGuideMapPin(document.getElementById('map-input-street').value)" class="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer">Guide Pin 📍</button>
-              </div>
-              <input 
-                type="text" 
-                id="map-input-street" 
-                placeholder="e.g. Station Road, Market Colony" 
-                class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-semibold text-xs" 
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1">Landmark (Optional)</label>
-              <input 
-                type="text" 
-                id="map-input-landmark" 
-                placeholder="e.g. Near Market / Temple" 
-                class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-semibold text-xs" 
-              />
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-gray-600 mb-1">Postal Pincode (Optional)</label>
-              <input 
-                type="text" 
-                id="map-input-pincode" 
-                maxlength="6" 
-                placeholder="e.g. 6-digit pin" 
-                class="w-full p-2.5 rounded-xl border border-gray-300 focus:border-blinkit-green outline-none font-semibold text-xs" 
-              />
-            </div>
-          </div>
-
         </div>
 
-        <!-- TAB 2: SAVED ADDRESSES LIST -->
-        <div id="addr-view-saved" class="hidden space-y-3">
-          <div id="saved-addresses-modal-list" class="space-y-2.5">
-            <!-- Populated by renderSavedAddressesModalList() -->
+        <!-- Section: Your saved addresses -->
+        <div class="pt-2">
+          <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">
+            Your saved addresses
+          </div>
+
+          <!-- Address Cards Container (Rendered dynamically by renderAddressBookCards) -->
+          <div id="ad3-saved-addresses-list" class="space-y-3">
+            <!-- Dynamic ad-3 cards -->
+          </div>
+        </div>
+
+        <!-- Dismissable Share Prompt Banner (ad-3 style) -->
+        <div id="ad3-share-banner" class="bg-[#FFF8E7] border border-[#FFE8B2] rounded-2xl p-3.5 flex items-center justify-between shadow-2xs">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-sm flex-shrink-0">
+              🔗
+            </div>
+            <div class="text-[11px] text-[#805B10] font-bold leading-tight truncate">
+              Now share your addresses with friends and family
+            </div>
           </div>
           <button 
             type="button" 
-            onclick="addNewAddressFlow()" 
-            class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-2xl font-black text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+            onclick="document.getElementById('ad3-share-banner').classList.add('hidden')" 
+            class="text-[#805B10] hover:text-black font-bold p-1 text-xs"
           >
-            <span class="text-base">➕</span>
-            <span>Add Another Address (Guided Pin 📍)</span>
+            ✕
           </button>
         </div>
 
       </div>
+    </div>
+  </div>
 
-      <!-- Modal Footer Action -->
-      <div class="p-4 border-t border-gray-200 bg-white flex-shrink-0 space-y-2">
+  <!-- ================= SCREEN AD-1: "ADD ADDRESS DETAILS" FORM MODAL ================= -->
+  <div id="address-form-modal" class="fixed inset-0 z-[68] hidden flex items-center justify-center p-3 sm:p-4">
+    <!-- Overlay -->
+    <div onclick="closeAddressFormModal()" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+
+    <div class="relative bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-gray-200 max-h-[92vh] flex flex-col z-10 animate-scale-in">
+      
+      <!-- Header: ← Add address details -->
+      <div class="p-4 border-b border-gray-200 flex items-center justify-between bg-white flex-shrink-0">
+        <div class="flex items-center gap-2.5">
+          <button 
+            type="button" 
+            onclick="closeAddressFormModal()" 
+            class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-base transition-colors cursor-pointer"
+          >
+            ←
+          </button>
+          <h4 class="font-black text-base text-gray-900" id="ad1-modal-title">Add address details</h4>
+        </div>
         <button 
-          id="btn-confirm-address-selection" 
-          onclick="confirmAndSaveAddressFromMap()" 
-          class="w-full bg-[#0C831F] hover:bg-emerald-800 active:scale-98 text-white py-3.5 rounded-2xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+          type="button" 
+          onclick="closeAddressFormModal()" 
+          class="text-gray-400 hover:text-gray-600 font-bold p-1 text-sm"
         >
-          <span>✓ Confirm & Deliver to This Location</span>
+          ✕
         </button>
-        <div id="modal-address-error" class="hidden text-center text-xs font-bold text-red-600 bg-red-50 p-2 rounded-xl border border-red-200"></div>
+      </div>
+
+      <!-- Scrollable Form Body -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs custom-scroll">
+        
+        <!-- SECTION 1: Address details -->
+        <div class="space-y-3">
+          <div class="text-[11px] font-extrabold text-gray-900 uppercase tracking-wider">
+            Address details
+          </div>
+
+          <!-- Card 1: Select a city -->
+          <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-2xl shadow-2xs">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center text-lg flex-shrink-0">
+                🏢
+              </div>
+              <div>
+                <div class="font-bold text-xs text-gray-900">Select a city</div>
+                <div class="text-[11px] text-gray-500 font-medium" id="ad1-city-name">Pune</div>
+              </div>
+            </div>
+            <button 
+              type="button" 
+              onclick="showNotificationToast('📍 Rasoee Fresh delivers across Pune (Kondhwa Budruk & nearby)')" 
+              class="border border-[#0C831F] text-[#0C831F] hover:bg-green-50 font-black text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
+            >
+              Select
+            </button>
+          </div>
+
+          <!-- Card 2: Select an area, street -->
+          <div class="space-y-2">
+            <div 
+              onclick="toggleAreaMapSelector()" 
+              class="flex items-center justify-between p-3 bg-white border border-gray-200 hover:border-emerald-400 rounded-2xl shadow-2xs cursor-pointer transition-all"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-2xl bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center text-lg flex-shrink-0">
+                  📍
+                </div>
+                <div class="min-w-0">
+                  <div class="font-bold text-xs text-gray-900 truncate" id="ad1-area-label">Select an area, street</div>
+                  <div class="text-[11px] text-gray-500 font-medium truncate" id="ad1-area-sub">Guide pin on map or search society</div>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onclick="event.stopPropagation(); toggleAreaMapSelector();" 
+                class="border border-[#0C831F] text-[#0C831F] hover:bg-green-50 font-black text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex-shrink-0"
+              >
+                Select
+              </button>
+            </div>
+
+            <!-- Expandable Drop-Pin Map & Society Autocomplete Panel -->
+            <div id="ad1-map-panel" class="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+              <div class="flex items-center justify-between text-[11px] font-bold text-gray-700">
+                <span>📍 Guide Pin &amp; Drop Exact Location</span>
+                <span class="text-emerald-700 font-extrabold bg-emerald-100/70 px-2 py-0.5 rounded-full text-[10px]">Max 5.0 km</span>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="relative">
+                <div class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl p-2 shadow-2xs focus-within:border-[#0C831F]">
+                  <span class="text-sm pl-1 text-gray-400">🔍</span>
+                  <input 
+                    type="text" 
+                    id="map-search-input" 
+                    placeholder="Type society, area, or paste maps link..." 
+                    autocomplete="off"
+                    class="flex-1 outline-none text-xs font-semibold text-gray-900 placeholder-gray-400 bg-transparent"
+                    oninput="handleAddressSearchInput(this.value)"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();searchAndGuideMapPin(this.value);}"
+                  />
+                  <button 
+                    type="button" 
+                    id="btn-map-search-guide"
+                    onclick="searchAndGuideMapPin(document.getElementById('map-search-input').value)" 
+                    class="px-2.5 py-1 bg-[#0C831F] hover:bg-emerald-800 text-white font-bold text-xs rounded-lg transition-all cursor-pointer"
+                  >
+                    Guide Pin 📍
+                  </button>
+                </div>
+
+                <!-- Suggestions dropdown -->
+                <div id="map-search-suggestions" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[1000] max-h-52 overflow-y-auto hidden divide-y divide-gray-100"></div>
+              </div>
+
+              <!-- Leaflet/Google Map Container -->
+              <div class="relative w-full h-48 rounded-xl overflow-hidden border border-gray-300 bg-slate-100">
+                <div id="delivery-map-picker" class="w-full h-full z-0"></div>
+                <!-- Live Distance Pill -->
+                <div id="map-live-pill" class="absolute top-2 left-2 z-[500] bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full shadow-md border border-gray-200 text-[10px] font-black">
+                  <span>⏳ Locating...</span>
+                </div>
+                <!-- Tile switcher -->
+                <div class="absolute top-2 right-24 z-[500] flex bg-white/95 rounded-lg p-0.5 border border-gray-200 text-[9px] font-bold">
+                  <button type="button" id="btn-tile-map" onclick="switchMapTileLayer('roadmap')" class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold cursor-pointer">Map</button>
+                  <button type="button" id="btn-tile-sat" onclick="switchMapTileLayer('satellite')" class="px-1.5 py-0.5 rounded text-gray-700 cursor-pointer">Sat</button>
+                </div>
+                <!-- Locate GPS -->
+                <button type="button" onclick="locateUserOnMap()" id="btn-map-locate-gps" class="absolute top-2 right-2 z-[500] bg-white px-2 py-1 rounded-lg border border-gray-200 text-[10px] font-bold shadow-xs cursor-pointer">
+                  🎯 GPS
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Enter complete address* -->
+          <div class="space-y-1">
+            <input 
+              type="text" 
+              id="ad1-input-complete-address" 
+              placeholder="Enter complete address*" 
+              class="w-full p-3.5 bg-white border border-gray-300 rounded-2xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
+            />
+            <div class="text-[10px] text-gray-400 px-1 font-medium">
+              Example: Plot No. 112, Shree Vihar Colony, Jagatpura / Flat 302, Building B, Anand Tirth Society, Kondhwa Budruk
+            </div>
+          </div>
+
+          <!-- Card 4: Add google maps link (optional) -->
+          <div class="flex items-center gap-2.5 p-3 bg-white border border-gray-300 rounded-2xl shadow-2xs focus-within:border-[#0C831F]">
+            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="#FFFFFF"/></svg>
+            <input 
+              type="text" 
+              id="ad1-input-maps-link" 
+              placeholder="Add google maps link (optional)" 
+              oninput="handleMapsLinkPaste(this.value)"
+              class="flex-1 text-xs font-semibold outline-none bg-transparent placeholder-gray-400"
+            />
+          </div>
+
+          <!-- Address Tag Selection -->
+          <div class="flex items-center gap-2 pt-1 flex-wrap">
+            <span class="text-[10px] font-bold text-gray-500 uppercase">Save As:</span>
+            <button type="button" onclick="setMapAddressTag('Home')" id="tag-opt-home" class="map-tag-btn px-2.5 py-1 rounded-xl border-2 border-[#0C831F] bg-green-50 font-bold text-gray-900 text-[11px] cursor-pointer">🏠 Home</button>
+            <button type="button" onclick="setMapAddressTag('Work')" id="tag-opt-work" class="map-tag-btn px-2.5 py-1 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-[11px] cursor-pointer">🏢 Work</button>
+            <button type="button" onclick="setMapAddressTag('Friend')" id="tag-opt-friend" class="map-tag-btn px-2.5 py-1 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-[11px] cursor-pointer">🎁 Friend</button>
+            <button type="button" onclick="setMapAddressTag('Hostel')" id="tag-opt-hostel" class="map-tag-btn px-2.5 py-1 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-[11px] cursor-pointer">📍 Hostel</button>
+          </div>
+        </div>
+
+        <!-- SECTION 2: Contact details -->
+        <div class="space-y-3 pt-2 border-t border-gray-100">
+          <div class="text-[11px] font-extrabold text-gray-900 uppercase tracking-wider">
+            Contact details
+          </div>
+
+          <!-- Radio Buttons: Myself vs Someone else -->
+          <div class="flex items-center gap-6 text-xs font-bold text-gray-800">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="ad1_recipient_radio" id="ad1-radio-self" value="self" onchange="handleAd1RecipientChange('self')" class="w-4 h-4 text-[#0C831F] focus:ring-[#0C831F]" />
+              <span>Myself</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="ad1_recipient_radio" id="ad1-radio-someone" value="someone" checked onchange="handleAd1RecipientChange('someone')" class="w-4 h-4 text-[#0C831F] focus:ring-[#0C831F]" />
+              <span>Someone else</span>
+            </label>
+          </div>
+
+          <!-- Inputs for Receiver -->
+          <div id="ad1-someone-fields" class="space-y-2.5">
+            <input 
+              type="text" 
+              id="ad1-receiver-name" 
+              placeholder="Receiver's name*" 
+              class="w-full p-3.5 bg-white border border-gray-300 rounded-2xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
+            />
+            <div class="relative flex items-center">
+              <input 
+                type="tel" 
+                id="ad1-receiver-phone" 
+                maxlength="10"
+                placeholder="Receiver's phone number*" 
+                oninput="this.value = this.value.replace(/\D/g, '')"
+                class="w-full p-3.5 pr-10 bg-white border border-gray-300 rounded-2xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
+              />
+              <span class="absolute right-3.5 text-gray-400 text-base pointer-events-none">📇</span>
+            </div>
+          </div>
+
+          <!-- Inputs for Myself -->
+          <div id="ad1-myself-fields" class="hidden space-y-2.5">
+            <input 
+              type="text" 
+              id="ad1-self-name" 
+              placeholder="Your name*" 
+              class="w-full p-3.5 bg-white border border-gray-300 rounded-2xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
+            />
+            <input 
+              type="tel" 
+              id="ad1-self-phone" 
+              readonly
+              class="w-full p-3.5 bg-gray-100 border border-gray-200 rounded-2xl text-xs font-semibold text-gray-600 outline-none cursor-not-allowed"
+            />
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="ad1-modal-error" class="hidden text-center text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200"></div>
+
+      </div>
+
+      <!-- Footer: Next Button (ad-1 style) -->
+      <div class="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+        <button 
+          type="button" 
+          id="btn-ad1-save"
+          onclick="handleAd1FormSubmit()" 
+          class="w-full bg-[#0C831F] hover:bg-emerald-800 active:scale-98 text-white py-3.5 rounded-2xl font-black text-sm shadow-md transition-all flex items-center justify-center cursor-pointer"
+        >
+          Next
+        </button>
       </div>
 
     </div>
   </div>
+
 
   <!-- Scripts -->
   <script src="store-config.js"></script>
