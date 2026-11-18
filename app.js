@@ -797,6 +797,13 @@ function updateCartItem(productId, delta) {
   updateCartUI();
 }
 
+// Currency rounding helper (prevents floating-point artifacts like 30.299999999999997)
+function roundMoney(val) {
+  const n = Number(val);
+  if (isNaN(n)) return 0;
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 // Cart Calculations
 function getCartSummary() {
   let subtotal = 0;
@@ -807,20 +814,23 @@ function getCartSummary() {
   for (const [id, qty] of Object.entries(state.cart)) {
     const product = state.products.find(p => p.id === id);
     if (product && qty > 0) {
-      subtotal += product.price * qty;
-      totalMrp += (product.mrp || product.price) * qty;
+      const unitPrice = Number(product.price) || 0;
+      const unitMrp = Number(product.mrp || product.price) || 0;
+      const lineTotal = roundMoney(unitPrice * qty);
+      subtotal = roundMoney(subtotal + lineTotal);
+      totalMrp = roundMoney(totalMrp + roundMoney(unitMrp * qty));
       itemCount += qty;
-      items.push({ product, qty, total: product.price * qty });
+      items.push({ product, qty, total: lineTotal });
     }
   }
 
-  const freeDeliveryThreshold = state.config.freeDeliveryThreshold || 199;
-  const standardDeliveryFee = state.config.standardDeliveryFee || 25;
+  const freeDeliveryThreshold = Number(state.config.freeDeliveryThreshold) || 199;
+  const standardDeliveryFee = Number(state.config.standardDeliveryFee) || 25;
   const isFreeDelivery = subtotal >= freeDeliveryThreshold || subtotal === 0;
   const deliveryFee = isFreeDelivery ? 0 : standardDeliveryFee;
   const handlingFee = 0;
-  const savings = Math.max(0, totalMrp - subtotal);
-  const grandTotal = subtotal + deliveryFee + (state.tipAmount || 0);
+  const savings = roundMoney(Math.max(0, totalMrp - subtotal));
+  const grandTotal = roundMoney(subtotal + deliveryFee + (Number(state.tipAmount) || 0));
 
   return {
     items,
@@ -830,9 +840,9 @@ function getCartSummary() {
     deliveryFee,
     isFreeDelivery,
     freeDeliveryThreshold,
-    amountNeededForFreeDelivery: Math.max(0, freeDeliveryThreshold - subtotal),
+    amountNeededForFreeDelivery: roundMoney(Math.max(0, freeDeliveryThreshold - subtotal)),
     handlingFee: 0,
-    tip: state.tipAmount || 0,
+    tip: Number(state.tipAmount) || 0,
     savings,
     grandTotal
   };
@@ -4844,8 +4854,8 @@ function openOrderReceipt(orderId) {
   let subtotal = 0;
   if (itemsContainer && order.items) {
     itemsContainer.innerHTML = order.items.map((item, idx) => {
-      const itemTot = item.total || (item.qty * (item.product?.price || 0));
-      subtotal += itemTot;
+      const itemTot = roundMoney(item.total != null ? item.total : (item.qty * (Number(item.product?.price) || 0)));
+      subtotal = roundMoney(subtotal + itemTot);
       return `
         <tr class="border-b border-gray-100 text-xs">
           <td class="py-2 pr-2">

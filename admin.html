@@ -1953,11 +1953,11 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block font-bold text-gray-700 mb-1">Selling Price (₹) *</label>
-            <input type="number" id="modal-prod-price" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900" placeholder="e.g. 45" />
+            <input type="number" step="any" min="0" inputmode="decimal" id="modal-prod-price" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green font-bold text-gray-900" placeholder="e.g. 45.50" />
           </div>
           <div>
             <label class="block font-bold text-gray-700 mb-1">MRP Price (₹)</label>
-            <input type="number" id="modal-prod-mrp" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. 60" />
+            <input type="number" step="any" min="0" inputmode="decimal" id="modal-prod-mrp" class="w-full p-2.5 rounded-xl border border-gray-300 outline-none focus:border-blinkit-green" placeholder="e.g. 60.00" />
           </div>
         </div>
 
@@ -2986,7 +2986,7 @@
     function updateKpis() {
       const totalProds = productsList.length;
       const inStock = productsList.filter(p => p.inStock !== false).length;
-      const totalRev = ordersList.reduce((sum, o) => sum + (o.total || 0), 0);
+      const totalRev = Math.round((ordersList.reduce((sum, o) => sum + (Number(o.total) || 0), 0) + Number.EPSILON) * 100) / 100;
 
       document.getElementById('kpi-total-products').textContent = totalProds;
       document.getElementById('kpi-in-stock-products').textContent = `${inStock} In Stock (${totalProds - inStock} Out of Stock)`;
@@ -3032,7 +3032,7 @@
       }
 
       tbody.innerHTML = filtered.map(p => {
-        const discount = Math.round(((p.mrp - p.price) / p.mrp) * 100);
+        const discount = p.mrp > 0 ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
         return `
           <tr id="rate-row-${p.id}" class="hover:bg-gray-50/80 transition-colors">
             <td class="p-3">
@@ -3052,6 +3052,9 @@
             <td class="p-3">
               <input 
                 type="number" 
+                step="any"
+                min="0"
+                inputmode="decimal"
                 value="${p.mrp || p.price}" 
                 oninput="updateProductField('${p.id}', 'mrp', this.value, false)"
                 onchange="updateProductField('${p.id}', 'mrp', this.value, true)" 
@@ -3063,6 +3066,9 @@
                 <span class="absolute left-2 top-1.5 text-gray-400 font-bold">₹</span>
                 <input 
                   type="number" 
+                  step="any"
+                  min="0"
+                  inputmode="decimal"
                   value="${p.price}" 
                   oninput="updateProductField('${p.id}', 'price', this.value, false)"
                   onchange="updateProductField('${p.id}', 'price', this.value, true)" 
@@ -3099,9 +3105,9 @@
       const p = productsList.find(item => item.id === id);
       if (p) {
         if (field === 'price' || field === 'mrp') {
-          const num = parseInt(val, 10);
+          const num = parseFloat(val);
           if (!isNaN(num) && num >= 0) {
-            p[field] = num;
+            p[field] = Math.round((num + Number.EPSILON) * 100) / 100;
           }
         } else {
           p[field] = val;
@@ -3142,7 +3148,7 @@
       productsList.forEach(p => {
         if (p.category === category) {
           const factor = 1 + (percent / 100);
-          p.price = Math.round(p.price * factor);
+          p.price = Math.round((p.price * factor + Number.EPSILON) * 100) / 100;
           if (p.price > p.mrp) p.mrp = p.price;
         }
       });
@@ -3351,12 +3357,12 @@
         let addedCount = 0;
         const idMapChanges = [];
 
-        // Parse numbers helper: removes ₹, Rs., commas, whitespace
+        // Parse numbers helper: removes ₹, Rs., commas, whitespace while preserving decimals
         const parseNum = (str) => {
-          if (!str) return NaN;
-          const cleaned = String(str).replace(/[₹\s,rs\.]/gi, '');
+          if (str === undefined || str === null || str === '') return NaN;
+          const cleaned = String(str).replace(/rs\.?/gi, '').replace(/[₹\s,]/g, '');
           const val = parseFloat(cleaned);
-          return isNaN(val) ? NaN : Math.round(val);
+          return isNaN(val) ? NaN : Math.round((val + Number.EPSILON) * 100) / 100;
         };
 
         // Process data rows
@@ -3751,15 +3757,17 @@
         const name = document.getElementById('modal-prod-name').value.trim();
         const cat = document.getElementById('modal-prod-category').value;
         const unit = document.getElementById('modal-prod-unit').value.trim();
-        const price = parseInt(document.getElementById('modal-prod-price').value, 10);
-        const mrp = parseInt(document.getElementById('modal-prod-mrp').value, 10) || price;
+        const rawPrice = parseFloat(document.getElementById('modal-prod-price').value);
+        const price = !isNaN(rawPrice) ? Math.round((rawPrice + Number.EPSILON) * 100) / 100 : NaN;
+        const rawMrp = parseFloat(document.getElementById('modal-prod-mrp').value);
+        const mrp = (!isNaN(rawMrp) && rawMrp >= 0) ? Math.round((rawMrp + Number.EPSILON) * 100) / 100 : price;
         const rawImage = document.getElementById('modal-prod-image').value.trim() || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
         const image = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(rawImage) : rawImage;
         const tag = document.getElementById('modal-prod-tag').value.trim();
         const inStock = document.getElementById('modal-prod-stock') ? document.getElementById('modal-prod-stock').checked : true;
 
-        if (!name || !unit || isNaN(price)) {
-          alert("Please fill in Product Name, Unit and Selling Price");
+        if (!name || !unit || isNaN(price) || price < 0) {
+          alert("Please fill in Product Name, Unit and a valid Selling Price");
           if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
           return;
         }
@@ -4708,8 +4716,8 @@
       let subtotal = 0;
       if (tbody) {
         tbody.innerHTML = order.items.map((item, idx) => {
-          const itemTot = item.total || (item.qty * (item.product?.price || 0));
-          subtotal += itemTot;
+          const itemTot = Math.round(((item.total != null ? Number(item.total) : (item.qty * (Number(item.product?.price) || 0))) + Number.EPSILON) * 100) / 100;
+          subtotal = Math.round((subtotal + itemTot + Number.EPSILON) * 100) / 100;
           return `
             <tr class="hover:bg-gray-50/80">
               <td class="p-2.5">
@@ -4816,7 +4824,7 @@
           if (customerMap.has(ph)) {
             const existing = customerMap.get(ph);
             existing.orderCount = (existing.orderCount || 0) + 1;
-            existing.totalSpend = (existing.totalSpend || 0) + (o.total || 0);
+            existing.totalSpend = Math.round(((existing.totalSpend || 0) + (Number(o.total) || 0) + Number.EPSILON) * 100) / 100;
             if (!existing.flat && o.customer?.flat) existing.flat = o.customer.flat;
             if (!existing.street && o.customer?.street) existing.street = o.customer.street;
             if (o.customer?.name && (existing.name === 'Customer' || existing.name === 'Valued Customer')) existing.name = o.customer.name;

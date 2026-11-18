@@ -1746,7 +1746,7 @@
         const prodName = item.product?.name || item.name || `Item #${idx+1}`;
         const unit = item.product?.unit || item.unit || '';
         const qty = item.qty || 1;
-        const total = item.total || (qty * (item.product?.price || item.price || 0));
+        const total = Math.round(((item.total != null ? Number(item.total) : (qty * (Number(item.product?.price || item.price) || 0))) + Number.EPSILON) * 100) / 100;
 
         return `
           <tr style="border-bottom: 1px dotted #ccc;">
