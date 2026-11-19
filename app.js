@@ -2818,7 +2818,7 @@ function showAddressActionMenu(id, event) {
 }
 
 // ================= SCREEN AD-1: "ADD ADDRESS DETAILS" =================
-let ad1RecipientType = 'someone';
+let ad1RecipientType = 'self';
 
 function openAddressFormModal(editId = null, prefillAddress = null) {
   editingAddressId = editId;
@@ -2826,9 +2826,11 @@ function openAddressFormModal(editId = null, prefillAddress = null) {
   if (!modal) return;
 
   const titleEl = document.getElementById('ad1-modal-title');
-  const cityEl = document.getElementById('ad1-city-name');
-  const areaLabel = document.getElementById('ad1-area-label');
-  const completeAddrInput = document.getElementById('ad1-input-complete-address');
+  const flatInput = document.getElementById('ad1-input-flat');
+  const streetInput = document.getElementById('ad1-input-street');
+  const landmarkInput = document.getElementById('ad1-input-landmark');
+  const areaInput = document.getElementById('ad1-input-area');
+  const pincodeInput = document.getElementById('ad1-input-pincode');
   const mapsLinkInput = document.getElementById('ad1-input-maps-link');
   const recNameInput = document.getElementById('ad1-receiver-name');
   const recPhoneInput = document.getElementById('ad1-receiver-phone');
@@ -2837,7 +2839,6 @@ function openAddressFormModal(editId = null, prefillAddress = null) {
   const errBox = document.getElementById('ad1-modal-error');
   const btnSave = document.getElementById('btn-ad1-save');
 
-  if (cityEl) cityEl.textContent = "Pune";
   if (errBox) { errBox.textContent = ''; errBox.classList.add('hidden'); }
 
   const userPhone = state.currentUser?.phone ? String(state.currentUser.phone).replace(/\D/g, '').slice(-10) : '';
@@ -2851,12 +2852,14 @@ function openAddressFormModal(editId = null, prefillAddress = null) {
     const addresses = (state.currentUser && Array.isArray(state.currentUser.savedAddresses)) ? state.currentUser.savedAddresses : [];
     const addr = addresses.find(a => a.id === editId);
     if (addr) {
-      if (areaLabel) areaLabel.textContent = addr.street || "Pune Locality";
-      if (completeAddrInput) {
-        completeAddrInput.value = [addr.flat, addr.street, addr.landmark ? 'Near ' + addr.landmark : ''].filter(Boolean).join(', ');
-      }
+      if (flatInput) flatInput.value = addr.flat || '';
+      if (streetInput) streetInput.value = addr.street || '';
+      if (landmarkInput) landmarkInput.value = addr.landmark || '';
+      if (areaInput) areaInput.value = addr.area || 'Kondhwa, Pune';
+      if (pincodeInput) pincodeInput.value = addr.pincode || '411048';
+      if (mapsLinkInput) mapsLinkInput.value = addr.mapsLink || '';
       setMapAddressTag(addr.tag || 'Home');
-      if (addr.isFriendOrder || addr.tag === 'Friend') {
+      if (addr.isFriendOrder || addr.tag === 'Friend' || (addr.receiverPhone && userPhone && addr.receiverPhone !== userPhone)) {
         handleAd1RecipientChange('someone');
         if (recNameInput) recNameInput.value = addr.receiverName || '';
         if (recPhoneInput) recPhoneInput.value = addr.receiverPhone || '';
@@ -2869,14 +2872,17 @@ function openAddressFormModal(editId = null, prefillAddress = null) {
     }
   } else {
     if (titleEl) titleEl.textContent = "Add address details";
-    if (btnSave) btnSave.textContent = "Next";
-    if (completeAddrInput) completeAddrInput.value = prefillAddress || '';
+    if (btnSave) btnSave.textContent = "Save Address";
+    if (flatInput) flatInput.value = prefillAddress || '';
+    if (streetInput) streetInput.value = '';
+    if (landmarkInput) landmarkInput.value = '';
+    if (areaInput) areaInput.value = 'Kondhwa, Pune';
+    if (pincodeInput) pincodeInput.value = '411048';
     if (mapsLinkInput) mapsLinkInput.value = '';
     if (recNameInput) recNameInput.value = '';
     if (recPhoneInput) recPhoneInput.value = '';
-    handleAd1RecipientChange('someone');
+    handleAd1RecipientChange(userPhone ? 'self' : 'someone');
     setMapAddressTag('Home');
-    if (areaLabel) areaLabel.textContent = "Select an area, street";
 
     const cfg = state.config?.deliveryZone || {};
     const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
@@ -2887,13 +2893,6 @@ function openAddressFormModal(editId = null, prefillAddress = null) {
   }
 
   modal.classList.remove('hidden');
-
-  setTimeout(() => {
-    initDeliveryMap(currentMapCoords.lat, currentMapCoords.lng);
-    panMapTo(currentMapCoords.lat, currentMapCoords.lng, 16);
-    setMarkerPosition(currentMapCoords.lat, currentMapCoords.lng);
-    updateMapDistanceBadge(currentMapCoords.lat, currentMapCoords.lng);
-  }, 200);
 }
 
 function closeAddressFormModal() {
@@ -2902,19 +2901,7 @@ function closeAddressFormModal() {
 }
 
 function toggleAreaMapSelector() {
-  const panel = document.getElementById('ad1-map-panel');
-  if (!panel) return;
-  panel.classList.toggle('hidden');
-  if (!panel.classList.contains('hidden')) {
-    setTimeout(() => {
-      if (deliveryMap && deliveryMap.invalidateSize) deliveryMap.invalidateSize();
-      if (googleMapInstance && window.google) {
-        google.maps.event.trigger(googleMapInstance, 'resize');
-      }
-      const searchInput = document.getElementById('map-search-input');
-      if (searchInput) searchInput.focus();
-    }, 150);
-  }
+  // Retained for backward-compatibility
 }
 
 function handleAd1RecipientChange(type) {
@@ -2941,7 +2928,10 @@ function handleAd1RecipientChange(type) {
 
 function handleMapsLinkPaste(val) {
   if (!val || val.length < 5) return;
-  searchAndGuideMapPin(val.trim());
+  const coordsMatch = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || val.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (coordsMatch) {
+    currentMapCoords = { lat: parseFloat(coordsMatch[1]), lng: parseFloat(coordsMatch[2]) };
+  }
 }
 
 async function handleAd1FormSubmit() {
@@ -2972,35 +2962,57 @@ async function handleAd1FormSubmit() {
     receiverPhone = userPhone || '8857917293';
   }
 
-  const completeAddr = document.getElementById('ad1-input-complete-address')?.value.trim();
-  if (!completeAddr || completeAddr.length < 5) {
+  const flat = document.getElementById('ad1-input-flat')?.value.trim();
+  const street = document.getElementById('ad1-input-street')?.value.trim();
+  const landmark = document.getElementById('ad1-input-landmark')?.value.trim() || '';
+  const area = document.getElementById('ad1-input-area')?.value.trim() || 'Kondhwa, Pune';
+  const pincode = document.getElementById('ad1-input-pincode')?.value.trim() || '411048';
+  const mapsLink = document.getElementById('ad1-input-maps-link')?.value.trim() || '';
+
+  if (!flat || flat.length < 2) {
     if (errBox) {
-      errBox.textContent = "Please enter complete address (House/Flat No, Society/Building, Locality).";
+      errBox.textContent = "Please enter Building, House, Flat or Floor details.";
       errBox.classList.remove('hidden');
     } else {
-      alert("Please enter complete address.");
+      alert("Please enter Building / Flat details.");
     }
     return;
   }
 
-  // Check 5km Delivery Radius Constraint
+  if (!street || street.length < 2) {
+    if (errBox) {
+      errBox.textContent = "Please enter Street, Road, Society or Locality details.";
+      errBox.classList.remove('hidden');
+    } else {
+      alert("Please enter Street / Locality details.");
+    }
+    return;
+  }
+
+  // Calculate coordinates & distance
   const cfg = state.config?.deliveryZone || {};
   const storeLat = parseFloat(cfg.storeCoordinates?.lat) || 18.455585;
   const storeLng = parseFloat(cfg.storeCoordinates?.lng) || 73.873529;
   const maxRadiusKm = parseFloat(cfg.maxRadiusKm) || 5.0;
 
-  const lat = (currentMapCoords.lat && currentMapCoords.lat !== 0) ? currentMapCoords.lat : 18.455585;
-  const lng = (currentMapCoords.lng && currentMapCoords.lng !== 0) ? currentMapCoords.lng : 73.873529;
+  let lat = storeLat;
+  let lng = storeLng;
+  let distanceKm = 0.5;
 
-  const distanceKm = calculateDistanceKm(storeLat, storeLng, lat, lng);
-  if (distanceKm > maxRadiusKm) {
-    if (errBox) {
-      errBox.textContent = `🚫 Location is ${distanceKm} km away from store. Our express delivery is strictly within ${maxRadiusKm} km. Please drag pin closer.`;
-      errBox.classList.remove('hidden');
-    } else {
-      alert(`Location is ${distanceKm} km away. Delivery is limited to ${maxRadiusKm} km.`);
+  if (mapsLink) {
+    const coordsMatch = mapsLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || mapsLink.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (coordsMatch) {
+      lat = parseFloat(coordsMatch[1]);
+      lng = parseFloat(coordsMatch[2]);
+      distanceKm = calculateDistanceKm(storeLat, storeLng, lat, lng);
     }
-    return;
+  } else if (state.userGpsCoords?.lat && state.userGpsCoords.lat !== 0) {
+    const gpsDist = calculateDistanceKm(storeLat, storeLng, state.userGpsCoords.lat, state.userGpsCoords.lng);
+    if (gpsDist <= maxRadiusKm) {
+      lat = state.userGpsCoords.lat;
+      lng = state.userGpsCoords.lng;
+      distanceKm = gpsDist;
+    }
   }
 
   const addressId = editingAddressId || ('addr_' + Date.now());
@@ -3012,13 +3024,15 @@ async function handleAd1FormSubmit() {
     placedByName: userName || receiverName,
     placedByPhone: userPhone || receiverPhone,
     isFriendOrder: isSomeone,
-    flat: completeAddr.split(',')[0] || completeAddr,
-    street: completeAddr.split(',').slice(1).join(', ').trim() || completeAddr,
-    landmark: '',
-    pincode: '411048',
+    flat,
+    street,
+    landmark,
+    area,
+    pincode,
+    mapsLink,
     lat,
     lng,
-    distanceKm,
+    distanceKm: Math.round(distanceKm * 100) / 100,
     isWithinZone: true,
     isDefault: true,
     createdAt: new Date().toISOString()
@@ -3268,10 +3282,10 @@ function updateCheckoutButtonText() {
   if (!hasAddress) {
     if (zoneBadge) zoneBadge.classList.add('hidden');
     btn.disabled = false;
-    btn.className = "w-full bg-[#0C831F] hover:bg-emerald-800 text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all cursor-pointer";
-    if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">📍</span>`;
+    btn.className = "w-full bg-[#0C831F] hover:bg-emerald-800 text-white py-2.5 px-3.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between shadow-md hover:shadow-lg active:scale-98 transition-all cursor-pointer";
+    if (btnIcon) btnIcon.innerHTML = `<span class="text-base sm:text-lg">📍</span>`;
     btnLabel.textContent = `Select Delivery Address (Within 5 km)`;
-    if (btnSub) btnSub.textContent = `Drop pin on map to verify delivery zone`;
+    if (btnSub) btnSub.textContent = `Set delivery address to verify zone`;
     return;
   }
 
@@ -3280,13 +3294,13 @@ function updateCheckoutButtonText() {
   if (zoneBadge) {
     zoneBadge.classList.remove('hidden');
     if (zoneCheck.isWithin) {
-      zoneBadge.className = "bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-2.5 text-xs font-bold flex items-center justify-between";
+      zoneBadge.className = "bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-2 text-xs font-bold flex items-center justify-between";
       zoneBadge.innerHTML = `
         <span class="flex items-center gap-1.5"><span>🟢</span> <span>${zoneCheck.message}</span></span>
         <span class="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full uppercase font-black">Within 5 km</span>
       `;
     } else {
-      zoneBadge.className = "bg-rose-50 border border-rose-300 text-rose-800 rounded-xl p-2.5 text-xs font-bold flex items-center justify-between";
+      zoneBadge.className = "bg-rose-50 border border-rose-300 text-rose-800 rounded-xl p-2 text-xs font-bold flex items-center justify-between";
       zoneBadge.innerHTML = `
         <span class="flex items-center gap-1.5"><span>🚫</span> <span>${zoneCheck.message}</span></span>
         <span class="text-[10px] bg-rose-200 text-rose-900 px-2 py-0.5 rounded-full uppercase font-black">Blocked (> 5 km)</span>
@@ -3297,22 +3311,16 @@ function updateCheckoutButtonText() {
   // Enforce 5 km Boundary: Disable checkout button if outside zone
   if (!zoneCheck.isWithin) {
     btn.disabled = true;
-    btn.className = "w-full bg-slate-300 text-slate-500 py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-none cursor-not-allowed opacity-80";
-    if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">🚫</span>`;
+    btn.className = "w-full bg-slate-300 text-slate-500 py-2.5 px-3.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between shadow-none cursor-not-allowed opacity-80";
+    if (btnIcon) btnIcon.innerHTML = `<span class="text-base sm:text-lg">🚫</span>`;
     btnLabel.textContent = `Delivery Not Available (> 5 km)`;
     if (btnSub) btnSub.textContent = `Address is beyond 5.0 km outlet boundary`;
     return;
   }
 
   btn.disabled = false;
-  btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all cursor-pointer";
-  if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">🛵</span>`;
-  btnLabel.textContent = `Place Order (Pay ₹${summary.grandTotal} on Delivery)`;
-  if (btnSub) btnSub.textContent = `Cash or UPI to Rider at Doorstep`;
-
-  btn.disabled = false;
-  btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all cursor-pointer";
-  if (btnIcon) btnIcon.innerHTML = `<span class="text-xl">🛵</span>`;
+  btn.className = "w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-2.5 px-3.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between shadow-md hover:shadow-lg active:scale-98 transition-all cursor-pointer";
+  if (btnIcon) btnIcon.innerHTML = `<span class="text-base sm:text-lg">🛵</span>`;
   btnLabel.textContent = `Place Order (Pay ₹${summary.grandTotal} on Delivery)`;
   if (btnSub) btnSub.textContent = `Cash or UPI to Rider at Doorstep`;
 }

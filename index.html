@@ -556,30 +556,30 @@
 
       </div>
 
-      <!-- Drawer Footer Action: Unified Checkout Button -->
-      <div class="p-4 border-t border-gray-200 bg-white shadow-inner">
+      <!-- Drawer Footer Action: Unified Checkout Button (Reduced Sleek Size) -->
+      <div class="p-3 sm:p-3.5 border-t border-gray-200 bg-white shadow-inner">
         <!-- Live Delivery Zone Distance Indicator Badge -->
-        <div id="delivery-zone-live-badge" class="hidden mb-3"></div>
+        <div id="delivery-zone-live-badge" class="hidden mb-2"></div>
 
         <button 
           id="btn-checkout-primary"
           onclick="handleUnifiedCheckout()"
-          class="w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-3.5 px-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-between shadow-lg hover:shadow-xl active:scale-98 transition-all"
+          class="w-full bg-[#25D366] hover:bg-[#20ba59] text-white py-2.5 px-3.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-between shadow-md hover:shadow-lg active:scale-98 transition-all"
         >
           <div class="flex items-center gap-2">
-            <span id="btn-checkout-icon" class="text-xl">🛵</span>
+            <span id="btn-checkout-icon" class="text-base sm:text-lg">🛵</span>
             <div class="text-left">
-              <div id="btn-checkout-label" class="leading-tight">Place Order (Cash / UPI on Delivery)</div>
-              <div id="btn-checkout-sub" class="text-[10px] font-normal opacity-90">Pay at Doorstep via Cash or UPI</div>
+              <div id="btn-checkout-label" class="font-extrabold text-xs sm:text-sm leading-tight">Place Order (Cash / UPI on Delivery)</div>
+              <div id="btn-checkout-sub" class="text-[9.5px] sm:text-[10px] font-medium opacity-90 leading-tight">Pay at Doorstep via Cash or UPI</div>
             </div>
           </div>
-          <span class="flex items-center gap-1 font-extrabold text-sm sm:text-base">
+          <span class="flex items-center gap-1 font-black text-xs sm:text-sm">
             <span>Confirm Order</span>
             <span>➔</span>
           </span>
         </button>
-        <div class="text-center mt-2">
-          <span class="text-[11px] text-gray-500 flex items-center justify-center gap-1">
+        <div class="text-center mt-1.5">
+          <span class="text-[10px] text-gray-500 flex items-center justify-center gap-1">
             🔒 Verified Order & Direct WhatsApp dispatch to Rasoee Fresh team
           </span>
         </div>
@@ -1581,8 +1581,8 @@
       <!-- Scrollable Body -->
       <div class="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs custom-scroll">
         
-        <!-- 3 Top Action Rows (ad-3 style) -->
-        <div class="space-y-2">
+        <!-- Top Action: Add new address -->
+        <div>
           <!-- 1. Add new address -->
           <div 
             onclick="openAddressFormModal(null)" 
@@ -1593,34 +1593,6 @@
               <span class="font-extrabold text-xs text-emerald-800">Add new address</span>
             </div>
             <span class="text-gray-400 group-hover:text-emerald-700 font-bold">›</span>
-          </div>
-
-          <!-- 2. Request address from someone else (WhatsApp) -->
-          <div 
-            onclick="requestAddressViaWhatsApp()" 
-            class="flex items-center justify-between p-3.5 bg-white hover:bg-green-50/50 border border-gray-200 hover:border-green-400 rounded-2xl cursor-pointer transition-all shadow-xs group"
-          >
-            <div class="flex items-center gap-3">
-              <div class="w-6 h-6 rounded-lg bg-[#25D366] text-white flex items-center justify-center text-xs flex-shrink-0">
-                💬
-              </div>
-              <span class="font-bold text-xs text-gray-900">Request address from someone else</span>
-            </div>
-            <span class="text-gray-400 group-hover:text-green-700 font-bold">›</span>
-          </div>
-
-          <!-- 3. Import your addresses from Zomato / Google -->
-          <div 
-            onclick="importAddressPrompt()" 
-            class="flex items-center justify-between p-3.5 bg-white hover:bg-rose-50/50 border border-gray-200 hover:border-rose-400 rounded-2xl cursor-pointer transition-all shadow-xs group"
-          >
-            <div class="flex items-center gap-3">
-              <div class="w-6 h-6 rounded-lg bg-[#E23744] text-white font-black text-[10px] flex items-center justify-center flex-shrink-0">
-                Z
-              </div>
-              <span class="font-bold text-xs text-gray-900">Import your addresses from Zomato / Google</span>
-            </div>
-            <span class="text-gray-400 group-hover:text-rose-700 font-bold">›</span>
           </div>
         </div>
 
@@ -1692,140 +1664,102 @@
         
         <!-- SECTION 1: Address details -->
         <div class="space-y-3">
-          <div class="text-[11px] font-extrabold text-gray-900 uppercase tracking-wider">
-            Address details
+          <div class="text-[11px] font-extrabold text-gray-900 uppercase tracking-wider flex items-center justify-between">
+            <span>Address details</span>
+            <span class="text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Express Delivery (Kondhwa & Nearby)</span>
           </div>
 
-          <!-- Card 1: Select a city -->
-          <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-2xl shadow-2xs">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-2xl bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center text-lg flex-shrink-0">
-                🏢
-              </div>
-              <div>
-                <div class="font-bold text-xs text-gray-900">Select a city</div>
-                <div class="text-[11px] text-gray-500 font-medium" id="ad1-city-name">Pune</div>
-              </div>
-            </div>
-            <button 
-              type="button" 
-              onclick="showNotificationToast('📍 Rasoee Fresh delivers across Pune (Kondhwa Budruk & nearby)')" 
-              class="border border-[#0C831F] text-[#0C831F] hover:bg-green-50 font-black text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer"
-            >
-              Select
-            </button>
-          </div>
-
-          <!-- Card 2: Select an area, street -->
-          <div class="space-y-2">
-            <div 
-              onclick="toggleAreaMapSelector()" 
-              class="flex items-center justify-between p-3 bg-white border border-gray-200 hover:border-emerald-400 rounded-2xl shadow-2xs cursor-pointer transition-all"
-            >
-              <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-2xl bg-[#FFF7ED] text-[#EA580C] flex items-center justify-center text-lg flex-shrink-0">
-                  📍
-                </div>
-                <div class="min-w-0">
-                  <div class="font-bold text-xs text-gray-900 truncate" id="ad1-area-label">Select an area, street</div>
-                  <div class="text-[11px] text-gray-500 font-medium truncate" id="ad1-area-sub">Guide pin on map or search society</div>
-                </div>
-              </div>
-              <button 
-                type="button" 
-                onclick="event.stopPropagation(); toggleAreaMapSelector();" 
-                class="border border-[#0C831F] text-[#0C831F] hover:bg-green-50 font-black text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex-shrink-0"
-              >
-                Select
-              </button>
-            </div>
-
-            <!-- Expandable Drop-Pin Map & Society Autocomplete Panel -->
-            <div id="ad1-map-panel" class="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
-              <div class="flex items-center justify-between text-[11px] font-bold text-gray-700">
-                <span>📍 Guide Pin &amp; Drop Exact Location</span>
-                <span class="text-emerald-700 font-extrabold bg-emerald-100/70 px-2 py-0.5 rounded-full text-[10px]">Max 5.0 km</span>
-              </div>
-
-              <!-- Search Bar -->
-              <div class="relative">
-                <div class="flex items-center gap-2 bg-white border border-gray-300 rounded-xl p-2 shadow-2xs focus-within:border-[#0C831F]">
-                  <span class="text-sm pl-1 text-gray-400">🔍</span>
-                  <input 
-                    type="text" 
-                    id="map-search-input" 
-                    placeholder="Type society, area, or paste maps link..." 
-                    autocomplete="off"
-                    class="flex-1 outline-none text-xs font-semibold text-gray-900 placeholder-gray-400 bg-transparent"
-                    oninput="handleAddressSearchInput(this.value)"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();searchAndGuideMapPin(this.value);}"
-                  />
-                  <button 
-                    type="button" 
-                    id="btn-map-search-guide"
-                    onclick="searchAndGuideMapPin(document.getElementById('map-search-input').value)" 
-                    class="px-2.5 py-1 bg-[#0C831F] hover:bg-emerald-800 text-white font-bold text-xs rounded-lg transition-all cursor-pointer"
-                  >
-                    Guide Pin 📍
-                  </button>
-                </div>
-
-                <!-- Suggestions dropdown -->
-                <div id="map-search-suggestions" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[1000] max-h-52 overflow-y-auto hidden divide-y divide-gray-100"></div>
-              </div>
-
-              <!-- Leaflet/Google Map Container -->
-              <div class="relative w-full h-48 rounded-xl overflow-hidden border border-gray-300 bg-slate-100">
-                <div id="delivery-map-picker" class="w-full h-full z-0"></div>
-                <!-- Live Distance Pill -->
-                <div id="map-live-pill" class="absolute top-2 left-2 z-[500] bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full shadow-md border border-gray-200 text-[10px] font-black">
-                  <span>⏳ Locating...</span>
-                </div>
-                <!-- Tile switcher -->
-                <div class="absolute top-2 right-24 z-[500] flex bg-white/95 rounded-lg p-0.5 border border-gray-200 text-[9px] font-bold">
-                  <button type="button" id="btn-tile-map" onclick="switchMapTileLayer('roadmap')" class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold cursor-pointer">Map</button>
-                  <button type="button" id="btn-tile-sat" onclick="switchMapTileLayer('satellite')" class="px-1.5 py-0.5 rounded text-gray-700 cursor-pointer">Sat</button>
-                </div>
-                <!-- Locate GPS -->
-                <button type="button" onclick="locateUserOnMap()" id="btn-map-locate-gps" class="absolute top-2 right-2 z-[500] bg-white px-2 py-1 rounded-lg border border-gray-200 text-[10px] font-bold shadow-xs cursor-pointer">
-                  🎯 GPS
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card 3: Enter complete address* -->
+          <!-- 1. Building / Flat / House / Floor -->
           <div class="space-y-1">
-            <input 
-              type="text" 
-              id="ad1-input-complete-address" 
-              placeholder="Enter complete address*" 
-              class="w-full p-3.5 bg-white border border-gray-300 rounded-2xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
-            />
-            <div class="text-[10px] text-gray-400 px-1 font-medium">
-              Example: Plot No. 112, Shree Vihar Colony, Jagatpura / Flat 302, Building B, Anand Tirth Society, Kondhwa Budruk
+            <label class="text-[11px] font-bold text-gray-700 block">Flat / House / Floor / Building *</label>
+            <div class="relative flex items-center">
+              <span class="absolute left-3 text-gray-400 text-sm pointer-events-none">🏢</span>
+              <input 
+                type="text" 
+                id="ad1-input-flat" 
+                placeholder="e.g. Flat 402, Building B, Ganga Satellite" 
+                class="w-full pl-9 pr-3.5 py-3 bg-white border border-gray-300 rounded-xl text-xs font-semibold outline-none focus:border-[#0C831F] focus:ring-1 focus:ring-[#0C831F] shadow-2xs"
+              />
             </div>
           </div>
 
-          <!-- Card 4: Add google maps link (optional) -->
-          <div class="flex items-center gap-2.5 p-3 bg-white border border-gray-300 rounded-2xl shadow-2xs focus-within:border-[#0C831F]">
-            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="#FFFFFF"/></svg>
-            <input 
-              type="text" 
-              id="ad1-input-maps-link" 
-              placeholder="Add google maps link (optional)" 
-              oninput="handleMapsLinkPaste(this.value)"
-              class="flex-1 text-xs font-semibold outline-none bg-transparent placeholder-gray-400"
-            />
+          <!-- 2. Street / Road / Society / Locality -->
+          <div class="space-y-1">
+            <label class="text-[11px] font-bold text-gray-700 block">Street / Road / Society / Locality *</label>
+            <div class="relative flex items-center">
+              <span class="absolute left-3 text-gray-400 text-sm pointer-events-none">🛣️</span>
+              <input 
+                type="text" 
+                id="ad1-input-street" 
+                placeholder="e.g. Katraj - Kondhwa Road, Anand Tirth Society" 
+                class="w-full pl-9 pr-3.5 py-3 bg-white border border-gray-300 rounded-xl text-xs font-semibold outline-none focus:border-[#0C831F] focus:ring-1 focus:ring-[#0C831F] shadow-2xs"
+              />
+            </div>
+          </div>
+
+          <!-- 3. Landmark (Optional) -->
+          <div class="space-y-1">
+            <label class="text-[11px] font-bold text-gray-700 block">Landmark (Optional)</label>
+            <div class="relative flex items-center">
+              <span class="absolute left-3 text-gray-400 text-sm pointer-events-none">📍</span>
+              <input 
+                type="text" 
+                id="ad1-input-landmark" 
+                placeholder="e.g. Near Iskcon Temple / Opposite School" 
+                class="w-full pl-9 pr-3.5 py-3 bg-white border border-gray-300 rounded-xl text-xs font-semibold outline-none focus:border-[#0C831F] focus:ring-1 focus:ring-[#0C831F] shadow-2xs"
+              />
+            </div>
+          </div>
+
+          <!-- 4. Area & City + Pincode -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-gray-700 block">Area & City</label>
+              <input 
+                type="text" 
+                id="ad1-input-area" 
+                value="Kondhwa, Pune" 
+                placeholder="e.g. Kondhwa, Pune"
+                class="w-full px-3.5 py-3 bg-gray-50 border border-gray-300 rounded-xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
+              />
+            </div>
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-gray-700 block">Pincode</label>
+              <input 
+                type="text" 
+                id="ad1-input-pincode" 
+                value="411048" 
+                maxlength="6"
+                oninput="this.value = this.value.replace(/\D/g, '')"
+                placeholder="411048" 
+                class="w-full px-3.5 py-3 bg-white border border-gray-300 rounded-xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
+              />
+            </div>
+          </div>
+
+          <!-- 5. Google Maps Link (Optional) -->
+          <div class="space-y-1">
+            <label class="text-[11px] font-bold text-gray-700 block">Google Maps Link (Optional)</label>
+            <div class="flex items-center gap-2 p-2.5 bg-white border border-gray-300 rounded-xl shadow-2xs focus-within:border-[#0C831F]">
+              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="#FFFFFF"/></svg>
+              <input 
+                type="text" 
+                id="ad1-input-maps-link" 
+                placeholder="Paste Google Maps location link (optional)" 
+                class="flex-1 text-xs font-medium outline-none bg-transparent placeholder-gray-400"
+              />
+            </div>
           </div>
 
           <!-- Address Tag Selection -->
-          <div class="flex items-center gap-2 pt-1 flex-wrap">
-            <span class="text-[10px] font-bold text-gray-500 uppercase">Save As:</span>
-            <button type="button" onclick="setMapAddressTag('Home')" id="tag-opt-home" class="map-tag-btn px-2.5 py-1 rounded-xl border-2 border-[#0C831F] bg-green-50 font-bold text-gray-900 text-[11px] cursor-pointer">🏠 Home</button>
-            <button type="button" onclick="setMapAddressTag('Work')" id="tag-opt-work" class="map-tag-btn px-2.5 py-1 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-[11px] cursor-pointer">🏢 Work</button>
-            <button type="button" onclick="setMapAddressTag('Friend')" id="tag-opt-friend" class="map-tag-btn px-2.5 py-1 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-[11px] cursor-pointer">🎁 Friend</button>
-            <button type="button" onclick="setMapAddressTag('Hostel')" id="tag-opt-hostel" class="map-tag-btn px-2.5 py-1 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-[11px] cursor-pointer">📍 Hostel</button>
+          <div class="pt-1">
+            <label class="text-[11px] font-bold text-gray-700 block mb-1.5">Save Address As:</label>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button type="button" onclick="setMapAddressTag('Home')" id="tag-opt-home" class="map-tag-btn px-3 py-1.5 rounded-xl border-2 border-[#0C831F] bg-green-50 font-black text-gray-900 text-xs cursor-pointer transition-all">🏠 Home</button>
+              <button type="button" onclick="setMapAddressTag('Work')" id="tag-opt-work" class="map-tag-btn px-3 py-1.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-xs cursor-pointer hover:bg-gray-50 transition-all">🏢 Work</button>
+              <button type="button" onclick="setMapAddressTag('Friend')" id="tag-opt-friend" class="map-tag-btn px-3 py-1.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-xs cursor-pointer hover:bg-gray-50 transition-all">🎁 Friend</button>
+              <button type="button" onclick="setMapAddressTag('Hostel')" id="tag-opt-hostel" class="map-tag-btn px-3 py-1.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 text-xs cursor-pointer hover:bg-gray-50 transition-all">📍 Hostel</button>
+            </div>
           </div>
         </div>
 
