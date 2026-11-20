@@ -1024,7 +1024,7 @@
             Your account
           </h3>
           <div class="text-xs text-gray-600 font-bold mt-0.5" id="account-user-phone">
-            8857917293
+            Guest
           </div>
         </div>
 
@@ -1772,17 +1772,17 @@
           <!-- Radio Buttons: Myself vs Someone else -->
           <div class="flex items-center gap-6 text-xs font-bold text-gray-800">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="ad1_recipient_radio" id="ad1-radio-self" value="self" onchange="handleAd1RecipientChange('self')" class="w-4 h-4 text-[#0C831F] focus:ring-[#0C831F]" />
+              <input type="radio" name="ad1_recipient_radio" id="ad1-radio-self" value="self" checked onchange="handleAd1RecipientChange('self')" class="w-4 h-4 text-[#0C831F] focus:ring-[#0C831F]" />
               <span>Myself</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="ad1_recipient_radio" id="ad1-radio-someone" value="someone" checked onchange="handleAd1RecipientChange('someone')" class="w-4 h-4 text-[#0C831F] focus:ring-[#0C831F]" />
+              <input type="radio" name="ad1_recipient_radio" id="ad1-radio-someone" value="someone" onchange="handleAd1RecipientChange('someone')" class="w-4 h-4 text-[#0C831F] focus:ring-[#0C831F]" />
               <span>Someone else</span>
             </label>
           </div>
 
           <!-- Inputs for Receiver -->
-          <div id="ad1-someone-fields" class="space-y-2.5">
+          <div id="ad1-someone-fields" class="hidden space-y-2.5">
             <input 
               type="text" 
               id="ad1-receiver-name" 
@@ -1795,7 +1795,7 @@
                 id="ad1-receiver-phone" 
                 maxlength="10"
                 placeholder="Receiver's phone number*" 
-                oninput="this.value = this.value.replace(/\D/g, '')"
+                oninput="this.value = this.value.replace(/\D/g, '').slice(0, 10)"
                 class="w-full p-3.5 pr-10 bg-white border border-gray-300 rounded-2xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
               />
               <span class="absolute right-3.5 text-gray-400 text-base pointer-events-none">📇</span>
@@ -1803,19 +1803,24 @@
           </div>
 
           <!-- Inputs for Myself -->
-          <div id="ad1-myself-fields" class="hidden space-y-2.5">
+          <div id="ad1-myself-fields" class="space-y-2.5">
             <input 
               type="text" 
               id="ad1-self-name" 
               placeholder="Your name*" 
               class="w-full p-3.5 bg-white border border-gray-300 rounded-2xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
             />
-            <input 
-              type="tel" 
-              id="ad1-self-phone" 
-              readonly
-              class="w-full p-3.5 bg-gray-100 border border-gray-200 rounded-2xl text-xs font-semibold text-gray-600 outline-none cursor-not-allowed"
-            />
+            <div class="relative flex items-center">
+              <input 
+                type="tel" 
+                id="ad1-self-phone" 
+                maxlength="10"
+                placeholder="Your 10-digit mobile number*" 
+                oninput="this.value = this.value.replace(/\D/g, '').slice(0, 10)"
+                class="w-full p-3.5 pr-10 bg-white border border-gray-300 rounded-2xl text-xs font-semibold outline-none focus:border-[#0C831F] shadow-2xs"
+              />
+              <span class="absolute right-3.5 text-gray-400 text-base pointer-events-none">📱</span>
+            </div>
           </div>
         </div>
 

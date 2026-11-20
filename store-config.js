@@ -1099,7 +1099,19 @@ function getStoredCategories() {
     const saved = (localStorage.getItem("rasoee_categories") || localStorage.getItem("raosee_categories"));
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Auto-heal/validate: if cached categories contain retired/stale IDs (e.g. 'vegetables-fruits') that are not part of current DEFAULT_CATEGORIES
+        const isObsolete = parsed.some(c => c && (c.id === 'vegetables-fruits' || c.id === 'vegetables---fruits' || c.id === 'veggies-fruits'));
+        if (isObsolete) {
+          localStorage.removeItem("rasoee_categories");
+          localStorage.removeItem("raosee_categories");
+          if (typeof saveToIndexedDB === "function") {
+            saveToIndexedDB("raosee_categories", DEFAULT_CATEGORIES);
+          }
+          return DEFAULT_CATEGORIES;
+        }
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn("Could not load categories", e);
@@ -1115,12 +1127,56 @@ function saveCategories(categories) {
     if (typeof saveToIndexedDB === "function") {
       saveToIndexedDB("raosee_categories", list);
     }
+    if (typeof syncCategoriesToCloud === "function") {
+      syncCategoriesToCloud(list);
+    }
     if (typeof syncToCloud === "function") {
       syncToCloud();
     }
   } catch (e) {
     console.warn("Could not save categories", e);
   }
+}
+
+async function syncCategoriesToCloud(categories) {
+  try {
+    const list = Array.isArray(categories) ? categories : (typeof getStoredCategories === 'function' ? getStoredCategories() : DEFAULT_CATEGORIES);
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/categories.json";
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list)
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("Direct categories cloud sync error:", e);
+    return false;
+  }
+}
+
+async function fetchCategoriesFromCloud() {
+  try {
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/categories.json";
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        // If cloud returns old categories like vegetables-fruits, ignore them and keep current DEFAULT_CATEGORIES
+        const isOldData = data.some(c => c && (c.id === 'vegetables-fruits' || c.id === 'vegetables---fruits'));
+        if (!isOldData) {
+          localStorage.setItem("raosee_categories", JSON.stringify(data));
+          localStorage.setItem("rasoee_categories", JSON.stringify(data));
+          if (typeof saveToIndexedDB === "function") {
+            saveToIndexedDB("raosee_categories", data);
+          }
+          return data;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Direct categories cloud fetch error:", e);
+  }
+  return null;
 }
 
 // Banners storage
@@ -1744,10 +1800,113 @@ async function fetchCartFromCloud(phone) {
   }
 }
 
+// ================= SMART CATEGORY MATCHER =================
+// Seamlessly matches compound categories (e.g. "Vegetables & Fruits"), aliases, and slugs
+function matchesCategoryFilter(product, activeCategory) {
+  if (!activeCategory || activeCategory === 'all') return true;
+  if (!product) return false;
+
+  const pCat = String(product.category || '').toLowerCase().trim();
+  const pLabel = String(product.categoryLabel || '').toLowerCase().trim();
+  const cat = String(activeCategory).toLowerCase().trim();
+
+  // 1. Direct match
+  if (pCat === cat) return true;
+
+  // 2. Normalized alphanumeric match
+  const normPCat = pCat.replace(/[^a-z0-9]/g, '');
+  const normCat = cat.replace(/[^a-z0-9]/g, '');
+  if (normPCat === normCat) return true;
+
+  // 3. Resolve category label from stored categories list
+  let catLabel = '';
+  try {
+    const categories = typeof getStoredCategories === 'function' ? getStoredCategories() : (typeof DEFAULT_CATEGORIES !== 'undefined' ? DEFAULT_CATEGORIES : []);
+    const catObj = Array.isArray(categories) ? categories.find(c => c.id === activeCategory || (c.id && c.id.toLowerCase().replace(/[^a-z0-9]/g, '') === normCat)) : null;
+    if (catObj && catObj.label) {
+      catLabel = String(catObj.label).toLowerCase().trim();
+    }
+  } catch (e) {}
+  const normCatLabel = catLabel.replace(/[^a-z0-9]/g, '');
+
+  // 4. Combined Vegetables & Fruits (matches "Vegetables & Fruits", "vegetables-fruits", etc.)
+  const isCombinedVegFruit = 
+    (normCat.includes('vegetable') && normCat.includes('fruit')) ||
+    (normCatLabel.includes('vegetable') && normCatLabel.includes('fruit')) ||
+    (cat.includes('vegetable') && cat.includes('fruit')) ||
+    (cat.includes('veggie') && cat.includes('fruit')) ||
+    cat === 'vegetables-fruits' || cat === 'fruits-vegetables' || cat === 'veggies-fruits' ||
+    normCat === 'vegetablesfruits' || normCat === 'fruitsvegetables' || normCat === 'veggiesfruits';
+
+  if (isCombinedVegFruit) {
+    return pCat === 'fresh-vegetables' || 
+           pCat === 'fresh-fruits' || 
+           pCat === 'leafy-greens' || 
+           pCat.includes('vegetable') || 
+           pCat.includes('fruit') || 
+           pCat.includes('green') || 
+           pLabel.includes('vegetable') || 
+           pLabel.includes('fruit') || 
+           pLabel.includes('green');
+  }
+
+  // 5. Fresh Vegetables
+  if (normCat.includes('vegetable') || normCatLabel.includes('vegetable') || normCat === 'veggies' || normCat === 'veggie') {
+    return pCat === 'fresh-vegetables' || pCat === 'leafy-greens' || pCat.includes('vegetable') || pLabel.includes('vegetable');
+  }
+
+  // 6. Fresh Fruits
+  if (normCat.includes('fruit') || normCatLabel.includes('fruit')) {
+    return pCat === 'fresh-fruits' || pCat.includes('fruit') || pLabel.includes('fruit');
+  }
+
+  // 7. Leafy Greens & Herbs
+  if (normCat.includes('green') || normCat.includes('leafy') || normCat.includes('herb') || normCatLabel.includes('green') || normCatLabel.includes('herb')) {
+    return pCat === 'leafy-greens' || pCat.includes('green') || pCat.includes('herb') || pLabel.includes('green') || pLabel.includes('herb');
+  }
+
+  // 8. Dairy, Milk & Paneer
+  if (normCat.includes('dairy') || normCat.includes('milk') || normCat.includes('paneer') || normCatLabel.includes('dairy') || normCatLabel.includes('milk')) {
+    return pCat === 'dairy-breakfast' || pCat.includes('dairy') || pCat.includes('milk') || pCat.includes('paneer') || pLabel.includes('dairy') || pLabel.includes('milk');
+  }
+
+  // 9. Beverages & Coolers
+  if (normCat.includes('beverage') || normCat.includes('cooler') || normCat.includes('drink') || normCatLabel.includes('beverage') || normCatLabel.includes('cooler')) {
+    return pCat === 'beverages' || pCat.includes('beverage') || pCat.includes('drink') || pLabel.includes('beverage');
+  }
+
+  // 10. Spices & Masalas
+  if (normCat.includes('spice') || normCat.includes('masala') || normCatLabel.includes('spice') || normCatLabel.includes('masala')) {
+    return pCat === 'spices-masalas' || pCat.includes('spice') || pCat.includes('masala') || pLabel.includes('spice') || pLabel.includes('masala');
+  }
+
+  // 11. Pickles & Chutneys
+  if (normCat.includes('pickle') || normCat.includes('chutney') || normCatLabel.includes('pickle') || normCatLabel.includes('chutney')) {
+    return pCat === 'pickles-chutneys' || pCat.includes('pickle') || pCat.includes('chutney') || pLabel.includes('pickle') || pLabel.includes('chutney');
+  }
+
+  // 12. Sauces & Spreads
+  if (normCat.includes('sauce') || normCat.includes('spread') || normCat.includes('syrup') || normCat.includes('jam') || normCatLabel.includes('sauce') || normCatLabel.includes('spread')) {
+    return pCat === 'sauces-spreads' || pCat.includes('sauce') || pCat.includes('spread') || pLabel.includes('sauce') || pLabel.includes('spread');
+  }
+
+  // 13. Instant Food & Soups
+  if (normCat.includes('instant') || normCat.includes('soup') || normCat.includes('snack') || normCat.includes('noodle') || normCatLabel.includes('instant') || normCatLabel.includes('snack')) {
+    return pCat === 'instant-food' || pCat.includes('instant') || pCat.includes('soup') || pCat.includes('snack') || pLabel.includes('instant');
+  }
+
+  // 14. Fallback: direct label or substring matching
+  if (catLabel && (pLabel.includes(catLabel) || catLabel.includes(pLabel))) return true;
+  if (pCat && (cat.includes(pCat) || pCat.includes(cat))) return true;
+
+  return false;
+}
+
 // Auto-run initialization and global exports
 if (typeof window !== "undefined") {
   window.calculateDistanceKm = calculateDistanceKm;
   window.normalizeImageUrl = normalizeImageUrl;
+  window.matchesCategoryFilter = matchesCategoryFilter;
   window.getStoreConfig = getStoreConfig;
   window.updateStoreConfig = updateStoreConfig;
   window.getStoredRiders = getStoredRiders;
@@ -1765,6 +1924,8 @@ if (typeof window !== "undefined") {
   window.fetchCartFromCloud = fetchCartFromCloud;
   window.syncConfigToCloud = syncConfigToCloud;
   window.fetchConfigFromCloud = fetchConfigFromCloud;
+  window.syncCategoriesToCloud = syncCategoriesToCloud;
+  window.fetchCategoriesFromCloud = fetchCategoriesFromCloud;
   window.syncBannersToCloud = syncBannersToCloud;
   window.fetchBannersFromCloud = fetchBannersFromCloud;
   initDemoDataIfEmpty();
@@ -1779,6 +1940,8 @@ if (typeof module !== "undefined" && module.exports) {
     updateStoreConfig,
     getStoredCategories,
     saveCategories,
+    syncCategoriesToCloud,
+    fetchCategoriesFromCloud,
     getStoredBanners,
     saveBanners,
     syncConfigToCloud,
@@ -1806,7 +1969,8 @@ if (typeof module !== "undefined" && module.exports) {
     findCustomerLocally,
     syncAllLocalCustomersToCloud,
     syncCartToCloud,
-    fetchCartFromCloud
+    fetchCartFromCloud,
+    matchesCategoryFilter
   };
 }
 

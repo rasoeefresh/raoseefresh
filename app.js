@@ -223,6 +223,11 @@ function populateAddressFormInputs(forceSource) {
 function loadConfigAndData() {
   state.config = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
   state.products = typeof getStoredProducts === 'function' ? getStoredProducts() : [];
+  if (!Array.isArray(state.products) || state.products.length === 0) {
+    if (typeof DEFAULT_PRODUCTS !== 'undefined' && Array.isArray(DEFAULT_PRODUCTS)) {
+      state.products = DEFAULT_PRODUCTS;
+    }
+  }
   
   if (state.config.payment && state.config.payment.defaultMethod) {
     state.selectedPaymentMethod = state.config.payment.defaultMethod;
@@ -376,7 +381,7 @@ function loadConfigAndData() {
 function startLiveCatalogSync() {
   const syncCatalog = async () => {
     try {
-      // 1. Check live config and banners
+      // 1. Check live config, categories and banners
       if (typeof fetchConfigFromCloud === 'function') {
         const cloudCfg = await fetchConfigFromCloud();
         if (cloudCfg) {
@@ -384,6 +389,12 @@ function startLiveCatalogSync() {
           renderBanners();
           renderAnnouncement();
           applyBranding();
+        }
+      }
+      if (typeof fetchCategoriesFromCloud === 'function') {
+        const cloudCats = await fetchCategoriesFromCloud();
+        if (cloudCats && Array.isArray(cloudCats) && cloudCats.length > 0) {
+          renderCategories();
         }
       }
       if (typeof fetchBannersFromCloud === 'function') {
@@ -601,7 +612,12 @@ function renderCategories() {
   if (!container) return;
 
   const categories = typeof getStoredCategories === 'function' ? getStoredCategories() : [];
-  const activeCategories = categories.filter(c => c.enabled !== false);
+  const activeCategories = (Array.isArray(categories) && categories.length > 0) ? categories.filter(c => c.enabled !== false) : [];
+
+  // If the active category is no longer valid, reset to 'all' so items always display
+  if (state.activeCategory !== 'all' && !activeCategories.some(c => c.id === state.activeCategory)) {
+    state.activeCategory = 'all';
+  }
 
   container.innerHTML = activeCategories.map(cat => {
     const isActive = state.activeCategory === cat.id;
@@ -638,19 +654,43 @@ function renderProducts() {
   const countBadge = document.getElementById('products-count');
   if (!grid) return;
 
-  let filtered = state.products;
+  // Ensure products list is never empty if DEFAULT_PRODUCTS is loaded
+  if (!Array.isArray(state.products) || state.products.length === 0) {
+    if (typeof getStoredProducts === 'function') {
+      state.products = getStoredProducts();
+    }
+    if ((!Array.isArray(state.products) || state.products.length === 0) && typeof DEFAULT_PRODUCTS !== 'undefined') {
+      state.products = DEFAULT_PRODUCTS;
+    }
+  }
 
-  // Filter by category
-  if (state.activeCategory !== 'all') {
-    filtered = filtered.filter(p => p.category === state.activeCategory);
+  let filtered = state.products || [];
+
+  // Filter by category with smart alias & compound matcher
+  if (state.activeCategory && state.activeCategory !== 'all') {
+    const matcher = typeof matchesCategoryFilter === 'function' ? matchesCategoryFilter : (window.matchesCategoryFilter || null);
+    if (matcher) {
+      filtered = filtered.filter(p => matcher(p, state.activeCategory));
+    } else {
+      const cat = String(state.activeCategory).toLowerCase().trim();
+      filtered = filtered.filter(p => {
+        const pCat = String(p.category || '').toLowerCase().trim();
+        const pLabel = String(p.categoryLabel || '').toLowerCase().trim();
+        if (pCat === cat) return true;
+        if (cat.includes('vegetable') || cat.includes('fruit')) {
+          return pCat === 'fresh-vegetables' || pCat === 'fresh-fruits' || pCat === 'leafy-greens' || pCat.includes('vegetable') || pCat.includes('fruit');
+        }
+        return pCat.includes(cat) || pLabel.includes(cat);
+      });
+    }
   }
 
   // Filter by search query
-  if (state.searchQuery.trim() !== '') {
+  if (state.searchQuery && state.searchQuery.trim() !== '') {
     const q = state.searchQuery.toLowerCase().trim();
     filtered = filtered.filter(p => 
-      p.name.toLowerCase().includes(q) || 
-      p.categoryLabel.toLowerCase().includes(q) ||
+      (p.name && p.name.toLowerCase().includes(q)) || 
+      (p.categoryLabel && p.categoryLabel.toLowerCase().includes(q)) ||
       (p.tag && p.tag.toLowerCase().includes(q))
     );
   }
@@ -660,12 +700,18 @@ function renderProducts() {
   }
 
   if (filtered.length === 0) {
+    const hasSearch = Boolean(state.searchQuery && state.searchQuery.trim() !== '');
+    const emptySubtext = hasSearch 
+      ? `We couldn't find anything matching "${state.searchQuery}". Would you like us to arrange it via WhatsApp?`
+      : `No items currently listed in this specific category aisle. Tap 'All Items' to view our complete fresh supermarket catalog.`;
+    const whatsappQuery = hasSearch ? state.searchQuery : (state.activeCategory || 'fresh grocery items');
+
     grid.innerHTML = `
       <div class="col-span-full py-16 text-center">
         <div class="w-20 h-20 mx-auto mb-4 bg-amber-50 rounded-full flex items-center justify-center text-3xl">🔍</div>
         <h3 class="text-lg font-bold text-gray-800 mb-1">No products found</h3>
-        <p class="text-sm text-gray-500 max-w-sm mx-auto mb-5">We couldn't find anything matching "${state.searchQuery}". Would you like us to arrange it via WhatsApp?</p>
-        <button onclick="openWhatsAppChat('Hi Rasoee Fresh team, do you have ${encodeURIComponent(state.searchQuery || 'this item')} available?')" class="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md transition-transform active:scale-95">
+        <p class="text-sm text-gray-500 max-w-sm mx-auto mb-5">${emptySubtext}</p>
+        <button onclick="openWhatsAppChat('Hi Rasoee Fresh team, do you have ${encodeURIComponent(whatsappQuery)} available?')" class="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md transition-transform active:scale-95">
           <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.299.144.347.491 1.2.534 1.287.043.087.072.188.014.303-.058.116-.087.188-.173.289l-.26.303c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824z"/></svg>
           Ask on WhatsApp
         </button>
@@ -2594,9 +2640,9 @@ async function confirmCurrentLocationDelivery() {
     id: 'addr_' + Date.now(),
     tag: 'Current Location',
     receiverName: userName,
-    receiverPhone: userPhone || '8857917293',
+    receiverPhone: userPhone || '',
     placedByName: userName,
-    placedByPhone: userPhone || '8857917293',
+    placedByPhone: userPhone || '',
     isFriendOrder: false,
     flat: 'Current Location',
     street: addrText,
@@ -2614,7 +2660,7 @@ async function confirmCurrentLocationDelivery() {
     state.currentUser = {
       id: 'usr_' + Date.now().toString().slice(-4),
       name: userName,
-      phone: userPhone || '8857917293',
+      phone: userPhone || '',
       savedAddresses: []
     };
   }
@@ -2723,7 +2769,7 @@ function renderAddressBookCards() {
     `;
 
     const fullAddr = [addr.flat, addr.street, addr.landmark ? 'Near ' + addr.landmark : ''].filter(Boolean).join(', ');
-    const phone = addr.receiverPhone || state.currentUser?.phone || '8857917293';
+    const phone = addr.receiverPhone || state.currentUser?.phone || '';
 
     return `
       <div class="p-3.5 rounded-2xl bg-white border-2 ${isSelected ? 'border-[#0C831F] shadow-sm' : 'border-gray-200 hover:border-gray-300'} transition-all space-y-2">
@@ -2741,9 +2787,10 @@ function renderAddressBookCards() {
               ${escapeHtml(fullAddr)}
             </p>
             
+            ${phone ? `
             <div class="text-[11px] text-gray-500 font-semibold">
               Phone number: <strong class="text-gray-800">${escapeHtml(phone)}</strong>
-            </div>
+            </div>` : ''}
 
             ${idx === 1 ? '<div class="text-[10px] text-gray-400">Last ordered 3 weeks ago</div>' : ''}
           </div>
@@ -2867,7 +2914,7 @@ function openAddressFormModal(editId = null, prefillAddress = null) {
   const userPhone = state.currentUser?.phone ? String(state.currentUser.phone).replace(/\D/g, '').slice(-10) : '';
   const userName = state.currentUser?.name || '';
   if (selfNameInput) selfNameInput.value = userName;
-  if (selfPhoneInput) selfPhoneInput.value = userPhone ? `+91 ${userPhone}` : '+91 8857917293';
+  if (selfPhoneInput) selfPhoneInput.value = userPhone;
 
   if (editId) {
     if (titleEl) titleEl.textContent = "Edit address details";
@@ -2888,6 +2935,8 @@ function openAddressFormModal(editId = null, prefillAddress = null) {
         if (recPhoneInput) recPhoneInput.value = addr.receiverPhone || '';
       } else {
         handleAd1RecipientChange('self');
+        if (selfNameInput) selfNameInput.value = addr.receiverName || userName || '';
+        if (selfPhoneInput) selfPhoneInput.value = (addr.receiverPhone || userPhone || '').replace(/\D/g, '').slice(-10);
       }
       const lat = parseFloat(addr.lat) || 18.455585;
       const lng = parseFloat(addr.lng) || 73.873529;
@@ -2904,7 +2953,7 @@ function openAddressFormModal(editId = null, prefillAddress = null) {
     if (mapsLinkInput) mapsLinkInput.value = '';
     if (recNameInput) recNameInput.value = '';
     if (recPhoneInput) recPhoneInput.value = '';
-    handleAd1RecipientChange(userPhone ? 'self' : 'someone');
+    handleAd1RecipientChange('self');
     setMapAddressTag('Home');
 
     const cfg = state.config?.deliveryZone || {};
@@ -2982,7 +3031,17 @@ async function handleAd1FormSubmit() {
     }
   } else {
     receiverName = document.getElementById('ad1-self-name')?.value.trim() || userName || 'Customer';
-    receiverPhone = userPhone || '8857917293';
+    const enteredSelfPhone = document.getElementById('ad1-self-phone')?.value.trim().replace(/\D/g, '').slice(-10);
+    receiverPhone = enteredSelfPhone || userPhone;
+    if (!receiverPhone || receiverPhone.length !== 10) {
+      if (errBox) {
+        errBox.textContent = "Please enter your valid 10-digit mobile number so rider can reach you.";
+        errBox.classList.remove('hidden');
+      } else {
+        alert("Please enter your 10-digit mobile number.");
+      }
+      return;
+    }
   }
 
   const flat = document.getElementById('ad1-input-flat')?.value.trim();
@@ -3064,10 +3123,15 @@ async function handleAd1FormSubmit() {
   if (!state.currentUser) {
     state.currentUser = {
       id: 'usr_' + Date.now().toString().slice(-4),
-      name: receiverName,
-      phone: userPhone || receiverPhone,
+      name: isSomeone ? (userName || 'Customer') : receiverName,
+      phone: isSomeone ? (userPhone || receiverPhone) : receiverPhone,
       savedAddresses: []
     };
+  } else {
+    if (!isSomeone) {
+      if (receiverName && receiverName !== 'Customer') state.currentUser.name = receiverName;
+      if (receiverPhone) state.currentUser.phone = receiverPhone;
+    }
   }
   if (!Array.isArray(state.currentUser.savedAddresses)) {
     state.currentUser.savedAddresses = [];
@@ -4274,18 +4338,22 @@ function openAccountDrawer() {
   const phoneEl = document.getElementById('account-user-phone');
   const addrEl = document.getElementById('account-user-address');
 
-  if (state.currentUser) {
+  if (state.currentUser && state.currentUser.phone) {
     if (nameEl) nameEl.textContent = state.currentUser.name || 'Valued Customer';
-    if (phoneEl) phoneEl.textContent = `+91 ${state.currentUser.phone || ''}`;
+    if (phoneEl) phoneEl.textContent = `+91 ${state.currentUser.phone}`;
     if (addrEl && state.currentUser.address) {
       addrEl.textContent = `${state.currentUser.address.flat || ''}, ${state.currentUser.address.street || ''}`;
     }
-  } else if (state.deliveryAddress) {
+  } else if (state.deliveryAddress && state.deliveryAddress.phone) {
     if (nameEl) nameEl.textContent = state.deliveryAddress.name || 'Customer Account';
-    if (phoneEl) phoneEl.textContent = state.deliveryAddress.phone ? `+91 ${state.deliveryAddress.phone}` : '+91 98765 43210';
+    if (phoneEl) phoneEl.textContent = `+91 ${state.deliveryAddress.phone}`;
     if (addrEl && state.deliveryAddress.flat) {
       addrEl.textContent = `${state.deliveryAddress.flat}, ${state.deliveryAddress.street || ''}`;
     }
+  } else {
+    if (nameEl) nameEl.textContent = 'Welcome Guest';
+    if (phoneEl) phoneEl.textContent = 'Tap to log in or add address';
+    if (addrEl) addrEl.textContent = 'No delivery address selected';
   }
 
   // Update order count badge
@@ -4395,7 +4463,7 @@ function populateCustomerSettingsForm() {
   if (nameInput) nameInput.value = user.name || state.deliveryAddress?.name || '';
   if (phoneInput) {
     const rawPhone = user.phone || state.deliveryAddress?.phone || '';
-    phoneInput.value = rawPhone ? (rawPhone.startsWith('+91') ? rawPhone : `+91 ${rawPhone}`) : '+91 98765 43210';
+    phoneInput.value = rawPhone ? (rawPhone.startsWith('+91') ? rawPhone : `+91 ${rawPhone}`) : '';
   }
   if (emailInput) emailInput.value = user.email || '';
   if (flatInput) flatInput.value = addr.flat || '';

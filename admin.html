@@ -3037,7 +3037,12 @@
 
       let filtered = productsList;
       if (filterCategory !== 'all') {
-        filtered = filtered.filter(p => p.category === filterCategory);
+        const matcher = typeof matchesCategoryFilter === 'function' ? matchesCategoryFilter : (window.matchesCategoryFilter || null);
+        if (matcher) {
+          filtered = filtered.filter(p => matcher(p, filterCategory));
+        } else {
+          filtered = filtered.filter(p => p.category === filterCategory);
+        }
       }
 
       tbody.innerHTML = filtered.map(p => {
