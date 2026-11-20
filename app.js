@@ -393,10 +393,25 @@ function startLiveCatalogSync() {
     } catch (err) {}
 
     try {
-      const res = await fetch("https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json?_t=" + Date.now(), { 
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" }
-      });
+      // 1. Lightweight 30-byte version check before downloading full 110 KB catalog
+      const localVersion = localStorage.getItem("rasoee_catalog_version") || '';
+      let shouldFetchFullCatalog = true;
+
+      try {
+        const vRes = await fetch("https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/catalog_version.json");
+        if (vRes.ok) {
+          const vData = await vRes.json();
+          const cloudVersion = typeof vData === 'object' && vData !== null ? String(vData.updatedAt || '') : String(vData || '');
+          if (cloudVersion && localVersion && cloudVersion === localVersion && Array.isArray(state.products) && state.products.length > 0) {
+            // Version has NOT changed and products are already in memory/cache! Skip downloading 110 KB catalog!
+            shouldFetchFullCatalog = false;
+          }
+        }
+      } catch (ve) {}
+
+      if (!shouldFetchFullCatalog) return;
+
+      const res = await fetch("https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json");
       if (!res.ok) return;
       const cloudProducts = await res.json();
       if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
@@ -427,26 +442,34 @@ function startLiveCatalogSync() {
           }
           renderProducts();
         }
+
+        // Record latest cloud version to skip redundant downloads on future visits
+        try {
+          const vRes = await fetch("https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/catalog_version.json");
+          if (vRes.ok) {
+            const vData = await vRes.json();
+            const cloudVersion = typeof vData === 'object' && vData !== null ? String(vData.updatedAt || '') : String(vData || '');
+            if (cloudVersion) localStorage.setItem("rasoee_catalog_version", cloudVersion);
+          }
+        } catch (ve) {}
       }
     } catch (e) {
       console.warn("Catalog sync error:", e);
     }
   };
 
-  // Immediate initial sync
+  // Immediate sync ONCE on site visit
   syncCatalog();
 
-  // Background poll every 8 seconds
-  setInterval(syncCatalog, 8000);
-
-  // Instant re-sync when customer switches tabs or resumes app
+  // No repeating background intervals: Only check if customer returns to tab after at least 15 minutes
+  let lastCatalogSyncTime = Date.now();
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && (Date.now() - lastCatalogSyncTime > 15 * 60 * 1000)) {
+        lastCatalogSyncTime = Date.now();
         syncCatalog();
       }
     });
-    window.addEventListener('focus', syncCatalog);
   }
 }
 
@@ -3438,6 +3461,9 @@ function toggleCartDrawer(open) {
     panel.classList.remove('translate-x-full');
     populateAddressFormInputs();
     renderCartDrawerContent(getCartSummary());
+    if (typeof pullCloudCartAndRefresh === 'function') {
+      pullCloudCartAndRefresh();
+    }
   } else {
     overlay.classList.add('opacity-0');
     panel.classList.add('translate-x-full');
@@ -5438,13 +5464,18 @@ async function pullCloudCartAndRefresh() {
   }
 }
 
-// Window focus & tab visibility change: sync immediately
-window.addEventListener('focus', pullCloudCartAndRefresh);
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
+// Sync cart when switching devices or resuming tabs (responsive 10s throttle, only for logged-in user)
+let lastCartSyncTime = 0;
+function pullCloudCartThrottled() {
+  if (state.currentUser?.phone && (Date.now() - lastCartSyncTime > 10 * 1000)) {
+    lastCartSyncTime = Date.now();
     pullCloudCartAndRefresh();
   }
+}
+window.addEventListener('focus', pullCloudCartThrottled);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    pullCloudCartThrottled();
+  }
 });
-
-// Periodic background check every 15 seconds for multi-device sync
-setInterval(pullCloudCartAndRefresh, 15000);
+// Blind 15-second background loop removed; sync now triggers precisely when switching devices/tabs or opening cart

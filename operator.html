@@ -1036,10 +1036,18 @@
         }
       });
 
-      // Poll every 5 seconds for new incoming orders
+      // Poll every 30 seconds for new incoming orders ONLY when tab is actively visible
       setInterval(() => {
-        loadOrders();
-      }, 5000);
+        if (!document.hidden) {
+          loadOrders();
+        }
+      }, 30000);
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          loadOrders();
+        }
+      });
     }
 
     function refreshOrders() {

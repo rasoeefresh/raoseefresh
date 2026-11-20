@@ -2890,11 +2890,20 @@
       renderCustomersTab();
       populateOutletSettings();
 
-      // Sync cloud orders immediately and setup 5s polling
+      // Sync cloud orders on load, and setup 30s interval ONLY when tab is actively visible
       syncCloudOrdersToAdmin();
       if (!window.adminCloudSyncInterval) {
-        window.adminCloudSyncInterval = setInterval(syncCloudOrdersToAdmin, 5000);
+        window.adminCloudSyncInterval = setInterval(() => {
+          if (!document.hidden) {
+            syncCloudOrdersToAdmin();
+          }
+        }, 30000);
       }
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          syncCloudOrdersToAdmin();
+        }
+      });
     }
 
     // Real-time Cloud RTDB sync for Admin Orders

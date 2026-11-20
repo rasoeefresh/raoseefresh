@@ -570,7 +570,17 @@ async function syncToCloud(customConfig, customProducts) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (res.ok) return { success: true, timestamp: payload.updatedAt };
+      if (res.ok) {
+        if (payload.products) {
+          const vUrl = syncCfg.firebaseUrl.trim().replace(/\/$/, '') + '/store_live_data/catalog_version.json';
+          await fetch(vUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ updatedAt: Date.now() })
+          }).catch(() => {});
+        }
+        return { success: true, timestamp: payload.updatedAt };
+      }
     } else if (syncCfg.type === 'jsonbin' && syncCfg.jsonbinId && syncCfg.apiKey) {
       const res = await fetch(`https://api.jsonbin.io/v3/b/${syncCfg.jsonbinId.trim()}`, {
         method: 'PUT',
@@ -606,20 +616,53 @@ async function syncProductsToCloud(products) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(list)
     });
-    return res.ok;
+    if (res.ok) {
+      // Update lightweight ~30-byte catalog version timestamp
+      const versionUrl = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/catalog_version.json";
+      const now = Date.now();
+      await fetch(versionUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updatedAt: now })
+      }).catch(() => {});
+      try {
+        localStorage.setItem("rasoee_catalog_version", String(now));
+      } catch (e) {}
+      return true;
+    }
+    return false;
   } catch (err) {
     console.warn("Direct products cloud sync error:", err);
     return false;
   }
 }
 
-async function fetchProductsFromCloud() {
+async function fetchProductsFromCloud(force = false) {
   try {
-    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json?_t=" + Date.now();
-    const res = await fetch(url, {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache" }
-    });
+    // 1. Lightweight 30-byte version check before downloading full 110 KB catalog
+    if (!force) {
+      try {
+        const vUrl = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/catalog_version.json";
+        const vRes = await fetch(vUrl);
+        if (vRes.ok) {
+          const vData = await vRes.json();
+          const cloudVer = typeof vData === 'object' && vData !== null ? String(vData.updatedAt || '') : String(vData || '');
+          const localVer = localStorage.getItem("rasoee_catalog_version") || '';
+          let cachedProducts = null;
+          try {
+            cachedProducts = JSON.parse(localStorage.getItem("rasoee_fresh_products") || localStorage.getItem("raosee_fresh_products") || '[]');
+          } catch(e) {}
+
+          if (cloudVer && localVer && cloudVer === localVer && Array.isArray(cachedProducts) && cachedProducts.length > 0) {
+            // Version matches, skip downloading full catalog
+            return cachedProducts;
+          }
+        }
+      } catch (ve) {}
+    }
+
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/products.json";
+    const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
@@ -646,6 +689,18 @@ async function fetchProductsFromCloud() {
         if (typeof _inMemoryProducts !== 'undefined') {
           _inMemoryProducts = data;
         }
+
+        // Record latest cloud version to prevent redundant downloads
+        try {
+          const vUrl = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/catalog_version.json";
+          const vRes = await fetch(vUrl);
+          if (vRes.ok) {
+            const vData = await vRes.json();
+            const cloudVer = typeof vData === 'object' && vData !== null ? String(vData.updatedAt || '') : String(vData || '');
+            if (cloudVer) localStorage.setItem("rasoee_catalog_version", cloudVer);
+          }
+        } catch (ve) {}
+
         return data;
       }
     }
@@ -685,7 +740,7 @@ async function syncConfigToCloud(config) {
 
 async function fetchConfigFromCloud() {
   try {
-    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/config.json?_t=" + Date.now();
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/config.json";
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
@@ -734,7 +789,7 @@ async function syncBannersToCloud(banners) {
 
 async function fetchBannersFromCloud() {
   try {
-    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/banners.json?_t=" + Date.now();
+    const url = "https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/banners.json";
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();

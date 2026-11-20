@@ -768,26 +768,33 @@
         }
       });
 
-      // Multi-device cloud polling every 4 seconds
-      setInterval(async () => {
-        if (activeOrder && typeof fetchOrdersFromCloud === 'function') {
-          try {
-            const cloudOrders = await fetchOrdersFromCloud();
-            if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
-              const fresh = cloudOrders.find(o => o.id === activeOrder.id);
-              if (fresh && (fresh.status !== activeOrder.status || JSON.stringify(fresh.rider) !== JSON.stringify(activeOrder.rider))) {
-                activeOrder = fresh;
-                renderTrackingView(fresh);
-                let localOrders = [];
-                try { localOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]'); } catch(e){}
-                const idx = localOrders.findIndex(o => o.id === fresh.id);
-                if (idx !== -1) localOrders[idx] = fresh; else localOrders.unshift(fresh);
-                localStorage.setItem('Rasoee_orders', JSON.stringify(localOrders));
-              }
+      // Bandwidth-safe single-order polling every 20 seconds (only while active & tab visible)
+      const pollSingleOrder = async () => {
+        if (!activeOrder || !activeOrder.id || document.hidden) return;
+        const s = (activeOrder.status || '').toLowerCase();
+        if (s.includes('deliver') || s.includes('cancel')) return; // Stop polling once finished
+
+        try {
+          const res = await fetch(`https://rasoee-fresh-default-rtdb.asia-southeast1.firebasedatabase.app/store_live_data/orders/${encodeURIComponent(activeOrder.id)}.json`);
+          if (res.ok) {
+            const fresh = await res.json();
+            if (fresh && fresh.id && (fresh.status !== activeOrder.status || JSON.stringify(fresh.rider) !== JSON.stringify(activeOrder.rider))) {
+              activeOrder = fresh;
+              renderTrackingView(fresh);
+              let localOrders = [];
+              try { localOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]'); } catch(e){}
+              const idx = localOrders.findIndex(o => o.id === fresh.id);
+              if (idx !== -1) localOrders[idx] = fresh; else localOrders.unshift(fresh);
+              localStorage.setItem('Rasoee_orders', JSON.stringify(localOrders));
             }
-          } catch(e) {}
-        }
-      }, 4000);
+          }
+        } catch(e) {}
+      };
+
+      setInterval(pollSingleOrder, 20000);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) pollSingleOrder();
+      });
     }
 
     function refreshOrderStatus() {
