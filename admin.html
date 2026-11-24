@@ -4844,7 +4844,7 @@
             if (o.customer?.name && (existing.name === 'Customer' || existing.name === 'Valued Customer')) existing.name = o.customer.name;
           } else {
             customerMap.set(ph, {
-              id: 'usr_' + ph.slice(-4),
+              id: 'usr_' + ph,
               name: o.customer?.name || 'Customer',
               phone: ph,
               flat: o.customer?.flat || '',
@@ -4859,6 +4859,9 @@
           }
         }
       });
+
+      // Permanently persist deduplicated unique customers
+      localStorage.setItem('Rasoee_users', JSON.stringify(Array.from(customerMap.values())));
 
       // Background multi-device customer sync from Cloud RTDB
       if (typeof fetchAllCustomersFromCloud === 'function' && !window._adminCloudCustomersLoaded) {

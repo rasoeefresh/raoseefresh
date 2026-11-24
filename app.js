@@ -3120,18 +3120,33 @@ async function handleAd1FormSubmit() {
     createdAt: new Date().toISOString()
   };
 
+  const targetUserPhone = isSomeone ? (userPhone || receiverPhone) : receiverPhone;
+  const targetUserName = isSomeone ? (userName || 'Customer') : receiverName;
+
   if (!state.currentUser) {
-    state.currentUser = {
-      id: 'usr_' + Date.now().toString().slice(-4),
-      name: isSomeone ? (userName || 'Customer') : receiverName,
-      phone: isSomeone ? (userPhone || receiverPhone) : receiverPhone,
-      savedAddresses: []
-    };
+    let existingProfile = typeof findCustomerLocally === 'function' ? findCustomerLocally(targetUserPhone) : null;
+    if (existingProfile) {
+      state.currentUser = {
+        ...existingProfile,
+        id: existingProfile.id || ('usr_' + targetUserPhone),
+        phone: targetUserPhone,
+        name: (targetUserName && targetUserName !== 'Customer') ? targetUserName : (existingProfile.name || 'Customer'),
+        savedAddresses: Array.isArray(existingProfile.savedAddresses) ? existingProfile.savedAddresses : []
+      };
+    } else {
+      state.currentUser = {
+        id: 'usr_' + targetUserPhone,
+        name: targetUserName,
+        phone: targetUserPhone,
+        savedAddresses: []
+      };
+    }
   } else {
     if (!isSomeone) {
       if (receiverName && receiverName !== 'Customer') state.currentUser.name = receiverName;
       if (receiverPhone) state.currentUser.phone = receiverPhone;
     }
+    state.currentUser.id = state.currentUser.id || ('usr_' + (state.currentUser.phone || targetUserPhone));
   }
   if (!Array.isArray(state.currentUser.savedAddresses)) {
     state.currentUser.savedAddresses = [];
@@ -3157,17 +3172,27 @@ async function handleAd1FormSubmit() {
     localStorage.setItem('Rasoee_address', JSON.stringify(newAddress));
     localStorage.setItem('Rasoee_current_user', JSON.stringify(state.currentUser));
     let users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
-    const uIdx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === userPhone);
+    const finalPhone = String(state.currentUser.phone || targetUserPhone).replace(/\D/g, '').slice(-10);
+    const uIdx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === finalPhone);
     if (uIdx >= 0) {
-      users[uIdx].savedAddresses = state.currentUser.savedAddresses;
-      users[uIdx].name = users[uIdx].name || state.currentUser.name;
+      users[uIdx] = {
+        ...users[uIdx],
+        ...state.currentUser,
+        phone: finalPhone,
+        savedAddresses: state.currentUser.savedAddresses,
+        name: state.currentUser.name || users[uIdx].name
+      };
     } else {
-      users.push(state.currentUser);
+      users.push({ ...state.currentUser, phone: finalPhone });
+    }
+    if (typeof deduplicateUsers === 'function') {
+      users = deduplicateUsers(users);
     }
     localStorage.setItem('Rasoee_users', JSON.stringify(users));
   } catch (e) {}
 
-  if (userPhone && typeof syncCustomerToCloud === 'function') {
+  const syncPhone = String(state.currentUser?.phone || targetUserPhone).replace(/\D/g, '').slice(-10);
+  if (syncPhone && typeof syncCustomerToCloud === 'function') {
     syncCustomerToCloud(state.currentUser);
   }
 
@@ -3697,7 +3722,7 @@ function handleUnifiedCheckout() {
   const customer = extractAddressForm();
   if (!customer) return;
 
-  const orderId = `RF-${Date.now().toString().slice(-6)}`;
+  const orderId = `RF-${Date.now().toString().slice(-6)}${Math.floor(10 + Math.random() * 90)}`;
 
   // Default & Primary: Cash / UPI on Delivery
   processOrderCompletion(orderId, summary, customer, {
@@ -4277,12 +4302,19 @@ function setCustomerSession(user) {
     localStorage.removeItem('Rasoee_address');
   }
 
-  // Update in Rasoee_users directory
+  // Update in Rasoee_users directory with clean 10-digit phone deduplication
   let users = [];
   try { users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]'); } catch (e) {}
-  const idx = users.findIndex(u => u.phone === normalized.phone);
-  if (idx >= 0) users[idx] = { ...users[idx], ...normalized };
-  else users.push(normalized);
+  const cleanPh = String(normalized.phone || '').replace(/\D/g, '').slice(-10);
+  const idx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === cleanPh);
+  if (idx >= 0) {
+    users[idx] = { ...users[idx], ...normalized, phone: cleanPh };
+  } else {
+    users.push({ ...normalized, phone: cleanPh });
+  }
+  if (typeof deduplicateUsers === 'function') {
+    users = deduplicateUsers(users);
+  }
   localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
   // Auto-populate cart drawer delivery fields immediately
@@ -4326,12 +4358,31 @@ function logoutCustomer() {
   }
 }
 
+// Customer phone resolver and order matcher
+function getActiveCustomerPhone() {
+  const p1 = state.currentUser?.phone;
+  const p2 = state.deliveryAddress?.phone;
+  const p3 = state.deliveryAddress?.receiverPhone;
+  const raw = p1 || p2 || p3 || '';
+  return String(raw).replace(/\D/g, '').slice(-10);
+}
+
+function isOrderForCustomer(order, targetPhone) {
+  if (!targetPhone) return true;
+  const p1 = String(order.customer?.phone || '').replace(/\D/g, '').slice(-10);
+  const p2 = String(order.customer?.receiverPhone || '').replace(/\D/g, '').slice(-10);
+  const p3 = String(order.customer?.placedByPhone || '').replace(/\D/g, '').slice(-10);
+  return p1 === targetPhone || p2 === targetPhone || p3 === targetPhone;
+}
+
 // ================= MY ACCOUNT & CUSTOMER SETTINGS DRAWER =================
 function openAccountDrawer() {
   const drawer = document.getElementById('account-drawer');
   const overlay = document.getElementById('account-drawer-overlay');
   const panel = document.getElementById('account-drawer-panel');
   if (!drawer || !overlay || !panel) return;
+
+  const userPhone = getActiveCustomerPhone();
 
   // Fill user details in header
   const nameEl = document.getElementById('account-user-name');
@@ -4363,15 +4414,46 @@ function openAccountDrawer() {
   } catch (e) {
     allOrders = [];
   }
-  const userPhone = state.currentUser?.phone || state.deliveryAddress?.phone;
   const userOrders = userPhone 
-    ? allOrders.filter(o => !o.customer?.phone || o.customer.phone === userPhone || o.customer.phone.includes(userPhone))
+    ? allOrders.filter(o => isOrderForCustomer(o, userPhone))
     : allOrders;
   const badgeEl = document.getElementById('account-tab-order-badge');
   if (badgeEl) badgeEl.textContent = userOrders.length;
 
   renderAccountOrders();
   populateCustomerSettingsForm();
+
+  // Multi-device Cloud RTDB live sync: pulls all repeated orders placed from any device
+  if (typeof fetchOrdersFromCloud === 'function') {
+    fetchOrdersFromCloud().then(cloudOrders => {
+      if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+        let localOrders = [];
+        try { localOrders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]'); } catch (e) {}
+        const orderMap = new Map();
+        localOrders.forEach(o => { if (o && o.id) orderMap.set(o.id, o); });
+        cloudOrders.forEach(co => {
+          if (co && co.id) {
+            const ex = orderMap.get(co.id);
+            if (!ex || (co.updatedAt || co.timestamp || '') >= (ex.updatedAt || ex.timestamp || '')) {
+              orderMap.set(co.id, co);
+            }
+          }
+        });
+        const merged = Array.from(orderMap.values()).sort((a, b) => {
+          const tA = Date.parse(a.timestamp || a.createdAt || 0) || 0;
+          const tB = Date.parse(b.timestamp || b.createdAt || 0) || 0;
+          return tB - tA;
+        });
+        localStorage.setItem('Rasoee_orders', JSON.stringify(merged));
+        renderAccountOrders();
+        const activeBadge = document.getElementById('account-tab-order-badge');
+        if (activeBadge) {
+          const uOrders = userPhone ? merged.filter(o => isOrderForCustomer(o, userPhone)) : merged;
+          activeBadge.textContent = uOrders.length;
+        }
+      }
+    }).catch(() => {});
+  }
 
   drawer.classList.remove('hidden');
   void drawer.offsetWidth;
@@ -4756,9 +4838,9 @@ function renderAccountOrders() {
   }
 
   // Filter orders for current user phone or show all local device orders
-  const userPhone = state.currentUser?.phone;
+  const userPhone = getActiveCustomerPhone();
   const userOrders = userPhone 
-    ? allOrders.filter(o => !o.customer?.phone || o.customer.phone === userPhone || o.customer.phone.includes(userPhone))
+    ? allOrders.filter(o => isOrderForCustomer(o, userPhone))
     : allOrders;
 
   if (userOrders.length === 0) {
@@ -5256,44 +5338,71 @@ function setupCrossTabSync() {
 
 // Order History & Customer Directory Registry
 function saveRecentOrder(order) {
+  if (!order || !order.id) return;
   try {
     let orders = JSON.parse(localStorage.getItem('Rasoee_orders') || '[]');
-    orders.unshift(order);
-    if (orders.length > 30) orders = orders.slice(0, 30);
+    const existingOrderIdx = orders.findIndex(o => o && o.id === order.id);
+    if (existingOrderIdx >= 0) {
+      orders[existingOrderIdx] = { ...orders[existingOrderIdx], ...order };
+    } else {
+      orders.unshift(order);
+    }
+    if (orders.length > 200) orders = orders.slice(0, 200);
     localStorage.setItem('Rasoee_orders', JSON.stringify(orders));
 
-    // Also register or update customer in Rasoee_users directory for Admin
-    if (order.customer && order.customer.phone) {
-      const normCustomer = normalizeCustomerData(order.customer);
-      let users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]');
-      const existingIdx = users.findIndex(u => u.phone === normCustomer.phone);
+    // Register or update customer in Rasoee_users directory for Admin
+    const rawPhone = order.customer?.receiverPhone || order.customer?.phone || '';
+    const cleanPhone = String(rawPhone).replace(/\D/g, '').slice(-10);
+
+    if (cleanPhone.length === 10) {
+      const normCustomer = normalizeCustomerData({ ...order.customer, phone: cleanPhone });
+      let users = [];
+      try { users = JSON.parse(localStorage.getItem('Rasoee_users') || '[]'); } catch (e) {}
+
+      const existingIdx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone);
       if (existingIdx >= 0) {
         users[existingIdx] = {
           ...users[existingIdx],
           ...normCustomer,
+          id: users[existingIdx].id || ('usr_' + cleanPhone),
+          phone: cleanPhone,
           orderCount: (users[existingIdx].orderCount || 0) + 1,
           lastOrderDate: new Date().toISOString(),
-          totalSpend: (users[existingIdx].totalSpend || 0) + (order.total || 0)
+          totalSpend: Math.round(((users[existingIdx].totalSpend || 0) + (Number(order.total) || 0) + Number.EPSILON) * 100) / 100
         };
       } else {
         users.push({
           ...normCustomer,
+          id: 'usr_' + cleanPhone,
+          phone: cleanPhone,
           lastOrderDate: new Date().toISOString(),
           orderCount: 1,
-          totalSpend: order.total || 0
+          totalSpend: Number(order.total) || 0
         });
+      }
+
+      if (typeof deduplicateUsers === 'function') {
+        users = deduplicateUsers(users);
       }
       localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
-      // Permanently sync customer profile to Cloud RTDB
-      if (typeof syncCustomerToCloud === 'function') {
-        syncCustomerToCloud(normCustomer);
+      // Safely sync customer profile to Cloud RTDB
+      try {
+        if (typeof syncCustomerToCloud === 'function') {
+          syncCustomerToCloud(users.find(u => u.phone === cleanPhone) || normCustomer);
+        }
+      } catch (custSyncErr) {
+        console.warn("Non-blocking customer sync warning:", custSyncErr);
       }
     }
 
     // Real-time Cloud RTDB sync for multi-device Operator, Admin & Customer profile
-    if (typeof syncOrderToCloud === 'function') {
-      syncOrderToCloud(order);
+    try {
+      if (typeof syncOrderToCloud === 'function') {
+        syncOrderToCloud(order);
+      }
+    } catch (orderSyncErr) {
+      console.warn("Non-blocking order sync warning:", orderSyncErr);
     }
   } catch (e) {
     console.warn("Could not save order", e);

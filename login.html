@@ -616,11 +616,14 @@
       } catch (e) {
         users = [];
       }
-      const existingIdx = users.findIndex(u => u.phone === cleanPhone);
+      const existingIdx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone);
       if (existingIdx >= 0) {
-        users[existingIdx] = { ...users[existingIdx], ...newUser };
+        users[existingIdx] = { ...users[existingIdx], ...newUser, phone: cleanPhone };
       } else {
-        users.push(newUser);
+        users.push({ ...newUser, phone: cleanPhone });
+      }
+      if (typeof deduplicateUsers === 'function') {
+        users = deduplicateUsers(users);
       }
       localStorage.setItem('Rasoee_users', JSON.stringify(users));
 
@@ -643,10 +646,11 @@
       const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
       const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');
 
+      const cleanPhone = String(phone || '').replace(/\D/g, '').slice(-10);
       const user = {
-        id: 'usr_' + phone.slice(-4),
+        id: 'usr_' + cleanPhone,
         name: name,
-        phone: phone,
+        phone: cleanPhone,
         flat: flat,
         street: street,
         landmark: landmark,
@@ -672,11 +676,14 @@
       } catch (e) {
         users = [];
       }
-      const idx = users.findIndex(u => u.phone === phone);
+      const idx = users.findIndex(u => String(u?.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone);
       if (idx >= 0) {
-        users[idx] = user;
+        users[idx] = { ...users[idx], ...user, phone: cleanPhone };
       } else {
         users.push(user);
+      }
+      if (typeof deduplicateUsers === 'function') {
+        users = deduplicateUsers(users);
       }
       localStorage.setItem('Rasoee_users', JSON.stringify(users));
 

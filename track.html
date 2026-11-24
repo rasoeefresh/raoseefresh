@@ -408,11 +408,17 @@
             orders.forEach(o => mergedMap.set(o.id, o));
             cloudOrders.forEach(co => {
               const local = mergedMap.get(co.id);
-              if (!local || new Date(co.updatedAt || co.date || 0) >= new Date(local.updatedAt || local.date || 0)) {
+              const coTime = Date.parse(co.updatedAt || co.timestamp || co.date || 0) || 0;
+              const localTime = Date.parse(local?.updatedAt || local?.timestamp || local?.date || 0) || 0;
+              if (!local || coTime >= localTime) {
                 mergedMap.set(co.id, co);
               }
             });
-            orders = Array.from(mergedMap.values()).sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
+            orders = Array.from(mergedMap.values()).sort((a,b) => {
+              const tA = Date.parse(a.timestamp || a.date || a.createdAt || 0) || 0;
+              const tB = Date.parse(b.timestamp || b.date || b.createdAt || 0) || 0;
+              return tB - tA;
+            });
             localStorage.setItem('Rasoee_orders', JSON.stringify(orders));
           }
         } catch (e) {
@@ -460,17 +466,27 @@
             const mergedMap = new Map();
             orders.forEach(o => mergedMap.set(o.id, o));
             cloudOrders.forEach(co => mergedMap.set(co.id, co));
-            orders = Array.from(mergedMap.values()).sort((a,b) => new Date(b.date || 0) - new Date(a.date || 0));
+            orders = Array.from(mergedMap.values()).sort((a,b) => {
+              const tA = Date.parse(a.timestamp || a.date || a.createdAt || 0) || 0;
+              const tB = Date.parse(b.timestamp || b.date || b.createdAt || 0) || 0;
+              return tB - tA;
+            });
             localStorage.setItem('Rasoee_orders', JSON.stringify(orders));
           }
         } catch(e) {}
       }
 
       const cleanQuery = q.replace('#', '').trim();
+      const qDigits = cleanQuery.replace(/\D/g, '');
       const match = orders.find(o => 
         o.id === cleanQuery || 
         o.id === `RF-${cleanQuery}` ||
-        (o.customer?.phone && o.customer.phone.includes(cleanQuery))
+        (o.customer?.phone && o.customer.phone.includes(cleanQuery)) ||
+        (o.customer?.receiverPhone && o.customer.receiverPhone.includes(cleanQuery)) ||
+        (qDigits.length >= 4 && (
+          String(o.customer?.phone || '').replace(/\D/g, '').includes(qDigits) ||
+          String(o.customer?.receiverPhone || '').replace(/\D/g, '').includes(qDigits)
+        ))
       );
 
       if (match) {

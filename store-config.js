@@ -1406,13 +1406,51 @@ async function syncOrderToCloud(order) {
   }
 }
 
+function normalizeCustomerPhone(phone) {
+  if (!phone) return '';
+  const digits = String(phone).replace(/\D/g, '');
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
+function deduplicateUsers(users) {
+  if (!Array.isArray(users)) return [];
+  const map = new Map();
+  users.forEach(u => {
+    if (!u) return;
+    const ph = normalizeCustomerPhone(u.phone || u.mobile);
+    if (!ph || ph.length !== 10) return;
+    if (!map.has(ph)) {
+      map.set(ph, { ...u, phone: ph, id: u.id || ('usr_' + ph) });
+    } else {
+      const ex = map.get(ph);
+      map.set(ph, {
+        ...ex,
+        ...u,
+        phone: ph,
+        id: ex.id || u.id || ('usr_' + ph),
+        name: (u.name && u.name !== 'Customer' && u.name !== 'Valued Customer') ? u.name : (ex.name || 'Valued Customer'),
+        flat: u.flat || ex.flat || '',
+        street: u.street || ex.street || '',
+        landmark: u.landmark || ex.landmark || '',
+        city: u.city || ex.city || '',
+        pincode: u.pincode || ex.pincode || '',
+        orderCount: Math.max(ex.orderCount || 0, u.orderCount || 0),
+        totalSpend: Math.round(((Math.max(ex.totalSpend || 0, u.totalSpend || 0)) + Number.EPSILON) * 100) / 100,
+        savedAddresses: Array.isArray(u.savedAddresses) && u.savedAddresses.length > 0 ? u.savedAddresses : (ex.savedAddresses || [])
+      });
+    }
+  });
+  return Array.from(map.values());
+}
+
 async function fetchOrdersFromCloud() {
   try {
-    const res = await fetch(`${CLOUD_RTDB_BASE}/orders.json`);
+    const res = await fetch(`${CLOUD_RTDB_BASE}/orders.json?_t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (data && typeof data === 'object') {
-        return Object.values(data);
+        const list = Array.isArray(data) ? data : Object.values(data);
+        return list.filter(o => o && o.id);
       }
     }
   } catch (e) {
@@ -1423,8 +1461,8 @@ async function fetchOrdersFromCloud() {
 
 async function syncCustomerToCloud(customer) {
   if (!customer) return false;
-  const cleanPhone = String(customer.phone || customer.mobile || '').replace(/\D/g, '').slice(-10);
-  if (!cleanPhone) return false;
+  const cleanPhone = normalizeCustomerPhone(customer.phone || customer.mobile);
+  if (!cleanPhone || cleanPhone.length !== 10) return false;
 
   const flat = customer.flat || (customer.address && typeof customer.address === 'object' ? customer.address.flat : '') || (customer.savedAddresses && customer.savedAddresses[0] ? customer.savedAddresses[0].flat : '') || (typeof customer.address === 'string' ? customer.address.split(',')[0].trim() : '') || '';
   const street = customer.street || (customer.address && typeof customer.address === 'object' ? customer.address.street : '') || (customer.savedAddresses && customer.savedAddresses[0] ? customer.savedAddresses[0].street : '') || (typeof customer.address === 'string' ? customer.address.split(',').slice(1).join(',').trim() : '') || '';
@@ -1437,7 +1475,7 @@ async function syncCustomerToCloud(customer) {
   const pincode = customer.pincode || (customer.address && typeof customer.address === 'object' ? customer.address.pincode : '') || defaultPin;
 
   const payload = {
-    id: customer.id || ('usr_' + cleanPhone.slice(-4)),
+    id: customer.id || ('usr_' + cleanPhone),
     phone: cleanPhone,
     name: name,
     flat: flat,
@@ -1453,8 +1491,8 @@ async function syncCustomerToCloud(customer) {
       city: city,
       pincode: pincode
     },
-    savedAddresses: Array.isArray(customerObj.savedAddresses) && customerObj.savedAddresses.length > 0
-      ? customerObj.savedAddresses
+    savedAddresses: Array.isArray(customer.savedAddresses) && customer.savedAddresses.length > 0
+      ? customer.savedAddresses
       : (flat ? [{ type: 'Home', tag: 'Home', receiverName: name, receiverPhone: cleanPhone, flat, street, landmark, city, isDefault: true }] : []),
     updatedAt: new Date().toISOString()
   };
@@ -1910,6 +1948,8 @@ if (typeof window !== "undefined") {
   window.getStoreConfig = getStoreConfig;
   window.updateStoreConfig = updateStoreConfig;
   window.getStoredRiders = getStoredRiders;
+  window.normalizeCustomerPhone = normalizeCustomerPhone;
+  window.deduplicateUsers = deduplicateUsers;
   window.syncOrderToCloud = syncOrderToCloud;
   window.fetchOrdersFromCloud = fetchOrdersFromCloud;
   window.syncCustomerToCloud = syncCustomerToCloud;
@@ -1961,6 +2001,8 @@ if (typeof module !== "undefined" && module.exports) {
     DEFAULT_RIDERS,
     getStoredRiders,
     saveStoredRiders,
+    normalizeCustomerPhone,
+    deduplicateUsers,
     syncOrderToCloud,
     fetchOrdersFromCloud,
     syncCustomerToCloud,

@@ -280,7 +280,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
       
       <!-- KPI Counts Bar -->
-      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pb-3 border-b border-slate-100">
+      <div class="grid grid-cols-2 sm:grid-cols-6 gap-2.5 pb-3 border-b border-slate-100">
         
         <div onclick="setFilter('all')" class="bg-slate-50 hover:bg-slate-100 p-2.5 rounded-2xl border border-slate-200 cursor-pointer transition-all">
           <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">All Active Orders</div>
@@ -305,18 +305,23 @@
           <div class="text-xl font-black text-purple-900 mt-0.5" id="kpi-count-dispatched">0</div>
         </div>
 
-        <div onclick="setFilter('delivered')" class="bg-emerald-50 hover:bg-emerald-100 p-2.5 rounded-2xl border border-emerald-200 cursor-pointer transition-all col-span-2 sm:col-span-1">
+        <div onclick="setFilter('delivered')" class="bg-emerald-50 hover:bg-emerald-100 p-2.5 rounded-2xl border border-emerald-200 cursor-pointer transition-all">
           <div class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Delivered Today</div>
           <div class="text-xl font-black text-emerald-900 mt-0.5" id="kpi-count-delivered">0</div>
+        </div>
+
+        <div onclick="setFilter('cancelled')" class="bg-rose-50 hover:bg-rose-100 p-2.5 rounded-2xl border border-rose-200 cursor-pointer transition-all">
+          <div class="text-[10px] font-bold text-rose-700 uppercase tracking-wider">Cancelled</div>
+          <div class="text-xl font-black text-rose-900 mt-0.5" id="kpi-count-cancelled">0</div>
         </div>
 
       </div>
 
       <!-- Controls & Search -->
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3">
+      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-3">
         
         <!-- Filter Tabs -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scroll text-xs font-bold">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 custom-scroll text-xs font-bold">
           <button onclick="setFilter('all')" id="filter-btn-all" class="filter-tab px-3 py-1.5 rounded-xl bg-slate-900 text-white shadow-2xs whitespace-nowrap">
             All Orders (<span id="tab-count-all">0</span>)
           </button>
@@ -332,18 +337,42 @@
           <button onclick="setFilter('delivered')" id="filter-btn-delivered" class="filter-tab px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap">
             ✓ Delivered (<span id="tab-count-delivered">0</span>)
           </button>
+          <button onclick="setFilter('cancelled')" id="filter-btn-cancelled" class="filter-tab px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap">
+            ✕ Cancelled (<span id="tab-count-cancelled">0</span>)
+          </button>
         </div>
 
-        <!-- Search Input -->
-        <div class="relative min-w-[260px]">
-          <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
-          <input 
-            type="text" 
-            id="order-search-input" 
-            placeholder="Search by Mobile No, Order ID or Customer..." 
-            oninput="handleSearch(this.value)"
-            class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-300 focus:border-blinkit-green focus:ring-2 focus:ring-emerald-100 text-xs font-semibold outline-none bg-slate-50"
-          />
+        <!-- Right Side: Sort & Search Input -->
+        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <!-- Sort Order Dropdown -->
+          <div class="relative">
+            <select 
+              id="order-sort-select" 
+              onchange="setSortOrder(this.value)" 
+              class="px-2.5 py-1.5 rounded-xl border border-slate-300 focus:border-blinkit-green focus:ring-2 focus:ring-emerald-100 text-xs font-bold outline-none bg-white text-slate-700 cursor-pointer shadow-2xs">
+              <option value="newest">🕒 Newest First</option>
+              <option value="oldest">⏳ Oldest First</option>
+              <option value="highest_amount">💰 Highest Value</option>
+            </select>
+          </div>
+
+          <!-- Search Input -->
+          <div class="relative min-w-[200px] flex-1">
+            <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+            <input 
+              type="text" 
+              id="order-search-input" 
+              placeholder="Search by Mobile, ID, Name..." 
+              oninput="handleSearch(this.value)"
+              class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-300 focus:border-blinkit-green focus:ring-2 focus:ring-emerald-100 text-xs font-semibold outline-none bg-slate-50"
+            />
+          </div>
+
+          <!-- Manual Refresh Button -->
+          <button onclick="loadOrders()" title="Refresh Orders" class="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-black text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1 cursor-pointer">
+            <span>🔄</span>
+            <span class="hidden sm:inline">Refresh</span>
+          </button>
         </div>
 
       </div>
@@ -645,11 +674,26 @@
     let currentConfig = {};
     let allOrders = [];
     let currentFilter = 'all';
+    let currentSortOrder = 'newest';
     let searchQuery = '';
     let activeModalOrderId = null;
     let audioAlertEnabled = true;
     let lastSeenOrderIds = new Set();
     let audioContext = null;
+
+    function getOrderTimestamp(o) {
+      if (!o) return 0;
+      const t = o.timestamp || o.date || o.createdAt || o.updatedAt;
+      if (!t) return 0;
+      if (typeof t === 'number') return t;
+      const p = Date.parse(t);
+      return isNaN(p) ? 0 : p;
+    }
+
+    function setSortOrder(order) {
+      currentSortOrder = order || 'newest';
+      renderOrders();
+    }
 
     // Initialize on Load
     document.addEventListener('DOMContentLoaded', () => {
@@ -978,7 +1022,7 @@
       if (typeof fetchOrdersFromCloud === 'function') {
         try {
           const cloudOrders = await fetchOrdersFromCloud();
-          if (cloudOrders && cloudOrders.length > 0) {
+          if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
             const orderMap = new Map();
             localOrders.forEach(o => { if (o && o.id) orderMap.set(o.id, o); });
             cloudOrders.forEach(co => {
@@ -989,7 +1033,7 @@
                 }
               }
             });
-            allOrders = Array.from(orderMap.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+            allOrders = Array.from(orderMap.values()).sort((a, b) => getOrderTimestamp(b) - getOrderTimestamp(a));
             localStorage.setItem('Rasoee_orders', JSON.stringify(allOrders));
           } else {
             allOrders = localOrders;
@@ -1006,7 +1050,7 @@
       let newOrderDetected = null;
       allOrders.forEach(o => {
         if (!lastSeenOrderIds.has(o.id)) {
-          if (lastSeenOrderIds.size > 0 && !(o.status || '').toLowerCase().includes('deliver')) {
+          if (lastSeenOrderIds.size > 0 && !(o.status || '').toLowerCase().includes('deliver') && !(o.status || '').toLowerCase().includes('cancel')) {
             newOrderDetected = o;
           }
           lastSeenOrderIds.add(o.id);
@@ -1064,37 +1108,58 @@
       const total = allOrders.length;
       const countNew = allOrders.filter(o => {
         const s = (o.status || 'Confirmed').toLowerCase();
-        return (s.includes('confirm') || s.includes('received') || s.includes('placed')) && !s.includes('pack') && !s.includes('out') && !s.includes('deliver');
+        return (s.includes('confirm') || s.includes('received') || s.includes('placed') || s.includes('pending')) && !s.includes('pack') && !s.includes('out') && !s.includes('deliver') && !s.includes('cancel');
       }).length;
 
       const countPacking = allOrders.filter(o => {
         const s = (o.status || '').toLowerCase();
-        return s.includes('pack') || s.includes('ready');
+        return (s.includes('pack') || s.includes('ready')) && !s.includes('out') && !s.includes('deliver') && !s.includes('cancel');
       }).length;
 
       const countDispatched = allOrders.filter(o => {
         const s = (o.status || '').toLowerCase();
-        return s.includes('out') || s.includes('dispatch') || s.includes('transit');
+        return (s.includes('out') || s.includes('dispatch') || s.includes('transit')) && !s.includes('deliver') && !s.includes('cancel');
       }).length;
 
       const countDelivered = allOrders.filter(o => {
         const s = (o.status || '').toLowerCase();
-        return s.includes('deliver') && !s.includes('out');
+        return s.includes('deliver') && !s.includes('out') && !s.includes('cancel');
+      }).length;
+
+      const countCancelled = allOrders.filter(o => {
+        const s = (o.status || '').toLowerCase();
+        return s.includes('cancel') || s.includes('reject');
       }).length;
 
       // Update KPI numbers
-      document.getElementById('kpi-count-all').textContent = total;
-      document.getElementById('kpi-count-new').textContent = countNew;
-      document.getElementById('kpi-count-packing').textContent = countPacking;
-      document.getElementById('kpi-count-dispatched').textContent = countDispatched;
-      document.getElementById('kpi-count-delivered').textContent = countDelivered;
+      const elAll = document.getElementById('kpi-count-all');
+      const elNew = document.getElementById('kpi-count-new');
+      const elPack = document.getElementById('kpi-count-packing');
+      const elDisp = document.getElementById('kpi-count-dispatched');
+      const elDelv = document.getElementById('kpi-count-delivered');
+      const elCanc = document.getElementById('kpi-count-cancelled');
+
+      if (elAll) elAll.textContent = total;
+      if (elNew) elNew.textContent = countNew;
+      if (elPack) elPack.textContent = countPacking;
+      if (elDisp) elDisp.textContent = countDispatched;
+      if (elDelv) elDelv.textContent = countDelivered;
+      if (elCanc) elCanc.textContent = countCancelled;
 
       // Update Tab count numbers
-      document.getElementById('tab-count-all').textContent = total;
-      document.getElementById('tab-count-new').textContent = countNew;
-      document.getElementById('tab-count-packing').textContent = countPacking;
-      document.getElementById('tab-count-dispatched').textContent = countDispatched;
-      document.getElementById('tab-count-delivered').textContent = countDelivered;
+      const tabAll = document.getElementById('tab-count-all');
+      const tabNew = document.getElementById('tab-count-new');
+      const tabPack = document.getElementById('tab-count-packing');
+      const tabDisp = document.getElementById('tab-count-dispatched');
+      const tabDelv = document.getElementById('tab-count-delivered');
+      const tabCanc = document.getElementById('tab-count-cancelled');
+
+      if (tabAll) tabAll.textContent = total;
+      if (tabNew) tabNew.textContent = countNew;
+      if (tabPack) tabPack.textContent = countPacking;
+      if (tabDisp) tabDisp.textContent = countDispatched;
+      if (tabDelv) tabDelv.textContent = countDelivered;
+      if (tabCanc) tabCanc.textContent = countCancelled;
     }
 
     // Filter Controls
@@ -1123,42 +1188,72 @@
       const emptyContainer = document.getElementById('no-orders-container');
       if (!container) return;
 
-      // Sort orders descending (newest first)
-      let filtered = [...allOrders].sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+      // Safe, Deterministic Sorting - Never returns NaN
+      let filtered = [...allOrders];
+      filtered.sort((a, b) => {
+        if (currentSortOrder === 'oldest') {
+          const diff = getOrderTimestamp(a) - getOrderTimestamp(b);
+          return diff !== 0 ? diff : String(a.id || '').localeCompare(String(b.id || ''));
+        } else if (currentSortOrder === 'highest_amount') {
+          const diff = (Number(b.total) || 0) - (Number(a.total) || 0);
+          return diff !== 0 ? diff : (getOrderTimestamp(b) - getOrderTimestamp(a));
+        } else {
+          // Default: newest first
+          const diff = getOrderTimestamp(b) - getOrderTimestamp(a);
+          return diff !== 0 ? diff : String(b.id || '').localeCompare(String(a.id || ''));
+        }
+      });
 
       // Filter by Status Tab
       if (currentFilter === 'new') {
         filtered = filtered.filter(o => {
           const s = (o.status || 'Confirmed').toLowerCase();
-          return (s.includes('confirm') || s.includes('received') || s.includes('placed')) && !s.includes('pack') && !s.includes('out') && !s.includes('deliver');
+          return (s.includes('confirm') || s.includes('received') || s.includes('placed') || s.includes('pending')) && !s.includes('pack') && !s.includes('out') && !s.includes('deliver') && !s.includes('cancel');
         });
       } else if (currentFilter === 'packing') {
         filtered = filtered.filter(o => {
           const s = (o.status || '').toLowerCase();
-          return s.includes('pack') || s.includes('ready');
+          return (s.includes('pack') || s.includes('ready')) && !s.includes('out') && !s.includes('deliver') && !s.includes('cancel');
         });
       } else if (currentFilter === 'dispatched') {
         filtered = filtered.filter(o => {
           const s = (o.status || '').toLowerCase();
-          return s.includes('out') || s.includes('dispatch') || s.includes('transit');
+          return (s.includes('out') || s.includes('dispatch') || s.includes('transit')) && !s.includes('deliver') && !s.includes('cancel');
         });
       } else if (currentFilter === 'delivered') {
         filtered = filtered.filter(o => {
           const s = (o.status || '').toLowerCase();
-          return s.includes('deliver') && !s.includes('out');
+          return s.includes('deliver') && !s.includes('out') && !s.includes('cancel');
+        });
+      } else if (currentFilter === 'cancelled') {
+        filtered = filtered.filter(o => {
+          const s = (o.status || '').toLowerCase();
+          return s.includes('cancel') || s.includes('reject');
         });
       }
 
       // Filter by Search Query
       if (searchQuery) {
+        const q = searchQuery.toLowerCase().trim();
+        const qDigits = q.replace(/\D/g, '');
         filtered = filtered.filter(o => {
-          const id = (o.id || '').toLowerCase();
-          const name = (o.customer?.name || '').toLowerCase();
-          const phone = (o.customer?.phone || '').toLowerCase();
+          const id = String(o.id || '').toLowerCase();
+          const name = String(o.customer?.name || o.customer?.receiverName || '').toLowerCase();
+          const p1 = String(o.customer?.phone || '').toLowerCase();
+          const p2 = String(o.customer?.receiverPhone || '').toLowerCase();
+          const pDigits1 = p1.replace(/\D/g, '');
+          const pDigits2 = p2.replace(/\D/g, '');
           const addr = (typeof o.customer?.address === 'object' 
-            ? `${o.customer.address.flat || ''} ${o.customer.address.street || ''}`
-            : (o.customer?.address || '')).toLowerCase();
-          return id.includes(searchQuery) || name.includes(searchQuery) || phone.includes(searchQuery) || addr.includes(searchQuery);
+            ? `${o.customer.address.flat || ''} ${o.customer.address.street || ''} ${o.customer.address.landmark || ''}`
+            : (o.customer?.flat ? `${o.customer.flat} ${o.customer.street || ''} ${o.customer.landmark || ''}` : (o.customer?.address || ''))).toLowerCase();
+
+          return id.includes(q) || 
+                 (qDigits.length >= 3 && id.replace(/\D/g, '').includes(qDigits)) ||
+                 name.includes(q) || 
+                 p1.includes(q) || 
+                 p2.includes(q) || 
+                 (qDigits.length >= 4 && (pDigits1.includes(qDigits) || pDigits2.includes(qDigits))) ||
+                 addr.includes(q);
         });
       }
 

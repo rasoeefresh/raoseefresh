@@ -1,9 +1,9 @@
 /**
- * Rasoee Fresh Supermarket - Service Worker (v6)
+ * Rasoee Fresh Supermarket - Service Worker (v7)
  * Network-first for HTML pages and real-time bypass for Firebase and images,
  * ensuring catalog updates, live images, and multi-device order sync occur instantaneously.
  */
-const CACHE_NAME = 'rasoee-fresh-v6';
+const CACHE_NAME = 'rasoee-fresh-v7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
