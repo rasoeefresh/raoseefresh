@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -670,6 +670,16 @@
 
   <!-- ================= JAVASCRIPT APP LOGIC ================= -->
   <script>
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     // Global State
     let currentConfig = {};
     let allOrders = [];
@@ -1183,215 +1193,243 @@
     }
 
     // Render Orders Cards
+    // Render Orders Cards
     function renderOrders() {
-      const container = document.getElementById('orders-cards-container');
-      const emptyContainer = document.getElementById('no-orders-container');
-      if (!container) return;
+      try {
+        const container = document.getElementById('orders-cards-container');
+        const emptyContainer = document.getElementById('no-orders-container');
+        if (!container) return;
 
-      // Safe, Deterministic Sorting - Never returns NaN
-      let filtered = [...allOrders];
-      filtered.sort((a, b) => {
-        if (currentSortOrder === 'oldest') {
-          const diff = getOrderTimestamp(a) - getOrderTimestamp(b);
-          return diff !== 0 ? diff : String(a.id || '').localeCompare(String(b.id || ''));
-        } else if (currentSortOrder === 'highest_amount') {
-          const diff = (Number(b.total) || 0) - (Number(a.total) || 0);
-          return diff !== 0 ? diff : (getOrderTimestamp(b) - getOrderTimestamp(a));
-        } else {
-          // Default: newest first
-          const diff = getOrderTimestamp(b) - getOrderTimestamp(a);
-          return diff !== 0 ? diff : String(b.id || '').localeCompare(String(a.id || ''));
-        }
-      });
-
-      // Filter by Status Tab
-      if (currentFilter === 'new') {
-        filtered = filtered.filter(o => {
-          const s = (o.status || 'Confirmed').toLowerCase();
-          return (s.includes('confirm') || s.includes('received') || s.includes('placed') || s.includes('pending')) && !s.includes('pack') && !s.includes('out') && !s.includes('deliver') && !s.includes('cancel');
+        // Safe, Deterministic Sorting - Never returns NaN
+        let filtered = [...allOrders];
+        filtered.sort((a, b) => {
+          if (currentSortOrder === 'oldest') {
+            const diff = getOrderTimestamp(a) - getOrderTimestamp(b);
+            return diff !== 0 ? diff : String(a?.id || '').localeCompare(String(b?.id || ''));
+          } else if (currentSortOrder === 'highest_amount') {
+            const diff = (Number(b?.total) || 0) - (Number(a?.total) || 0);
+            return diff !== 0 ? diff : (getOrderTimestamp(b) - getOrderTimestamp(a));
+          } else {
+            // Default: newest first
+            const diff = getOrderTimestamp(b) - getOrderTimestamp(a);
+            return diff !== 0 ? diff : String(b?.id || '').localeCompare(String(a?.id || ''));
+          }
         });
-      } else if (currentFilter === 'packing') {
-        filtered = filtered.filter(o => {
-          const s = (o.status || '').toLowerCase();
-          return (s.includes('pack') || s.includes('ready')) && !s.includes('out') && !s.includes('deliver') && !s.includes('cancel');
-        });
-      } else if (currentFilter === 'dispatched') {
-        filtered = filtered.filter(o => {
-          const s = (o.status || '').toLowerCase();
-          return (s.includes('out') || s.includes('dispatch') || s.includes('transit')) && !s.includes('deliver') && !s.includes('cancel');
-        });
-      } else if (currentFilter === 'delivered') {
-        filtered = filtered.filter(o => {
-          const s = (o.status || '').toLowerCase();
-          return s.includes('deliver') && !s.includes('out') && !s.includes('cancel');
-        });
-      } else if (currentFilter === 'cancelled') {
-        filtered = filtered.filter(o => {
-          const s = (o.status || '').toLowerCase();
-          return s.includes('cancel') || s.includes('reject');
-        });
-      }
 
-      // Filter by Search Query
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase().trim();
-        const qDigits = q.replace(/\D/g, '');
-        filtered = filtered.filter(o => {
-          const id = String(o.id || '').toLowerCase();
-          const name = String(o.customer?.name || o.customer?.receiverName || '').toLowerCase();
-          const p1 = String(o.customer?.phone || '').toLowerCase();
-          const p2 = String(o.customer?.receiverPhone || '').toLowerCase();
-          const pDigits1 = p1.replace(/\D/g, '');
-          const pDigits2 = p2.replace(/\D/g, '');
-          const addr = (typeof o.customer?.address === 'object' 
-            ? `${o.customer.address.flat || ''} ${o.customer.address.street || ''} ${o.customer.address.landmark || ''}`
-            : (o.customer?.flat ? `${o.customer.flat} ${o.customer.street || ''} ${o.customer.landmark || ''}` : (o.customer?.address || ''))).toLowerCase();
-
-          return id.includes(q) || 
-                 (qDigits.length >= 3 && id.replace(/\D/g, '').includes(qDigits)) ||
-                 name.includes(q) || 
-                 p1.includes(q) || 
-                 p2.includes(q) || 
-                 (qDigits.length >= 4 && (pDigits1.includes(qDigits) || pDigits2.includes(qDigits))) ||
-                 addr.includes(q);
-        });
-      }
-
-      if (filtered.length === 0) {
-        container.innerHTML = '';
-        emptyContainer.classList.remove('hidden');
-        return;
-      }
-
-      emptyContainer.classList.add('hidden');
-
-      container.innerHTML = filtered.map(order => {
-        const s = (order.status || 'Confirmed');
-        const sLower = s.toLowerCase();
-        
-        let statusBadge = '';
-        let primaryAction = '';
-        let cardBorder = 'border-slate-200';
-
-        if ((sLower.includes('confirm') || sLower.includes('received') || sLower.includes('placed')) && !sLower.includes('pack') && !sLower.includes('out') && !sLower.includes('deliver')) {
-          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300">🔔 Needs Packing</span>`;
-          primaryAction = `<button onclick="advanceOrderStatus('${order.id}', 'Packing')" class="flex-1 py-2 bg-blinkit-green hover:bg-blinkit-greenHover text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">▶ Start Packing</button>`;
-          cardBorder = 'border-amber-300 shadow-sm';
-        } else if (sLower.includes('pack')) {
-          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-900 border border-blue-300">📦 In Packing</span>`;
-          primaryAction = `<button onclick="advanceOrderStatus('${order.id}', 'Ready for Dispatch')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">🏷️ Mark Ready</button>`;
-          cardBorder = 'border-blue-300';
-        } else if (sLower.includes('ready')) {
-          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-indigo-100 text-indigo-900 border border-indigo-300">🏷️ Ready for Dispatch</span>`;
-          primaryAction = `<button onclick="openPackingModal('${order.id}')" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">🚚 Assign Rider &amp; Dispatch</button>`;
-          cardBorder = 'border-indigo-300';
-        } else if (sLower.includes('out') || sLower.includes('dispatch')) {
-          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-900 border border-purple-300">🚚 Out for Delivery</span>`;
-          primaryAction = `<button onclick="advanceOrderStatus('${order.id}', 'Delivered')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">✓ Mark Delivered</button>`;
-          cardBorder = 'border-purple-300';
-        } else if (sLower.includes('deliver')) {
-          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">✓ Delivered</span>`;
-          primaryAction = `<button onclick="openPackingModal('${order.id}')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs">View Details</button>`;
-        } else {
-          statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-900 border border-rose-300">✕ Cancelled</span>`;
-          primaryAction = `<button onclick="openPackingModal('${order.id}')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs">View Details</button>`;
+        // Filter by Status Tab
+        if (currentFilter === 'new') {
+          filtered = filtered.filter(o => {
+            const s = String(o?.status || 'Confirmed').toLowerCase();
+            return (s.includes('confirm') || s.includes('received') || s.includes('placed') || s.includes('pending')) && !s.includes('pack') && !s.includes('out') && !s.includes('deliver') && !s.includes('cancel');
+          });
+        } else if (currentFilter === 'packing') {
+          filtered = filtered.filter(o => {
+            const s = String(o?.status || '').toLowerCase();
+            return (s.includes('pack') || s.includes('ready')) && !s.includes('out') && !s.includes('deliver') && !s.includes('cancel');
+          });
+        } else if (currentFilter === 'dispatched') {
+          filtered = filtered.filter(o => {
+            const s = String(o?.status || '').toLowerCase();
+            return (s.includes('out') || s.includes('dispatch') || s.includes('transit')) && !s.includes('deliver') && !s.includes('cancel');
+          });
+        } else if (currentFilter === 'delivered') {
+          filtered = filtered.filter(o => {
+            const s = String(o?.status || '').toLowerCase();
+            return s.includes('deliver') && !s.includes('out') && !s.includes('cancel');
+          });
+        } else if (currentFilter === 'cancelled') {
+          filtered = filtered.filter(o => {
+            const s = String(o?.status || '').toLowerCase();
+            return s.includes('cancel') || s.includes('reject');
+          });
         }
 
-        const formattedTime = formatOrderTime(order.timestamp);
-        const itemCount = (order.items || []).reduce((sum, i) => sum + (i.qty || 1), 0);
-        const isFriend = !!(order.customer?.isFriendOrder || order.customer?.tag === 'Friend');
-        const customerName = order.customer?.receiverName || order.customer?.name || 'Walk-in Customer';
-        const customerPhone = order.customer?.receiverPhone || order.customer?.phone || '-';
-        
-        let addressStr = typeof order.customer?.address === 'object'
-          ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
-          : (order.customer?.flat ? `${order.customer.flat}, ${order.customer.street || ''}${order.customer.landmark ? ' (Near ' + order.customer.landmark + ')' : ''}` : (order.customer?.address || 'Pickup at Store'));
-        if (order.customer?.distanceKm != null) {
-          addressStr += ` (${order.customer.distanceKm} km)`;
+        // Filter by Search Query
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase().trim();
+          const qDigits = q.replace(/\D/g, '');
+          filtered = filtered.filter(o => {
+            const id = String(o?.id || '').toLowerCase();
+            const name = String(o?.customer?.name || o?.customer?.receiverName || '').toLowerCase();
+            const p1 = String(o?.customer?.phone || '').toLowerCase();
+            const p2 = String(o?.customer?.receiverPhone || '').toLowerCase();
+            const pDigits1 = p1.replace(/\D/g, '');
+            const pDigits2 = p2.replace(/\D/g, '');
+            const addr = (typeof o?.customer?.address === 'object' 
+              ? `${o.customer.address.flat || ''} ${o.customer.address.street || ''} ${o.customer.address.landmark || ''}`
+              : (o?.customer?.flat ? `${o.customer.flat} ${o.customer.street || ''} ${o.customer.landmark || ''}` : (o?.customer?.address || ''))).toLowerCase();
+
+            return id.includes(q) || 
+                   (qDigits.length >= 3 && id.replace(/\D/g, '').includes(qDigits)) ||
+                   name.includes(q) || 
+                   p1.includes(q) || 
+                   p2.includes(q) || 
+                   (qDigits.length >= 4 && (pDigits1.includes(qDigits) || pDigits2.includes(qDigits))) ||
+                   addr.includes(q);
+          });
         }
 
-        const isOnlinePaid = (order.payment?.status || '').includes('PAID') || (order.payment?.method || '').toLowerCase().includes('upi');
+        if (filtered.length === 0) {
+          container.innerHTML = '';
+          if (emptyContainer) emptyContainer.classList.remove('hidden');
+          return;
+        }
 
-        return `
-          <div class="bg-white rounded-3xl p-5 border ${cardBorder} shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
+        if (emptyContainer) emptyContainer.classList.add('hidden');
+
+        const renderedCards = filtered.map(order => {
+          try {
+            if (!order) return '';
+            const safeOrderId = String(order.id || '#RF-ORDER');
+            const s = String(order.status || 'Confirmed');
+            const sLower = s.toLowerCase();
             
-            <!-- Top Row: ID, Time, Badge -->
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="font-mono font-black text-sm text-slate-900">${order.id || '#RF-ORDER'}</span>
-                ${statusBadge}
-              </div>
-              <div class="text-[11px] text-slate-400 font-medium">${formattedTime}</div>
-            </div>
+            let statusBadge = '';
+            let primaryAction = '';
+            let cardBorder = 'border-slate-200';
 
-            <!-- Customer & Address Block -->
-            <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100 text-xs space-y-1">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1 flex-wrap">
-                  <span class="font-black text-slate-900">${escapeHtml(customerName)}</span>
-                  ${isFriend ? '<span class="text-[9px] bg-amber-100 text-amber-900 font-black px-1.5 py-0.5 rounded border border-amber-300">🎁 Friend</span>' : ''}
+            if ((sLower.includes('confirm') || sLower.includes('received') || sLower.includes('placed')) && !sLower.includes('pack') && !sLower.includes('out') && !sLower.includes('deliver')) {
+              statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300">🔔 Needs Packing</span>`;
+              primaryAction = `<button onclick="advanceOrderStatus('${escapeHtml(safeOrderId)}', 'Packing')" class="flex-1 py-2 bg-blinkit-green hover:bg-blinkit-greenHover text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">▶ Start Packing</button>`;
+              cardBorder = 'border-amber-300 shadow-sm';
+            } else if (sLower.includes('pack')) {
+              statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-900 border border-blue-300">📦 In Packing</span>`;
+              primaryAction = `<button onclick="advanceOrderStatus('${escapeHtml(safeOrderId)}', 'Ready for Dispatch')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">🏷️ Mark Ready</button>`;
+              cardBorder = 'border-blue-300';
+            } else if (sLower.includes('ready')) {
+              statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-indigo-100 text-indigo-900 border border-indigo-300">🏷️ Ready for Dispatch</span>`;
+              primaryAction = `<button onclick="openPackingModal('${escapeHtml(safeOrderId)}')" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">🚚 Assign Rider &amp; Dispatch</button>`;
+              cardBorder = 'border-indigo-300';
+            } else if (sLower.includes('out') || sLower.includes('dispatch')) {
+              statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-900 border border-purple-300">🚚 Out for Delivery</span>`;
+              primaryAction = `<button onclick="advanceOrderStatus('${escapeHtml(safeOrderId)}', 'Delivered')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95">✓ Mark Delivered</button>`;
+              cardBorder = 'border-purple-300';
+            } else if (sLower.includes('deliver')) {
+              statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">✓ Delivered</span>`;
+              primaryAction = `<button onclick="openPackingModal('${escapeHtml(safeOrderId)}')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs">View Details</button>`;
+            } else {
+              statusBadge = `<span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-900 border border-rose-300">✕ Cancelled</span>`;
+              primaryAction = `<button onclick="openPackingModal('${escapeHtml(safeOrderId)}')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs">View Details</button>`;
+            }
+
+            const formattedTime = formatOrderTime(order.timestamp);
+            const rawItems = Array.isArray(order.items) ? order.items.filter(Boolean) : [];
+            const itemCount = rawItems.reduce((sum, i) => sum + (Number(i?.qty) || 1), 0);
+            const isFriend = !!(order.customer?.isFriendOrder || order.customer?.tag === 'Friend');
+            const customerName = String(order.customer?.receiverName || order.customer?.name || 'Walk-in Customer');
+            const customerPhone = String(order.customer?.receiverPhone || order.customer?.phone || '-');
+            const rawPhoneDigits = customerPhone.replace(/\D/g, '');
+            
+            let addressStr = typeof order.customer?.address === 'object'
+              ? `${order.customer.address.flat || ''}, ${order.customer.address.street || ''}${order.customer.address.landmark ? ' (Near ' + order.customer.address.landmark + ')' : ''}`
+              : (order.customer?.flat ? `${order.customer.flat}, ${order.customer.street || ''}${order.customer.landmark ? ' (Near ' + order.customer.landmark + ')' : ''}` : (order.customer?.address || 'Pickup at Store'));
+            if (order.customer?.distanceKm != null) {
+              addressStr += ` (${order.customer.distanceKm} km)`;
+            }
+
+            const isOnlinePaid = String(order.payment?.status || '').toUpperCase().includes('PAID') || String(order.payment?.method || '').toLowerCase().includes('upi');
+
+            const itemsSummary = rawItems.map(i => {
+              const name = i?.product?.name || i?.name || 'Item';
+              const q = i?.qty || 1;
+              return `${name} (${q}x)`;
+            }).join(', ') || 'Grocery items';
+
+            return `
+              <div class="bg-white rounded-3xl p-5 border ${cardBorder} shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
+                
+                <!-- Top Row: ID, Time, Badge -->
+                <div class="space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="font-mono font-black text-sm text-slate-900">${escapeHtml(safeOrderId)}</span>
+                    ${statusBadge}
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-medium">${escapeHtml(formattedTime)}</div>
                 </div>
-                <a href="tel:+91${customerPhone.replace(/\D/g,'')}" class="font-mono text-emerald-700 hover:underline font-bold text-[11px] flex items-center gap-0.5">📞 +91 ${customerPhone}</a>
-              </div>
-              ${isFriend && order.customer?.placedByName ? `<div class="text-[10px] text-slate-500">Ordered By: ${escapeHtml(order.customer.placedByName)} (${order.customer.placedByPhone || ''})</div>` : ''}
-              <p class="text-slate-600 text-[11px] font-medium line-clamp-2 leading-relaxed">
-                📍 ${addressStr}
-              </p>
-              ${order.customer?.instructions ? `
-                <div class="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 font-semibold truncate">
-                  💬 ${order.customer.instructions}
+
+                <!-- Customer & Address Block -->
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100 text-xs space-y-1">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1 flex-wrap">
+                      <span class="font-black text-slate-900">${escapeHtml(customerName)}</span>
+                      ${isFriend ? '<span class="text-[9px] bg-amber-100 text-amber-900 font-black px-1.5 py-0.5 rounded border border-amber-300">🎁 Friend</span>' : ''}
+                    </div>
+                    <a href="tel:+91${escapeHtml(rawPhoneDigits)}" class="font-mono text-emerald-700 hover:underline font-bold text-[11px] flex items-center gap-0.5">📞 +91 ${escapeHtml(customerPhone)}</a>
+                  </div>
+                  ${isFriend && order.customer?.placedByName ? `<div class="text-[10px] text-slate-500">Ordered By: ${escapeHtml(order.customer.placedByName)} (${escapeHtml(String(order.customer.placedByPhone || ''))})</div>` : ''}
+                  <p class="text-slate-600 text-[11px] font-medium line-clamp-2 leading-relaxed">
+                    📍 ${escapeHtml(addressStr)}
+                  </p>
+                  ${order.customer?.instructions ? `
+                    <div class="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 font-semibold truncate">
+                      💬 ${escapeHtml(order.customer.instructions)}
+                    </div>
+                  ` : ''}
                 </div>
-              ` : ''}
-            </div>
 
-            <!-- Items Brief Preview -->
-            <div class="text-xs space-y-1">
-              <div class="flex items-center justify-between text-slate-500 font-bold text-[11px]">
-                <span>ITEMS (${itemCount})</span>
-                <span class="text-slate-900 font-black text-sm">₹${order.total || 0}</span>
+                <!-- Items Brief Preview -->
+                <div class="text-xs space-y-1">
+                  <div class="flex items-center justify-between text-slate-500 font-bold text-[11px]">
+                    <span>ITEMS (${itemCount})</span>
+                    <span class="text-slate-900 font-black text-sm">₹${escapeHtml(String(order.total || 0))}</span>
+                  </div>
+                  <div class="text-[11px] text-slate-600 font-medium line-clamp-2 leading-relaxed">
+                    ${escapeHtml(itemsSummary)}
+                  </div>
+                </div>
+
+                <!-- Payment Badge & Rider Info -->
+                <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
+                  <div>
+                    ${isOnlinePaid 
+                      ? `<span class="text-emerald-700 font-black">💳 Paid Online</span>` 
+                      : `<span class="text-amber-800 font-black">💵 COD: Collect ₹${escapeHtml(String(order.total || 0))}</span>`
+                    }
+                  </div>
+                  <div class="text-slate-500 text-[10px] font-semibold">
+                    ${order.rider?.name ? `🚚 Rider: ${escapeHtml(order.rider.name)}` : 'Rider: Unassigned'}
+                  </div>
+                </div>
+
+                <!-- Action Buttons Footer -->
+                <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                  <button 
+                    onclick="openPackingModal('${escapeHtml(safeOrderId)}')" 
+                    class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
+                    title="Open Packing Checklist"
+                  >
+                    📋 Checklist
+                  </button>
+                  
+                  ${primaryAction}
+
+                  <button 
+                    onclick="printPackingSlipDirect('${escapeHtml(safeOrderId)}')" 
+                    class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
+                    title="Print Packing Slip"
+                  >
+                    🖨️
+                  </button>
+                </div>
+
               </div>
-              <div class="text-[11px] text-slate-600 font-medium line-clamp-2 leading-relaxed">
-                ${(order.items || []).map(i => `${i.product?.name || i.name} (${i.qty}x)`).join(', ') || 'Grocery items'}
-              </div>
-            </div>
+            `;
+          } catch (cardErr) {
+            console.error("Error rendering individual order card:", order, cardErr);
+            return '';
+          }
+        }).filter(Boolean).join('');
 
-            <!-- Payment Badge & Rider Info -->
-            <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
-              <div>
-                ${isOnlinePaid 
-                  ? `<span class="text-emerald-700 font-black">💳 Paid Online</span>` 
-                  : `<span class="text-amber-800 font-black">💵 COD: Collect ₹${order.total || 0}</span>`
-                }
-              </div>
-              <div class="text-slate-500 text-[10px] font-semibold">
-                ${order.rider?.name ? `🚚 Rider: ${order.rider.name}` : 'Rider: Unassigned'}
-              </div>
-            </div>
-
-            <!-- Action Buttons Footer -->
-            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
-              <button 
-                onclick="openPackingModal('${order.id}')" 
-                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
-                title="Open Packing Checklist"
-              >
-                📋 Checklist
-              </button>
-              
-              ${primaryAction}
-
-              <button 
-                onclick="printPackingSlipDirect('${order.id}')" 
-                class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors"
-                title="Print Packing Slip"
-              >
-                🖨️
-              </button>
-            </div>
-
-          </div>
-        `;
-      }).join('');
+        if (!renderedCards) {
+          container.innerHTML = '';
+          if (emptyContainer) emptyContainer.classList.remove('hidden');
+        } else {
+          container.innerHTML = renderedCards;
+          if (emptyContainer) emptyContainer.classList.add('hidden');
+        }
+      } catch (renderErr) {
+        console.error("Error inside renderOrders:", renderErr);
+      }
     }
 
     // Time Formatter
@@ -1782,7 +1820,7 @@
         return;
       }
 
-      const cleanPhone = recipientPhone.replace(/\D/g, '').slice(-10);
+      const cleanPhone = String(recipientPhone).replace(/\D/g, '').slice(-10);
       const status = order.status || 'Confirmed';
       const riderInfo = order.rider?.name ? `with rider *${order.rider.name}* (${order.rider.phone || ''})` : '';
       const recipientName = order.customer?.receiverName || order.customer?.name || 'Customer';

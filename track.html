@@ -823,7 +823,7 @@
         alert("Delivery partner has not been allotted yet. Store team is currently packing your fresh order.");
         return;
       }
-      const phone = activeOrder.rider.phone.replace(/\D/g, '');
+      const phone = String(activeOrder.rider.phone).replace(/\D/g, '');
       window.location.href = `tel:+91${phone}`;
     }
 
@@ -834,7 +834,7 @@
         return;
       }
       const riderName = activeOrder.rider.name || 'Delivery Partner';
-      const riderPhone = activeOrder.rider.phone.replace(/\D/g, '');
+      const riderPhone = String(activeOrder.rider.phone).replace(/\D/g, '');
       const orderId = activeOrder.id || '';
       const msg = `Hi ${riderName}! I am checking on my delivery for Rasoee Fresh Order #${orderId}. Please let me know once you reach the building.`;
       window.open(`https://wa.me/91${riderPhone}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -842,7 +842,7 @@
 
     function chatAboutThisOrder() {
       const cfg = typeof getStoreConfig === 'function' ? getStoreConfig() : {};
-      const waNumber = (cfg.whatsappNumber || '919876543210').replace(/\D/g, '');
+      const waNumber = String(cfg.whatsappNumber || '919876543210').replace(/\D/g, '');
       const orderId = activeOrder?.id || '';
       const msg = `Hello Rasoee Fresh team! I need assistance with my live order #${orderId}.`;
       window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');

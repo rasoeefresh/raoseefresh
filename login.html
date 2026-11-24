@@ -584,7 +584,7 @@
 
     function saveProfileAndFinish() {
       const name = document.getElementById('profile-name-input')?.value.trim() || 'Valued Customer';
-      const cleanPhone = activePhone.replace(/\D/g, '').slice(-10);
+      const cleanPhone = String(activePhone || '').replace(/\D/g, '').slice(-10);
 
       const defaultCity = (typeof getStoreConfig === 'function' ? (getStoreConfig().city || '') : '');
       const defaultPin = (typeof getStoreConfig === 'function' ? (getStoreConfig().pincode || '') : '');

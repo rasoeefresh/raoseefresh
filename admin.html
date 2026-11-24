@@ -4953,7 +4953,7 @@
         alert("Customer phone number not available.");
         return;
       }
-      const cleanPhone = phone.replace(/\D/g, '');
+      const cleanPhone = String(phone).replace(/\D/g, '');
       const msg = `Hello ${name}! Greeting from Rasoee Fresh Supermarket team. How was your recent grocery delivery experience with us? We'd love your feedback!`;
       window.open(`https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
@@ -4963,7 +4963,7 @@
         alert("Customer phone was not provided.");
         return;
       }
-      const cleanPhone = phone.replace(/\D/g, '');
+      const cleanPhone = String(phone).replace(/\D/g, '');
       const msg = `Hello! Regarding your Rasoee Fresh Supermarket order #${orderId}: Your order status is now "${status}". Our dedicated delivery team is actively serving you!`;
       window.open(`https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }

@@ -1940,8 +1940,19 @@ function matchesCategoryFilter(product, activeCategory) {
   return false;
 }
 
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Auto-run initialization and global exports
 if (typeof window !== "undefined") {
+  window.escapeHtml = escapeHtml;
   window.calculateDistanceKm = calculateDistanceKm;
   window.normalizeImageUrl = normalizeImageUrl;
   window.matchesCategoryFilter = matchesCategoryFilter;
@@ -2012,7 +2023,8 @@ if (typeof module !== "undefined" && module.exports) {
     syncAllLocalCustomersToCloud,
     syncCartToCloud,
     fetchCartFromCloud,
-    matchesCategoryFilter
+    matchesCategoryFilter,
+    escapeHtml
   };
 }
 
